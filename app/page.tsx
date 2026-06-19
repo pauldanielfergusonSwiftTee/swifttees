@@ -1,6 +1,10 @@
 import Image from "next/image";
 
 export default function Home() {
+  const daysToCarden = Math.ceil(
+  (new Date("2026-07-26").getTime() - new Date().getTime()) /
+    (1000 * 60 * 60 * 24)
+);
   return (
     <main className="min-h-screen bg-green-950 text-white">
       <nav className="border-b border-green-800 bg-green-950/90">
@@ -59,8 +63,8 @@ export default function Home() {
           <h2 className="text-4xl font-black mb-3">The Belfry Weekend</h2>
 
           <p className="text-green-100 mb-6">
-            34 days to go • Scores, photos, write-ups and inevitable controversy.
-          </p>
+  {daysToCarden} days until Carden Park • Scores, photos, write-ups and inevitable controversy.
+</p>
 
           <div className="flex flex-wrap gap-3">
             <a
