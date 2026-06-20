@@ -56,67 +56,63 @@ export default function EventsPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-green-950 text-white p-8">
+    <main className="min-h-screen bg-slate-50 text-slate-900 p-8">
       <div className="max-w-6xl mx-auto">
-        <a href="/" className="text-green-300 text-sm">
+        <a href="/" className="text-green-700 text-sm font-bold">
           ← Back to home
         </a>
 
-        <section className="mt-6 mb-10 rounded-3xl bg-gradient-to-br from-green-900 to-green-800 p-8 border border-green-700">
-          <p className="text-green-300 font-bold mb-2">Next Swift Tees Trip</p>
+        <section className="mt-6 mb-10 rounded-3xl bg-white p-8 border border-slate-200 shadow-sm">
+          <p className="text-green-700 font-bold mb-2">Next Swift Tees Trip</p>
 
-          <h1 className="text-5xl md:text-7xl font-black mb-4">
+          <h1 className="text-5xl md:text-7xl font-black mb-4 text-green-950">
             Carden Park 2026
           </h1>
 
-          <p className="text-xl text-green-100 max-w-3xl">
+          <p className="text-xl text-slate-700 max-w-3xl">
             Two days, two courses, twelve golfers and absolutely no guarantee
             of sensible scoring, sensible drinking or sensible shot selection.
           </p>
         </section>
 
         <div className="grid md:grid-cols-3 gap-6 mb-10">
-          <div className="rounded-2xl bg-green-900 p-6 border border-green-800">
-            <p className="text-green-300 text-sm font-bold">Trip Dates</p>
-            <p className="text-2xl font-black mt-2">26-27 July 2026</p>
+          <div className="rounded-2xl bg-white p-6 border border-slate-200 shadow-sm">
+            <p className="text-green-700 text-sm font-bold">Trip Dates</p>
+            <p className="text-2xl font-black mt-2 text-green-950">26-27 July 2026</p>
           </div>
 
-          <div className="rounded-2xl bg-green-900 p-6 border border-green-800">
-            <p className="text-green-300 text-sm font-bold">Courses</p>
-            <p className="text-2xl font-black mt-2">Cheshire + Nicklaus</p>
+          <div className="rounded-2xl bg-white p-6 border border-slate-200 shadow-sm">
+            <p className="text-green-700 text-sm font-bold">Courses</p>
+            <p className="text-2xl font-black mt-2 text-green-950">Cheshire + Nicklaus</p>
           </div>
 
-          <div className="rounded-2xl bg-green-900 p-6 border border-green-800">
-            <p className="text-green-300 text-sm font-bold">Players</p>
-            <p className="text-2xl font-black mt-2">12 Adults</p>
+          <div className="rounded-2xl bg-white p-6 border border-slate-200 shadow-sm">
+            <p className="text-green-700 text-sm font-bold">Players</p>
+            <p className="text-2xl font-black mt-2 text-green-950">12 Adults</p>
           </div>
         </div>
 
         <section className="mb-10">
-          <h2 className="text-4xl font-black mb-6">Trip Timeline</h2>
+          <h2 className="text-4xl font-black mb-6 text-green-950">Trip Timeline</h2>
 
           <div className="grid md:grid-cols-2 gap-6">
             {timeline.map((day) => (
               <div
                 key={day.day}
-                className="rounded-2xl bg-green-900 p-6 border border-green-800"
+                className="rounded-2xl bg-white p-6 border border-slate-200 shadow-sm"
               >
-                <p className="text-green-300 font-bold">{day.day}</p>
-                <h3 className="text-2xl font-black mb-5">{day.date}</h3>
+                <p className="text-green-700 font-bold">{day.day}</p>
+                <h3 className="text-2xl font-black mb-5 text-green-950">{day.date}</h3>
 
                 <div className="space-y-4">
                   {day.items.map((item) => (
                     <div
                       key={`${item.time}-${item.title}`}
-                      className="rounded-xl bg-green-950/60 p-4"
+                      className="rounded-xl bg-slate-50 p-4 border border-slate-200"
                     >
-                      <p className="text-green-300 text-sm font-bold">
-                        {item.time}
-                      </p>
-                      <p className="text-xl font-bold">{item.title}</p>
-                      <p className="text-green-100 text-sm mt-1">
-                        {item.detail}
-                      </p>
+                      <p className="text-green-700 text-sm font-bold">{item.time}</p>
+                      <p className="text-xl font-bold text-slate-900">{item.title}</p>
+                      <p className="text-slate-600 text-sm mt-1">{item.detail}</p>
                     </div>
                   ))}
                 </div>
@@ -126,32 +122,27 @@ export default function EventsPage() {
         </section>
 
         <section className="grid md:grid-cols-2 gap-6 mb-10">
-          <div className="rounded-2xl bg-green-900 p-6 border border-green-800">
-            <h2 className="text-3xl font-black mb-5">Trip Details</h2>
+          <div className="rounded-2xl bg-white p-6 border border-slate-200 shadow-sm">
+            <h2 className="text-3xl font-black mb-5 text-green-950">Trip Details</h2>
 
             <div className="space-y-3">
               {details.map((detail) => (
-                <div
-                  key={detail.label}
-                  className="border-b border-green-800 pb-3"
-                >
-                  <p className="text-green-300 text-sm font-bold">
-                    {detail.label}
-                  </p>
-                  <p className="text-green-100">{detail.value}</p>
+                <div key={detail.label} className="border-b border-slate-200 pb-3">
+                  <p className="text-green-700 text-sm font-bold">{detail.label}</p>
+                  <p className="text-slate-700">{detail.value}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="rounded-2xl bg-green-900 p-6 border border-green-800">
-            <h2 className="text-3xl font-black mb-5">Formats & Extras</h2>
+          <div className="rounded-2xl bg-white p-6 border border-slate-200 shadow-sm">
+            <h2 className="text-3xl font-black mb-5 text-green-950">Formats & Extras</h2>
 
             <div className="space-y-3">
               {formats.map((format) => (
                 <div
                   key={format}
-                  className="rounded-xl bg-green-950/60 p-4 text-green-100"
+                  className="rounded-xl bg-slate-50 p-4 text-slate-700 border border-slate-200"
                 >
                   {format}
                 </div>
@@ -160,17 +151,17 @@ export default function EventsPage() {
           </div>
         </section>
 
-        <section className="rounded-3xl bg-white text-green-950 p-8">
-          <p className="font-bold text-sm mb-2">Coming Soon</p>
+        <section className="rounded-3xl bg-green-950 text-white p-8">
+          <p className="font-bold text-sm mb-2 text-green-300">Coming Soon</p>
           <h2 className="text-4xl font-black mb-3">Live Leaderboard</h2>
-          <p className="mb-6">
+          <p className="mb-6 text-green-100">
             Hole-by-hole scoring, Stableford points, movers, collapses and
             bragging rights will appear here once the scoring system is built.
           </p>
 
           <a
             href="/leaderboard"
-            className="inline-block rounded-full bg-green-950 text-white px-5 py-3 font-bold"
+            className="inline-block rounded-full bg-white text-green-950 px-5 py-3 font-bold"
           >
             View Leaderboard
           </a>
