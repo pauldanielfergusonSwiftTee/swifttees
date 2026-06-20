@@ -143,15 +143,7 @@ export default function PlayersPage() {
                   <p className="text-xl font-bold">{player.wins}</p>
                 </div>
 
-                <div className="rounded-xl bg-green-950/60 p-3">
-                  <p className="text-green-300">Nearest Pins</p>
-                  <p className="text-xl font-bold">{player.nearestPins}</p>
-                </div>
-
-                <div className="rounded-xl bg-green-950/60 p-3">
-                  <p className="text-green-300">Long Drives</p>
-                  <p className="text-xl font-bold">{player.longDrives}</p>
-                </div>
+                
               </div>
 
               <p className="text-green-100 text-sm leading-6">{player.bio}</p>

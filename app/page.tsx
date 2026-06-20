@@ -60,7 +60,7 @@ export default function Home() {
         <div className="rounded-3xl bg-gradient-to-br from-green-900 to-green-800 p-8 border border-green-700">
           <p className="text-green-300 font-semibold mb-2">Next Event</p>
 
-          <h2 className="text-4xl font-black mb-3">The Belfry Weekend</h2>
+          <h2 className="text-4xl font-black mb-3">Carden Park Weekend</h2>
 
           <p className="text-green-100 mb-6">
   {daysToCarden} days until Carden Park • Scores, photos, write-ups and inevitable controversy.
@@ -82,7 +82,7 @@ export default function Home() {
             </a>
           </div>
         </div>
-                <div className="grid md:grid-cols-4 gap-4 mt-8">
+                <div className="grid md:grid-cols-3 gap-4 mt-8">
           <a href="/players" className="rounded-2xl bg-green-900 p-6 border border-green-800 hover:bg-green-800">
             <p className="text-3xl mb-2">👥</p>
             <h3 className="text-xl font-bold">Players</h3>
@@ -106,6 +106,27 @@ export default function Home() {
             <h3 className="text-xl font-bold">Leaderboard</h3>
             <p className="text-green-200 text-sm">Scores, bragging rights and pain.</p>
           </a>
+          <a
+  href="/hall-of-fame"
+  className="rounded-2xl bg-green-900 p-6 border border-green-800 hover:bg-green-800"
+>
+  <p className="text-3xl mb-2">🏆</p>
+  <h3 className="text-xl font-bold">Hall of Fame</h3>
+  <p className="text-green-200 text-sm">
+    Legends, records and questionable achievements.
+  </p>
+</a>
+
+<a
+  href="/weekend-bingo"
+  className="rounded-2xl bg-green-900 p-6 border border-green-800 hover:bg-green-800"
+>
+  <p className="text-3xl mb-2">🎯</p>
+  <h3 className="text-xl font-bold">Weekend Bingo</h3>
+  <p className="text-green-200 text-sm">
+    No names needed. Everyone knows.
+  </p>
+</a>
         </div>
       </section>
     </main>
