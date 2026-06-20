@@ -27,6 +27,16 @@ export default function Home() {
       </nav>
 
       <section className="max-w-6xl mx-auto px-6 py-16">
+        <div className="relative h-100 rounded-3xl overflow-hidden mb-10">
+  <Image
+    src="/carden-park.jpg"
+    alt="Carden Park"
+    fill
+    className="object-cover"
+  />
+
+  <div className="absolute inset-0 bg-black/40" />
+</div>
         <p className="text-green-300 font-semibold mb-4">
           Private Golf Society
         </p>
