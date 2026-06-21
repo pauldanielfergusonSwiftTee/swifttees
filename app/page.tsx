@@ -36,7 +36,9 @@ export default function Home() {
       </nav>
 
       <section className="max-w-6xl mx-auto px-6 py-12">
-        
+         <p className="text-green-700 font-semibold mb-2">
+          Est. 2025
+        </p>
 
         <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-4 text-green-950">
           Swift Tees Golf Society
