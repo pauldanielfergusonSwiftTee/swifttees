@@ -1,51 +1,68 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { supabase } from "../../lib/supabase";
 
-const bingoSquares = [
-  "Driver loft adjustment",
-  "Can Crushed on a Tee Box",
-  "Birkdale gets mentioned",
-  "Unnecessary flop shot attempted",
-  "Someone says they haven't played much",
-  "Club travels further than the ball",
-  "Buggy parked somewhere questionable",
-  "Handicap complaints begin",
-  "Ball found that definitely isn't theirs",
-  "New club/fitting discussion",
-  "Guinness before midday",
-  "Lost ball found in the fairway",
-  "One more drink becomes three",
-  "Someone claims they are not bothered about winning",
-  "Emergency swing tip on the tee",
-  "Shot tracker disagrees with reality",
-];
+type BingoSquare = {
+  id: number;
+  text: string;
+  is_checked: boolean;
+};
 
 export default function WeekendBingoPage() {
-  const [checked, setChecked] = useState<string[]>([]);
+  const [squares, setSquares] = useState<BingoSquare[]>([]);
+  const completed = squares.filter((square) => square.is_checked).length;
+
+  async function loadSquares() {
+    const { data, error } = await supabase
+      .from("bingo_squares")
+      .select("id, text, is_checked")
+      .order("id", { ascending: true });
+
+    if (error) {
+      console.log(error);
+      return;
+    }
+
+    setSquares(data || []);
+  }
 
   useEffect(() => {
-    const saved = localStorage.getItem("swifttees-bingo");
-
-    if (saved) {
-      setChecked(JSON.parse(saved));
-    }
+    loadSquares();
   }, []);
 
-  function toggleSquare(square: string) {
-    let updated: string[];
+  async function toggleSquare(square: BingoSquare) {
+    const { error } = await supabase
+      .from("bingo_squares")
+      .update({ is_checked: !square.is_checked })
+      .eq("id", square.id);
 
-    if (checked.includes(square)) {
-      updated = checked.filter((item) => item !== square);
-    } else {
-      updated = [...checked, square];
+    if (error) {
+      alert("Could not update bingo square");
+      console.log(error);
+      return;
     }
 
-    setChecked(updated);
-    localStorage.setItem(
-      "swifttees-bingo",
-      JSON.stringify(updated)
-    );
+    loadSquares();
+  }
+
+  async function resetBingo() {
+    const confirmReset = confirm("Reset all bingo squares?");
+
+    if (!confirmReset) return;
+
+    const { error } = await supabase
+      .from("bingo_squares")
+      .update({ is_checked: false })
+      .neq("id", 0);
+
+    if (error) {
+      alert("Could not reset bingo");
+      console.log(error);
+      return;
+    }
+
+    loadSquares();
   }
 
   return (
@@ -55,37 +72,43 @@ export default function WeekendBingoPage() {
           ← Back to home
         </a>
 
-        <h1 className="text-5xl md:text-6xl font-black mt-6 mb-2">
-          Weekend Bingo
-        </h1>
+        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mt-6 mb-8">
+          <div>
+            <h1 className="text-5xl md:text-6xl font-black mb-2 text-green-950">
+              Weekend Bingo
+            </h1>
 
-        <p className="text-slate-600 mb-2">
-          No names needed. Everyone knows.
-        </p>
+            <p className="text-slate-600">
+              No names needed. Everyone knows.
+            </p>
 
-        <p className="font-bold text-green-700 mb-8">
-          {checked.length} / {bingoSquares.length} completed
-        </p>
+            <p className="font-bold text-green-700 mt-2">
+              {completed} / {squares.length} completed
+            </p>
+          </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {bingoSquares.map((square) => {
-            const isChecked = checked.includes(square);
+          <button
+            onClick={resetBingo}
+            className="rounded-full border border-red-300 text-red-700 px-5 py-3 font-bold bg-white hover:bg-red-50"
+          >
+            Reset Bingo
+          </button>
+        </div>
 
-            return (
-              <button
-                key={square}
-                onClick={() => toggleSquare(square)}
-                className={`min-h-32 rounded-2xl p-4 border flex items-center justify-center text-center font-bold transition-all
-                  ${
-                    isChecked
-                      ? "bg-green-700 text-white border-green-800"
-                      : "bg-white text-slate-900 border-slate-300 hover:border-green-600"
-                  }`}
-              >
-                {isChecked ? `✅ ${square}` : square}
-              </button>
-            );
-          })}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {squares.map((square) => (
+            <button
+              key={square.id}
+              onClick={() => toggleSquare(square)}
+              className={`min-h-32 rounded-2xl p-4 border flex items-center justify-center text-center font-bold transition-all ${
+                square.is_checked
+                  ? "bg-green-700 text-white border-green-800"
+                  : "bg-white text-slate-900 border-slate-300 hover:border-green-600"
+              }`}
+            >
+              {square.is_checked ? `✅ ${square.text}` : square.text}
+            </button>
+          ))}
         </div>
       </div>
     </main>
