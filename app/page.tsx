@@ -105,25 +105,28 @@ useEffect(() => {
           </div>
 
           <div className="p-6">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-full bg-green-700 text-white py-3 text-center font-bold">
-                ⏳ {daysToCarden} Days to Go
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+  <a
+    href="/events/carden-park-2026"
+    className="rounded-2xl bg-white px-4 py-4 text-center font-black text-green-950 border border-slate-200 shadow-sm text-sm md:text-base"
+  >
+    Full Details
+  </a>
 
-              <a
-                href="/events/carden-park-2026"
-                className="rounded-full bg-green-900 text-white py-3 text-center font-bold"
-              >
-                📅 Full Details
-              </a>
+  <a
+    href="/events/carden-park-2026/live-leaderboard"
+    className="rounded-2xl bg-green-950 px-4 py-4 text-center font-black text-white border border-green-900 shadow-sm text-sm md:text-base"
+  >
+    Live Leaderboard
+  </a>
 
-              <a
-                href="/leaderboard"
-                className="rounded-full border border-green-900 text-green-900 py-3 text-center font-bold"
-              >
-                🏆 Live Leaderboard
-              </a>
-            </div>
+  <a
+    href="/register-interest"
+    className="rounded-2xl bg-white px-4 py-4 text-center font-black text-green-950 border border-slate-200 shadow-sm text-sm md:text-base"
+  >
+    Register Interest
+  </a>
+</div>
           </div>
         </div>
 
@@ -198,7 +201,7 @@ useEffect(() => {
             className="rounded-2xl bg-green-900 p-6 border border-green-800 hover:bg-green-800 text-white"
           >
             <p className="text-3xl mb-2">🏆</p>
-            <h3 className="text-xl font-bold">Leaderboard</h3>
+            <h3 className="text-xl font-bold">Society Leaderboard</h3>
             <p className="text-green-200 text-sm">
               Scores, bragging rights and pain.
             </p>
