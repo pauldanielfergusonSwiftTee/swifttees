@@ -35,17 +35,23 @@ export default function EventsPage() {
           title: "Carden Park - Nicklaus Course",
           detail: "Second round. Final scores, pressure and inevitable controversy.",
         },
+         {
+          time: "Awards",
+          title: "Winners Announced",
+          detail: "Celebrations, commiserations and excuses over a pint.",
+        },
       ],
     },
   ];
 
   const details = [
+     { label: "12 Players", value: "Blue, White and Green Teams" },
     { label: "Venue", value: "Carden Park Hotel, Golf Resort & Spa" },
     { label: "Location", value: "Broxton Road, Chester, CH3 9DQ" },
     { label: "Accommodation", value: "5 twin rooms + 2 double rooms for single occupancy" },
     { label: "Board", value: "Dinner, bed and breakfast" },
-    { label: "Players", value: "12 adults" },
-    { label: "Confirmation", value: "Confirmed by Poppy" },
+   
+    
   ];
 
   const formats = [
@@ -87,10 +93,114 @@ export default function EventsPage() {
           </div>
 
           <div className="rounded-2xl bg-white p-6 border border-slate-200 shadow-sm">
-            <p className="text-green-700 text-sm font-bold">Players</p>
-            <p className="text-2xl font-black mt-2 text-green-950">12 Adults</p>
+            <p className="text-green-700 text-sm font-bold">Format</p>
+            <p className="text-2xl font-black mt-2 text-green-950">Ryder Cup Style </p>
           </div>
         </div>
+
+
+
+
+
+
+
+
+
+
+<section className="mb-10 rounded-3xl bg-white p-6 border border-slate-200 shadow-sm">
+  <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-2 mb-5">
+    <div>
+      
+      <h2 className="text-3xl md:text-4xl font-black text-green-950">
+        Carden Cup Teams
+      </h2>
+    </div>
+
+    <p className="text-sm font-bold text-slate-500">
+      3 teams • 1 player from each handicap tier
+    </p>
+  </div>
+
+  <div className="grid md:grid-cols-3 gap-4">
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-2xl font-black text-slate-700">White Team </h3>
+        
+      </div>
+
+      <p className="text-slate-600 font-semibold">
+        Gav •  Wrighty  •   Carl  •  Adam
+      </p>
+    </div>
+
+    <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-2xl font-black text-blue-700">Blue Team</h3>
+        
+      </div>
+
+      <p className="text-slate-600 font-semibold">
+        Dan  •  Liam  •  Stu  •  Phil
+      </p>
+    </div>
+
+    <div className="rounded-2xl border border-green-200 bg-green-50 p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-2xl font-black text-green-700">Green Team</h3>
+        
+      </div>
+
+      <p className="text-slate-600 font-semibold">
+        Painy • Paul • Ian • Taz
+      </p>
+    </div>
+  </div>
+</section>
+
+
+
+<section className="mb-10 rounded-3xl bg-green-950 text-white p-8">
+  <p className="font-bold text-sm mb-2 text-green-300">
+    Scoring & Standings
+  </p>
+
+  <h2 className="text-4xl font-black mb-3">
+    Carden Park Live Leaderboard
+  </h2>
+
+  <p className="mb-6 text-green-100">
+    Live scoring, Stableford points, match standings, collapses and
+    accusations of handicap manipulation will appear here during the trip.
+  </p>
+
+  <div className="flex flex-col md:flex-row gap-4">
+    <a
+      href="/events/carden-park-2026/live-leaderboard"
+      className="inline-block rounded-full bg-white text-green-950 px-5 py-3 font-bold"
+    >
+      Live Leaderboard →
+    </a>
+
+    <a
+      href="/leaderboard"
+      className="inline-block rounded-full border border-green-400 text-white px-5 py-3 font-bold"
+    >
+      Society Standings →
+    </a>
+  </div>
+</section>
+
+
+
+
+
+
+
+
+
+
+
+  
 
         <section className="mb-10">
           <h2 className="text-4xl font-black mb-6 text-green-950">Trip Timeline</h2>
@@ -151,21 +261,7 @@ export default function EventsPage() {
           </div>
         </section>
 
-        <section className="rounded-3xl bg-green-950 text-white p-8">
-          <p className="font-bold text-sm mb-2 text-green-300">Coming Soon</p>
-          <h2 className="text-4xl font-black mb-3">Live Leaderboard</h2>
-          <p className="mb-6 text-green-100">
-            Hole-by-hole scoring, Stableford points, movers, collapses and
-            bragging rights will appear here once the scoring system is built.
-          </p>
-
-          <a
-            href="/leaderboard"
-            className="inline-block rounded-full bg-white text-green-950 px-5 py-3 font-bold"
-          >
-            View Leaderboard
-          </a>
-        </section>
+       
       </div>
     </main>
   );
