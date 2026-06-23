@@ -102,14 +102,19 @@ export default function Home() {
           </div>
 
           <div className="pt-6 pb-2">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl mx-auto">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-5xl mx-auto">
               <a
                 href="/events/carden-park-2026"
                 className="rounded-2xl bg-white px-6 py-5 text-center font-black text-green-950 border border-slate-200 shadow-sm text-lg md:text-xl hover:border-green-700"
               >
                 📋 Weekend Details
               </a>
-
+<a
+  href="/weekend-bingo"
+  className="rounded-2xl bg-white px-6 py-5 text-center font-black text-green-950 border border-slate-200 shadow-sm text-lg md:text-xl hover:border-green-700"
+>
+  🎯 Carden Park Bingo
+</a>
               <a
                 href="/events/carden-park-2026/live-leaderboard"
                 className="rounded-2xl bg-white px-6 py-5 text-center font-black text-green-950 border border-slate-200 shadow-sm text-lg md:text-xl hover:border-green-700"
@@ -229,11 +234,7 @@ export default function Home() {
             <p className="text-green-200 text-sm">Legends, records and questionable achievements.</p>
           </a>
 
-          <a href="/weekend-bingo" className="rounded-2xl bg-green-900 p-6 border border-green-800 hover:bg-green-800 text-white">
-            <p className="text-3xl mb-2">🎯</p>
-            <h3 className="text-xl font-bold">Weekend Bingo</h3>
-            <p className="text-green-200 text-sm">No names needed. Everyone knows.</p>
-          </a>
+        
         </div>
       </section>
     </main>
