@@ -19,12 +19,6 @@ const teams = [
   { position: 3, name: "Green", points: 16, thru: "avg 5" },
 ];
 
-const groups = [
-  { name: "Group 1", teeTime: "13:10", thru: 7 },
-  { name: "Group 2", teeTime: "13:20", thru: 6 },
-  { name: "Group 3", teeTime: "13:30", thru: 5 },
-];
-
 function teamDot(team: string) {
   if (team === "Blue") return "bg-blue-500";
   if (team === "Green") return "bg-green-500";
@@ -63,13 +57,60 @@ export default function CardenParkLiveLeaderboardPage() {
           </h1>
 
           <p className="text-slate-600 mt-2 text-sm md:text-base max-w-3xl">
-            Carden Park 2026 standings, team scores and group progress.
+            Carden Park 2026 team standings, individual scores and live stats.
           </p>
         </div>
 
+        <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 md:p-5 mb-5">
+          <h2 className="text-xl md:text-2xl font-black text-green-950 mb-3">
+            Team Standings
+          </h2>
+
+          <div className="grid grid-cols-3 gap-2 md:gap-4">
+            {teams.map((team, index) => (
+              <div
+                key={team.name}
+                className={`rounded-2xl p-3 md:p-5 text-center border ${
+                  index === 0
+                    ? "bg-green-950 text-white border-green-900"
+                    : "bg-slate-50 text-slate-900 border-slate-200"
+                }`}
+              >
+                <p className="text-2xl md:text-3xl mb-1">
+                  {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
+                </p>
+
+                <p
+                  className={`text-base md:text-2xl font-black leading-tight ${
+                    index === 0 ? "text-white" : "text-green-950"
+                  }`}
+                >
+                  {team.name}
+                </p>
+
+                <p
+                  className={`text-3xl md:text-5xl font-black mt-1 ${
+                    index === 0 ? "text-green-300" : "text-green-950"
+                  }`}
+                >
+                  {team.points}
+                </p>
+
+                <p
+                  className={`text-xs md:text-sm font-bold ${
+                    index === 0 ? "text-green-200" : "text-slate-500"
+                  }`}
+                >
+                  pts • {team.thru}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         <section className="rounded-3xl bg-green-950 text-white border border-green-900 shadow-sm p-5 md:p-6 mb-5">
           <p className="text-green-300 font-bold text-sm mb-3">
-            Current Podium
+            Individual Podium
           </p>
 
           <div className="grid grid-cols-3 gap-3">
@@ -152,148 +193,67 @@ export default function CardenParkLiveLeaderboardPage() {
             </table>
           </section>
 
-          <div className="space-y-5">
-            <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
-              <h2 className="text-xl font-black text-green-950 mb-3">
-                Team Standings
-              </h2>
+          <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
+            <h2 className="text-xl font-black text-green-950 mb-3">
+              Quick Stats
+            </h2>
 
-              <div className="space-y-2">
-                {teams.map((team, index) => (
-                  <div
-                    key={team.name}
-                    className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl">
-                          {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
-                        </span>
-
-                        <div>
-                          <p className="text-base font-black text-green-950">
-                            {team.name}
-                          </p>
-                          <p className="text-xs text-slate-500">
-                            {team.thru}
-                          </p>
-                        </div>
-                      </div>
-
-                      <p className="text-2xl font-black text-green-950">
-                        {team.points}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                <p className="text-xs font-bold text-slate-500">
+                  Biggest Climber
+                </p>
+                <p className="font-black text-green-950">
+                  Wrighty ↑
+                </p>
               </div>
-            </section>
 
-            <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
-              <h2 className="text-xl font-black text-green-950 mb-3">
-                Group Progress
-              </h2>
-
-              <div className="space-y-2">
-                {groups.map((group) => (
-                  <div
-                    key={group.name}
-                    className="rounded-xl bg-slate-50 border border-slate-200 px-4 py-3"
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-green-700 text-xs font-bold">
-                          {group.teeTime}
-                        </p>
-
-                        <p className="text-base font-black text-green-950">
-                          {group.name}
-                        </p>
-                      </div>
-
-                      <p className="text-sm font-black text-slate-700">
-                        ⛳ {group.thru}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                <p className="text-xs font-bold text-slate-500">
+                  Current Collapse
+                </p>
+                <p className="font-black text-green-950">
+                  Adam ↓
+                </p>
               </div>
-            </section>
 
+              <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                <p className="text-xs font-bold text-slate-500">
+                  Best Last 3 Holes
+                </p>
+                <p className="font-black text-green-950">
+                  Paul · 7 pts
+                </p>
+              </div>
 
+              <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                <p className="text-xs font-bold text-slate-500">
+                  💀 Blob King
+                </p>
+                <p className="font-black text-green-950">
+                  Taz · 3
+                </p>
+              </div>
 
+              <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                <p className="text-xs font-bold text-slate-500">
+                  Most Pars
+                </p>
+                <p className="font-black text-green-950">
+                  Carl · 5
+                </p>
+              </div>
 
-
-           <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4">
-  <h2 className="text-xl font-black text-green-950 mb-3">
-    Quick Stats
-  </h2>
-
-  <div className="grid grid-cols-2 gap-2 text-sm">
-   
-
-    <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-      <p className="text-xs font-bold text-slate-500">
-        Biggest Climber
-      </p>
-      <p className="font-black text-green-950">
-        Wrighty ↑
-      </p>
-    </div>
-
-    <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-      <p className="text-xs font-bold text-slate-500">
-        Current Collapse
-      </p>
-      <p className="font-black text-green-950">
-        Adam ↓
-      </p>
-    </div>
-
-    <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-      <p className="text-xs font-bold text-slate-500">
-        Best Last 3 Holes
-      </p>
-      <p className="font-black text-green-950">
-        Paul · 7 pts
-      </p>
-    </div>
-
-    <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-  <p className="text-xs font-bold text-slate-500">
-    💀 Blob King
-  </p>
-
-  <p className="font-black text-green-950">
-    Taz · 3
-  </p>
-</div>
-
- <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-      <p className="text-xs font-bold text-slate-500">
-        Most Pars
-      </p>
-      <p className="font-black text-green-950">
-        Carl · 5
-      </p>
-    </div>
-
-    <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-      <p className="text-xs font-bold text-slate-500">
-        Most Birdies
-      </p>
-      <p className="font-black text-green-950">
-        Phil · 2
-      </p>
-    </div>
-
-
-  </div>
-</section>
-
-
-
-          </div>
+              <div className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                <p className="text-xs font-bold text-slate-500">
+                  Most Birdies
+                </p>
+                <p className="font-black text-green-950">
+                  Phil · 2
+                </p>
+              </div>
+            </div>
+          </section>
         </div>
 
         <p className="text-xs text-slate-500">
