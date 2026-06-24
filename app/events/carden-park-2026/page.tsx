@@ -38,7 +38,7 @@ export default function EventsPage() {
         {
           time: "Post-Game Awards",
           title: "Winners Announced",
-          detail: "Celebrations, commiserations and excuses over a pint.",
+          detail: "Celebrations, commiserations and more excuses over a pint.",
         },
       ],
     },

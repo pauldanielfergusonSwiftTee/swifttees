@@ -65,7 +65,7 @@ export default function Home() {
         </h1>
 
         <p className="text-xl md:text-2xl text-slate-700 mb-8 max-w-3xl">
-          Questionable golf. Elite admin. Twelve lads chasing glory,
+          Questionable golf. Elite admin. One bunch of mates chasing glory,
           dignity and at least one fairway.
         </p>
 
@@ -93,11 +93,17 @@ export default function Home() {
                 26–27 July 2026
               </p>
 
-              <div className="mt-4 flex items-center gap-3 text-green-300 font-black">
-                <span className="text-3xl">⏳</span>
-                <span className="text-4xl md:text-5xl">{daysToCarden}</span>
-                <span className="text-xl md:text-2xl uppercase">Days To Go</span>
-              </div>
+              <div className="mt-4 flex items-center gap-3 text-green-300">
+  <span className="text-2xl">⏳</span>
+
+  <span className="text-3xl md:text-4xl font-black">
+    {daysToCarden}
+  </span>
+
+  <span className="text-lg md:text-xl font-bold uppercase">
+    Days To Go
+  </span>
+</div>
             </div>
           </div>
 
@@ -109,18 +115,19 @@ export default function Home() {
               >
                 📋 Weekend Details
               </a>
+ <a
+                href="/events/carden-park-2026/live-leaderboard"
+                className="rounded-2xl bg-white px-6 py-5 text-center font-black text-green-950 border border-slate-200 shadow-sm text-lg md:text-xl hover:border-green-700"
+              >
+                🏆 Live Leaderboard
+              </a>
 <a
   href="/weekend-bingo"
   className="rounded-2xl bg-white px-6 py-5 text-center font-black text-green-950 border border-slate-200 shadow-sm text-lg md:text-xl hover:border-green-700"
 >
   🎯 Carden Park Bingo
 </a>
-              <a
-                href="/events/carden-park-2026/live-leaderboard"
-                className="rounded-2xl bg-white px-6 py-5 text-center font-black text-green-950 border border-slate-200 shadow-sm text-lg md:text-xl hover:border-green-700"
-              >
-                🏆 Live Leaderboard
-              </a>
+             
             </div>
           </div>
         </div>
@@ -130,7 +137,7 @@ export default function Home() {
           className="block rounded-3xl bg-green-950 text-white p-6 md:p-8 border border-green-900 shadow-sm mb-8 hover:bg-green-900"
         >
           <p className="inline-block bg-white text-green-950 text-sm font-black uppercase tracking-wider px-3 py-1 rounded-full mb-5">
-            Register Interest
+            Upcoming Event. 
           </p>
 
           <div className="grid md:grid-cols-[1.5fr_1fr] gap-8 items-center">
@@ -141,7 +148,7 @@ export default function Home() {
 
               <p className="text-green-100 mb-6 text-lg">
                 Location and dates to be announced.
-                Add your name so we know who is interested.
+                Add your name and get involved.
               </p>
 
               <span className="inline-block rounded-full bg-white text-green-950 px-6 py-3 font-bold">
