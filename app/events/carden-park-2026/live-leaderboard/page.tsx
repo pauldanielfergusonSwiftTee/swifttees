@@ -59,23 +59,7 @@ export default function CardenParkLiveLeaderboardPage() {
           <p className="text-slate-600 mt-2 text-sm md:text-base max-w-3xl">
             Carden Park 2026 team standings, individual scores and live stats.
           </p>
-          <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3">
-  <a
-    href="/events/carden-park-2026/live-leaderboard/setup"
-    className="rounded-2xl bg-green-950 text-white px-4 py-3 text-center font-black"
-  >
-    ⚙️ Tournament Setup
-  </a>
-
-  <a
-    href="/events/carden-park-2026/live-leaderboard/live-scoring"
-    className="rounded-2xl bg-white text-green-950 border border-slate-200 px-4 py-3 text-center font-black"
-  >
-    ⛳ Live Scoring
-  </a>
-
- 
-</div>
+         
         </div>
 
         <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 md:p-5 mb-5">
@@ -272,7 +256,21 @@ export default function CardenParkLiveLeaderboardPage() {
             </div>
           </section>
         </div>
+<div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+  <a
+    href="/events/carden-park-2026/live-leaderboard/live-scoring"
+    className="rounded-2xl bg-green-950 text-white px-6 py-5 text-center font-black border border-green-900 shadow-sm text-lg hover:bg-green-900"
+  >
+    ⛳ Live Scoring
+  </a>
 
+  <a
+    href="/events/carden-park-2026/live-leaderboard/setup"
+    className="rounded-2xl bg-white text-green-950 px-6 py-5 text-center font-black border border-slate-200 shadow-sm text-lg hover:border-green-700"
+  >
+    ⚙️ Tournament Setup
+  </a>
+</div>
         <p className="text-xs text-slate-500">
           Mock data for layout testing. Live scoring will connect to Supabase next.
         </p>
