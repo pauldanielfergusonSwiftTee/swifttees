@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
 const players = [
   { position: 1, name: "Carl", team: "White", points: 15, thru: 7, movement: "↑" },
   { position: 2, name: "Phil", team: "Blue", points: 12, thru: 7, movement: "↑" },
@@ -31,8 +35,35 @@ function movementStyle(movement: string) {
   return "text-slate-400";
 }
 
+
+
 export default function CardenParkLiveLeaderboardPage() {
-  const topThree = players.slice(0, 3);
+const [lastUpdated, setLastUpdated] = useState(new Date());
+
+useEffect(() => {
+  const interval = setInterval(() => {
+    setLastUpdated(new Date());
+  }, 1000);
+
+  return () => clearInterval(interval);
+}, []);
+
+function timeAgo(date: Date) {
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+
+  if (seconds < 5) return "Updated just now";
+  if (seconds === 1) return "Updated 1 sec ago";
+  if (seconds < 60) return `Updated ${seconds} secs ago`;
+
+  const minutes = Math.floor(seconds / 60);
+
+  if (minutes === 1) return "Updated 1 min ago";
+
+  return `Updated ${minutes} mins ago`;
+}
+
+
+
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-900 p-4 md:p-8">
@@ -48,18 +79,15 @@ export default function CardenParkLiveLeaderboardPage() {
             </span>
 
             <span className="text-xs font-bold text-slate-500">
-              Updated 13:42
-            </span>
+  {timeAgo(lastUpdated)}
+</span>
           </div>
 
           <h1 className="text-3xl md:text-6xl font-black text-green-950">
             Live Leaderboard
           </h1>
 
-          <p className="text-slate-600 mt-2 text-sm md:text-base max-w-3xl">
-            Carden Park 2026 team standings, individual scores and live stats.
-          </p>
-         
+          
         </div>
 
         <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 md:p-5 mb-5">
@@ -109,38 +137,7 @@ export default function CardenParkLiveLeaderboardPage() {
           </div>
         </section>
 
-        <section className="rounded-3xl bg-green-950 text-white border border-green-900 shadow-sm p-5 md:p-6 mb-5">
-          <p className="text-green-300 font-bold text-sm mb-3">
-            Individual Podium
-          </p>
-
-          <div className="grid grid-cols-3 gap-3">
-            {topThree.map((player, index) => (
-              <div
-                key={player.name}
-                className={`rounded-2xl p-4 text-center ${
-                  index === 0 ? "bg-white text-green-950" : "bg-white/10 text-white"
-                }`}
-              >
-                <p className="text-2xl mb-1">
-                  {index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉"}
-                </p>
-
-                <p className="text-lg md:text-2xl font-black leading-tight">
-                  {player.name}
-                </p>
-
-                <p className={index === 0 ? "text-green-700 font-bold" : "text-green-100 font-bold"}>
-                  {player.points} pts
-                </p>
-
-                <p className={index === 0 ? "text-xs text-slate-500" : "text-xs text-green-200"}>
-                  thru {player.thru}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
+       
 
         <div className="grid lg:grid-cols-[1.45fr_0.8fr] gap-5 mb-5">
           <section className="rounded-3xl bg-white border border-slate-200 shadow-sm overflow-hidden">
