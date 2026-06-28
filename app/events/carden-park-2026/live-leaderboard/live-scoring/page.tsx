@@ -163,14 +163,23 @@ export default function LiveScoringPage() {
           </p>
 
           <h1 className="text-3xl md:text-6xl font-black text-green-950">
-            Live Scoring
+            Update Scorecards
           </h1>
 
           <p className="text-slate-600 mt-1 text-sm">
-            Pulling rounds, groups, players, handicaps and bonus holes from
-            Tournament Setup.
+            Enter scores hole-by-hole for your group. Team standings and the live leaderboard update automatically.
           </p>
         </div>
+
+<div className="mt-3">
+  <a
+  href="/events/carden-park-2026/live-leaderboard"
+  className="mt-5 mb-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-4 text-lg font-black text-green-950 shadow-sm transition hover:border-green-700 hover:bg-slate-50"
+>
+  🏆 Live Leaderboard
+</a>
+</div>
+
 
         <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-3 mb-4">
           <p className="text-sm font-bold text-green-700 mb-2">Select Round</p>
@@ -382,7 +391,7 @@ export default function LiveScoringPage() {
             onClick={saveHole}
             className="mt-4 w-full rounded-2xl bg-white text-green-950 px-5 py-4 text-xl font-black"
           >
-            Save Hole {hole} Scores
+            Update Hole {hole} Scorecards
           </button>
         </section>
 

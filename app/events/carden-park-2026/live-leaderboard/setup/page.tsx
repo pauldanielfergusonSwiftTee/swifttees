@@ -32,6 +32,50 @@ const rounds = [
   },
 ];
 
+const courseHoles: Record<string, any[]> = {
+  "Cheshire Course": [
+    { hole: 1, yards: 170, par: 3, strokeIndex: 17 },
+    { hole: 2, yards: 568, par: 5, strokeIndex: 7 },
+    { hole: 3, yards: 379, par: 4, strokeIndex: 9 },
+    { hole: 4, yards: 371, par: 4, strokeIndex: 15 },
+    { hole: 5, yards: 413, par: 4, strokeIndex: 3 },
+    { hole: 6, yards: 545, par: 5, strokeIndex: 5 },
+    { hole: 7, yards: 434, par: 4, strokeIndex: 13 },
+    { hole: 8, yards: 231, par: 3, strokeIndex: 11 },
+    { hole: 9, yards: 476, par: 4, strokeIndex: 1 },
+    { hole: 10, yards: 356, par: 4, strokeIndex: 16 },
+    { hole: 11, yards: 581, par: 5, strokeIndex: 6 },
+    { hole: 12, yards: 374, par: 4, strokeIndex: 4 },
+    { hole: 13, yards: 360, par: 4, strokeIndex: 8 },
+    { hole: 14, yards: 467, par: 5, strokeIndex: 10 },
+    { hole: 15, yards: 145, par: 3, strokeIndex: 18 },
+    { hole: 16, yards: 402, par: 4, strokeIndex: 2 },
+    { hole: 17, yards: 201, par: 3, strokeIndex: 12 },
+    { hole: 18, yards: 351, par: 4, strokeIndex: 14 },
+  ],
+  "Nicklaus Course": [
+    { hole: 1, yards: 445, par: 4, strokeIndex: 8 },
+    { hole: 2, yards: 363, par: 4, strokeIndex: 18 },
+    { hole: 3, yards: 201, par: 3, strokeIndex: 16 },
+    { hole: 4, yards: 546, par: 5, strokeIndex: 6 },
+    { hole: 5, yards: 446, par: 4, strokeIndex: 10 },
+    { hole: 6, yards: 373, par: 4, strokeIndex: 12 },
+    { hole: 7, yards: 423, par: 4, strokeIndex: 2 },
+    { hole: 8, yards: 174, par: 3, strokeIndex: 14 },
+    { hole: 9, yards: 568, par: 5, strokeIndex: 4 },
+    { hole: 10, yards: 424, par: 4, strokeIndex: 3 },
+    { hole: 11, yards: 454, par: 4, strokeIndex: 5 },
+    { hole: 12, yards: 230, par: 3, strokeIndex: 13 },
+    { hole: 13, yards: 574, par: 5, strokeIndex: 7 },
+    { hole: 14, yards: 355, par: 4, strokeIndex: 15 },
+    { hole: 15, yards: 425, par: 4, strokeIndex: 1 },
+    { hole: 16, yards: 159, par: 3, strokeIndex: 17 },
+    { hole: 17, yards: 378, par: 4, strokeIndex: 11 },
+    { hole: 18, yards: 507, par: 5, strokeIndex: 9 },
+  ],
+};
+
+
 type RoundSetup = {
   course: string;
   teeTimes: string[];
@@ -43,13 +87,13 @@ type RoundSetup = {
 };
 
 type SetupState = {
-  handicaps: Record<string, number>;
+  handicaps: Record<string, number | "">;
   rounds: Record<number, RoundSetup>;
 };
 
 function makeInitialSetup(): SetupState {
   return {
-    handicaps: Object.fromEntries(players.map((player) => [player, 0])),
+    handicaps: Object.fromEntries(players.map((player) => [player, ""])),
     rounds: Object.fromEntries(
       rounds.map((round) => [
         round.round,
@@ -70,6 +114,21 @@ function makeInitialSetup(): SetupState {
     ),
   };
 }
+
+const playerTeams: Record<string, string> = {
+  Gav: "White",
+  Wrighty: "White",
+  Carl: "White",
+  Adam: "White",
+  Dan: "Blue",
+  Liam: "Blue",
+  Stu: "Blue",
+  Phil: "Blue",
+  Painy: "Green",
+  Paul: "Green",
+  Ian: "Green",
+  Taz: "Green",
+};
 
 export default function TournamentSetupPage() {
   const [saved, setSaved] = useState(false);
@@ -105,10 +164,13 @@ export default function TournamentSetupPage() {
             players: group
               .filter((player) => player !== "")
               .map((player) => ({
-                name: player,
-                team: "",
-                eventHandicap: setup.handicaps[player] ?? 0,
-              })),
+  name: player,
+  team: playerTeams[player] || "",
+ eventHandicap:
+  setup.handicaps[player] === ""
+    ? 0
+    : setup.handicaps[player],
+})),
           })),
           bonusHoles: [
             ...roundSetup.longestDriveHoles.map((hole) => ({
@@ -122,12 +184,7 @@ export default function TournamentSetupPage() {
               points: roundSetup.nearestPinPoints,
             })),
           ],
-          holes: Array.from({ length: 18 }, (_, index) => ({
-            hole: index + 1,
-            par: 4,
-            yards: 0,
-            strokeIndex: index + 1,
-          })),
+          holes: courseHoles[roundSetup.course],
         };
       }),
     };
@@ -146,17 +203,17 @@ export default function TournamentSetupPage() {
     setOpenSection(openSection === section ? "" : section);
   }
 
-  function updateHandicap(player: string, value: string) {
-    setSaved(false);
+ function updateHandicap(player: string, value: number | "") {
+  setSaved(false);
 
-    setSetup((current) => ({
-      ...current,
-      handicaps: {
-        ...current.handicaps,
-        [player]: Number(value),
-      },
-    }));
-  }
+  setSetup((current) => ({
+    ...current,
+    handicaps: {
+      ...current.handicaps,
+      [player]: value,
+    },
+  }));
+}
 
   function updateRoundCourse(roundNumber: number, course: string) {
     setSaved(false);
@@ -267,7 +324,9 @@ export default function TournamentSetupPage() {
   }
 
   function handicapComplete() {
-    return Object.values(setup.handicaps).every((value) => value >= 0);
+   return Object.values(setup.handicaps).every(
+  (value) => value !== ""
+);
   }
 
   function roundComplete(roundNumber: number) {
@@ -404,13 +463,18 @@ export default function TournamentSetupPage() {
                     </label>
 
                     <input
-                      type="number"
-                      inputMode="numeric"
-                      min="0"
-                      value={setup.handicaps[player]}
-                      onChange={(e) => updateHandicap(player, e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 font-bold"
-                    />
+  type="number"
+  inputMode="numeric"
+  min="0"
+  value={setup.handicaps[player]}
+  onChange={(e) =>
+    updateHandicap(
+      player,
+      e.target.value === "" ? "" : Number(e.target.value)
+    )
+  }
+  className="w-full rounded-xl border border-slate-300 px-3 py-2 font-bold"
+/>
                   </div>
                 ))}
               </div>
@@ -522,12 +586,7 @@ export default function TournamentSetupPage() {
                             ))}
                           </div>
 
-                          <a
-                            href={`/events/carden-park-2026/live-leaderboard/live-scoring?group=${groupNumber}&round=${round.round}`}
-                            className="block mt-3 rounded-xl bg-green-950 text-white text-center px-4 py-3 font-black"
-                          >
-                            Open Scoring
-                          </a>
+                          
                         </div>
                       ))}
                     </div>
@@ -683,11 +742,11 @@ export default function TournamentSetupPage() {
           <p className="text-green-700 text-sm font-bold">Save Setup</p>
 
           <h2 className="text-2xl md:text-3xl font-black text-green-950 mb-2">
-            Ready for Scoring
+            Tournament Ready
           </h2>
 
           <p className="text-slate-600 text-sm mb-4">
-            Save the setup, then open the leaderboard or scorer links.
+            Save the setup, then start updating scorecards or view the live leaderboard.
           </p>
 
           <button
@@ -710,30 +769,12 @@ export default function TournamentSetupPage() {
                 🏆 View Live Leaderboard
               </a>
 
-              <div className="grid md:grid-cols-2 gap-3">
-                {rounds.map((round) => (
-                  <div
-                    key={round.round}
-                    className="rounded-2xl bg-slate-50 border border-slate-200 p-3"
-                  >
-                    <p className="text-sm font-black text-green-950 mb-2">
-                      {round.day} Scoring Links
-                    </p>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      {[1, 2, 3].map((groupNumber) => (
-                        <a
-                          key={groupNumber}
-                          href={`/events/carden-park-2026/live-leaderboard/live-scoring?group=${groupNumber}&round=${round.round}`}
-                          className="rounded-xl bg-white text-green-950 border border-slate-200 px-2 py-2 text-center text-sm font-black"
-                        >
-                          G{groupNumber}
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
+             <a
+  href="/events/carden-park-2026/live-leaderboard/live-scoring"
+ className="block rounded-2xl bg-green-950 text-white px-4 py-3 text-center font-black mt-3"
+>
+  ⛳ Update Scorecards
+</a>
             </div>
           )}
         </section>

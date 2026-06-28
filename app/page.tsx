@@ -125,7 +125,7 @@ export default function Home() {
       href="/events/carden-park-2026/live-leaderboard/live-scoring"
       className="rounded-2xl bg-white px-6 py-5 text-center font-black text-green-950 border border-slate-200 shadow-sm text-lg md:text-xl hover:border-green-700"
     >
-      ⛳ Live Scoring
+      ⛳ Update Scorecards
     </a>
 
     
