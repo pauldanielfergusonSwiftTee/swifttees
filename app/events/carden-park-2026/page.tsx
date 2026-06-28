@@ -119,7 +119,12 @@ export default function EventsPage() {
 >
   🏆 Live Leaderboard
 </a>
-
+<a
+  href="/events/carden-park-2026/live-leaderboard/live-scoring"
+  className="rounded-2xl bg-white text-green-950 px-5 py-4 text-center font-black"
+>
+  ⛳ Live Scoring
+</a>
 <a
   href="/events/carden-park-2026/live-leaderboard/setup"
   className="rounded-2xl bg-white text-green-950 px-5 py-4 text-center font-black"
@@ -127,12 +132,7 @@ export default function EventsPage() {
   ⚙️ Tournament Setup
 </a>
 
-<a
-  href="/events/carden-park-2026/live-leaderboard/live-scoring"
-  className="rounded-2xl bg-white text-green-950 px-5 py-4 text-center font-black"
->
-  ⛳ Live Scoring
-</a>
+
           </div>
         </section>
 
