@@ -105,27 +105,34 @@ export default function EventsPage() {
             accusations of handicap manipulation throughout the weekend.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <a
-              href="/weekend-bingo"
-              className="rounded-2xl bg-white text-green-950 px-5 py-4 text-center font-black"
-            >
-              🎯 Carden Park Bingo
-            </a>
+         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+           <a
+  href="/weekend-bingo"
+  className="rounded-2xl bg-white text-green-950 px-5 py-4 text-center font-black"
+>
+  🎯 Weekend Bingo
+</a>
 
-            <a
-              href="/events/carden-park-2026/live-leaderboard"
-              className="rounded-2xl bg-white text-green-950 px-5 py-4 text-center font-black"
-            >
-              🏆 Live Leaderboard
-            </a>
+<a
+  href="/events/carden-park-2026/live-leaderboard"
+  className="rounded-2xl bg-white text-green-950 px-5 py-4 text-center font-black"
+>
+  🏆 Live Leaderboard
+</a>
 
-            <a
-              href="/leaderboard"
-              className="rounded-2xl bg-white/10 border border-green-400 text-white px-5 py-4 text-center font-black"
-            >
-              📊 Society Standings
-            </a>
+<a
+  href="/events/carden-park-2026/live-leaderboard/setup"
+  className="rounded-2xl bg-white text-green-950 px-5 py-4 text-center font-black"
+>
+  ⚙️ Tournament Setup
+</a>
+
+<a
+  href="/events/carden-park-2026/live-leaderboard/live-scoring"
+  className="rounded-2xl bg-white text-green-950 px-5 py-4 text-center font-black"
+>
+  ⛳ Live Scoring
+</a>
           </div>
         </section>
 

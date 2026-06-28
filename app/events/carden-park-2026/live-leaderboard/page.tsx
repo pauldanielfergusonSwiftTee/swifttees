@@ -59,6 +59,23 @@ export default function CardenParkLiveLeaderboardPage() {
           <p className="text-slate-600 mt-2 text-sm md:text-base max-w-3xl">
             Carden Park 2026 team standings, individual scores and live stats.
           </p>
+          <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-3">
+  <a
+    href="/events/carden-park-2026/live-leaderboard/setup"
+    className="rounded-2xl bg-green-950 text-white px-4 py-3 text-center font-black"
+  >
+    ⚙️ Tournament Setup
+  </a>
+
+  <a
+    href="/events/carden-park-2026/live-leaderboard/live-scoring"
+    className="rounded-2xl bg-white text-green-950 border border-slate-200 px-4 py-3 text-center font-black"
+  >
+    ⛳ Live Scoring
+  </a>
+
+ 
+</div>
         </div>
 
         <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 md:p-5 mb-5">
