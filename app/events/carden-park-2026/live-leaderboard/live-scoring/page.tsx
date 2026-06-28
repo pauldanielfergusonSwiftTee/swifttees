@@ -8,6 +8,11 @@ function teamDot(team: string) {
   return "bg-slate-200 border border-slate-400";
 }
 
+function formatLabel(format: string) {
+  if (format === "scramblePairs") return "Scramble Pairs";
+  return "Stableford";
+}
+
 export default function LiveScoringPage() {
   const [tournamentSetup, setTournamentSetup] = useState<any>(null);
   const [roundId, setRoundId] = useState<number | null>(null);
@@ -43,7 +48,7 @@ export default function LiveScoringPage() {
 
           <p className="mt-2 text-slate-600 text-sm">
             Go to Tournament Setup first, save the event setup, then return to
-            Live Scoring.
+            Update Scorecards.
           </p>
 
           <a
@@ -65,34 +70,36 @@ export default function LiveScoringPage() {
     (group: any) => group.id === selectedGroupId
   );
 
+  const isScramble = currentRound.format === "scramblePairs";
+
   const currentHole = currentRound.holes.find((item: any) => item.hole === hole);
 
   const bonusHole = currentRound.bonusHoles?.find(
     (bonus: any) => bonus.hole === hole
   );
 
- const allRoundPlayers = Array.from(
-  new Set(
-    currentRound.groups.flatMap((group: any) =>
-      group.players.map((player: any) => player.name)
+  const allRoundPlayers = Array.from(
+    new Set(
+      currentRound.groups.flatMap((group: any) =>
+        group.players.map((player: any) => player.name)
+      )
     )
-  )
-);
+  );
 
-  function scoreKey(player: string, holeNumber = hole) {
-    return `${roundId}-${selectedGroupId}-${holeNumber}-${player}`;
+  function scoreKey(id: string, holeNumber = hole) {
+    return `${roundId}-${selectedGroupId}-${holeNumber}-${id}`;
   }
 
   function bonusKey(holeNumber = hole) {
     return `${roundId}-${holeNumber}`;
   }
 
-  function getScore(player: string) {
-    return scores[scoreKey(player)] || 0;
+  function getScore(id: string) {
+    return scores[scoreKey(id)] || 0;
   }
 
-  function changeScore(player: string, amount: number) {
-    const key = scoreKey(player);
+  function changeScore(id: string, amount: number) {
+    const key = scoreKey(id);
     const currentScore = scores[key] || 0;
     const newScore = Math.max(0, currentScore + amount);
 
@@ -102,8 +109,8 @@ export default function LiveScoringPage() {
     }));
   }
 
-  function setScore(player: string, value: string) {
-    const key = scoreKey(player);
+  function setScore(id: string, value: string) {
+    const key = scoreKey(id);
     const numberValue = Number(value);
 
     setScores((current) => ({
@@ -129,8 +136,10 @@ export default function LiveScoringPage() {
         ? ` Bonus winner: ${getBonusWinner()}.`
         : "";
 
+    const formatMessage = isScramble ? "scramble scores" : "scorecards";
+
     setSavedMessage(
-      `${currentRound.day} ${currentRound.course} — Hole ${hole} saved.${bonusMessage}`
+      `${currentRound.day} ${currentRound.course} — Hole ${hole} ${formatMessage} updated.${bonusMessage}`
     );
 
     if (hole < 18) {
@@ -142,6 +151,12 @@ export default function LiveScoringPage() {
   }
 
   function holeHasScores(holeNumber: number) {
+    if (isScramble) {
+      return selectedGroup.pairs?.some(
+        (pair: any) => scores[scoreKey(pair.id, holeNumber)]
+      );
+    }
+
     return selectedGroup.players.some(
       (player: any) => scores[scoreKey(player.name, holeNumber)]
     );
@@ -163,23 +178,25 @@ export default function LiveScoringPage() {
           </p>
 
           <h1 className="text-3xl md:text-6xl font-black text-green-950">
-            Update Scorecards
+            {isScramble ? "Update Scramble Scorecards" : "Update Scorecards"}
           </h1>
 
           <p className="text-slate-600 mt-1 text-sm">
-            Enter scores hole-by-hole for your group. Team standings and the live leaderboard update automatically.
+            {isScramble
+              ? "Enter one score per scramble pair for each hole."
+              : "Enter scores hole-by-hole for your group."}{" "}
+            Team standings and the live leaderboard update automatically.
           </p>
         </div>
 
-<div className="mt-3">
-  <a
-  href="/events/carden-park-2026/live-leaderboard"
-  className="mt-5 mb-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-4 text-lg font-black text-green-950 shadow-sm transition hover:border-green-700 hover:bg-slate-50"
->
-  🏆 Live Leaderboard
-</a>
-</div>
-
+        <div className="mt-3">
+          <a
+            href="/events/carden-park-2026/live-leaderboard"
+            className="mt-5 mb-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-4 text-lg font-black text-green-950 shadow-sm transition hover:border-green-700 hover:bg-slate-50"
+          >
+            🏆 Live Leaderboard
+          </a>
+        </div>
 
         <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-3 mb-4">
           <p className="text-sm font-bold text-green-700 mb-2">Select Round</p>
@@ -202,6 +219,9 @@ export default function LiveScoringPage() {
               >
                 <span className="block text-sm">{round.day}</span>
                 <span className="block text-xs opacity-80">{round.course}</span>
+                <span className="block text-[11px] opacity-80 mt-1">
+                  {formatLabel(round.format)}
+                </span>
               </button>
             ))}
           </div>
@@ -241,11 +261,7 @@ export default function LiveScoringPage() {
 
             <p className="text-green-100 text-xs font-bold mt-1">
               {selectedGroup.name} • {selectedGroup.teeTime} •{" "}
-              {currentRound.tee}
-            </p>
-
-            <p className="text-green-200 text-xs font-bold mt-1">
-              {currentRound.format}
+              {formatLabel(currentRound.format)}
             </p>
 
             <h2 className="text-4xl font-black mt-2">⛳ Hole {hole} of 18</h2>
@@ -278,11 +294,11 @@ export default function LiveScoringPage() {
                 >
                   <option value="">Select winner from all players</option>
 
-               {allRoundPlayers.map((playerName: any, index: number) => (
-  <option key={`${playerName}-${index}`} value={playerName}>
-    {playerName}
-  </option>
-))}
+                  {allRoundPlayers.map((playerName: any, index: number) => (
+                    <option key={`${playerName}-${index}`} value={playerName}>
+                      {playerName}
+                    </option>
+                  ))}
                 </select>
 
                 {getBonusWinner() && (
@@ -332,53 +348,121 @@ export default function LiveScoringPage() {
           </div>
 
           <div className="space-y-3">
-            {selectedGroup.players.map((player: any) => (
-              <div
-                key={player.name}
-                className="rounded-2xl bg-white text-green-950 p-3 flex items-center justify-between gap-3"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span
-                    className={`h-3 w-3 rounded-full shrink-0 ${teamDot(
-                      player.team
-                    )}`}
-                  />
+            {!isScramble &&
+              selectedGroup.players.map((player: any) => (
+                <div
+                  key={player.name}
+                  className="rounded-2xl bg-white text-green-950 p-3 flex items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span
+                      className={`h-3 w-3 rounded-full shrink-0 ${teamDot(
+                        player.team
+                      )}`}
+                    />
 
-                  <div>
-                    <label className="text-xl font-black">{player.name}</label>
-                    <p className="text-xs font-bold text-slate-500">
-                      {player.team || "No Team"} • HCP {player.eventHandicap}
-                    </p>
+                    <div>
+                      <label className="text-xl font-black">
+                        {player.name}
+                      </label>
+                      <p className="text-xs font-bold text-slate-500">
+                        {player.team || "No Team"} • HCP{" "}
+                        {player.eventHandicap}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => changeScore(player.name, -1)}
+                      className="h-10 w-10 rounded-xl bg-slate-100 border border-slate-200 text-xl font-black"
+                    >
+                      −
+                    </button>
+
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="0"
+                      value={getScore(player.name) || ""}
+                      onChange={(e) => setScore(player.name, e.target.value)}
+                      className="w-16 rounded-xl border border-slate-300 px-2 py-2 text-center text-2xl font-black"
+                      placeholder="-"
+                    />
+
+                    <button
+                      onClick={() => changeScore(player.name, 1)}
+                      className="h-10 w-10 rounded-xl bg-slate-100 border border-slate-200 text-xl font-black"
+                    >
+                      +
+                    </button>
                   </div>
                 </div>
+              ))}
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => changeScore(player.name, -1)}
-                    className="h-10 w-10 rounded-xl bg-slate-100 border border-slate-200 text-xl font-black"
-                  >
-                    −
-                  </button>
+            {isScramble &&
+              selectedGroup.pairs?.map((pair: any) => (
+                <div
+                  key={pair.id}
+                  className="rounded-2xl bg-white text-green-950 p-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
 
-                  <input
-                    type="number"
-                    inputMode="numeric"
-                    min="0"
-                    value={getScore(player.name) || ""}
-                    onChange={(e) => setScore(player.name, e.target.value)}
-                    className="w-16 rounded-xl border border-slate-300 px-2 py-2 text-center text-2xl font-black"
-                    placeholder="-"
-                  />
 
-                  <button
-                    onClick={() => changeScore(player.name, 1)}
-                    className="h-10 w-10 rounded-xl bg-slate-100 border border-slate-200 text-xl font-black"
-                  >
-                    +
-                  </button>
+
+                    <p className="text-sm font-black text-green-700">
+  👥 Pair {pair.pairNumber}
+</p>
+
+<p className="text-2xl font-black text-green-950">
+  {pair.player1} + {pair.player2}
+</p>
+
+<div className="mt-2 inline-flex rounded-full bg-green-100 px-3 py-1">
+  <span className="text-sm font-black text-green-900">
+    {pair.finalHandicap} HCP
+  </span>
+</div>
+
+{pair.calculatedHandicap !== pair.finalHandicap && (
+  <p className="mt-1 text-xs text-slate-500">
+    Calculated: {pair.calculatedHandicap}
+  </p>
+)}
+
+
+
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => changeScore(pair.id, -1)}
+                        className="h-10 w-10 rounded-xl bg-slate-100 border border-slate-200 text-xl font-black"
+                      >
+                        −
+                      </button>
+
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min="0"
+                        value={getScore(pair.id) || ""}
+                        onChange={(e) => setScore(pair.id, e.target.value)}
+                        className="w-16 rounded-xl border border-slate-300 px-2 py-2 text-center text-2xl font-black"
+                        placeholder="-"
+                      />
+
+                      <button
+                        onClick={() => changeScore(pair.id, 1)}
+                        className="h-10 w-10 rounded-xl bg-slate-100 border border-slate-200 text-xl font-black"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
           </div>
 
           {savedMessage && (
@@ -391,7 +475,9 @@ export default function LiveScoringPage() {
             onClick={saveHole}
             className="mt-4 w-full rounded-2xl bg-white text-green-950 px-5 py-4 text-xl font-black"
           >
-            Update Hole {hole} Scorecards
+            {isScramble
+              ? `Update Hole ${hole} Scramble Scores`
+              : `Update Hole ${hole} Scorecards`}
           </button>
         </section>
 
