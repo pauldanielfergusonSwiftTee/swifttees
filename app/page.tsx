@@ -108,28 +108,29 @@ export default function Home() {
           </div>
 
           <div className="pt-6 pb-2">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-5xl mx-auto">
-              <a
-                href="/events/carden-park-2026"
-                className="rounded-2xl bg-white px-6 py-5 text-center font-black text-green-950 border border-slate-200 shadow-sm text-lg md:text-xl hover:border-green-700"
-              >
-                📋 Weekend Details
-              </a>
- <a
-                href="/events/carden-park-2026/live-leaderboard"
-                className="rounded-2xl bg-white px-6 py-5 text-center font-black text-green-950 border border-slate-200 shadow-sm text-lg md:text-xl hover:border-green-700"
-              >
-                🏆 Live Leaderboard
-              </a>
+  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-5xl mx-auto">
+    <a
+      href="/events/carden-park-2026"
+      className="rounded-2xl bg-white px-6 py-5 text-center font-black text-green-950 border border-slate-200 shadow-sm text-lg md:text-xl hover:border-green-700"
+    >
+      📋 Weekend Details
+    </a>
 <a
-  href="/weekend-bingo"
-  className="rounded-2xl bg-white px-6 py-5 text-center font-black text-green-950 border border-slate-200 shadow-sm text-lg md:text-xl hover:border-green-700"
->
-  🎯 Carden Park Bingo
-</a>
-             
-            </div>
-          </div>
+      href="/events/carden-park-2026/live-leaderboard"
+      className="rounded-2xl bg-white px-6 py-5 text-center font-black text-green-950 border border-slate-200 shadow-sm text-lg md:text-xl hover:border-green-700"
+    >
+      🏆 Live Leaderboard
+    </a>
+    <a
+      href="/events/carden-park-2026/live-leaderboard/live-scoring"
+      className="rounded-2xl bg-white px-6 py-5 text-center font-black text-green-950 border border-slate-200 shadow-sm text-lg md:text-xl hover:border-green-700"
+    >
+      ⛳ Live Scoring
+    </a>
+
+    
+  </div>
+</div>
         </div>
 
         <a
