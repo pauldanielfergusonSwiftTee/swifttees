@@ -94,9 +94,7 @@ export default function Home() {
           </div>
 
           <div className="mt-auto pb-8 text-white">
-            <p className="inline-block rounded-full bg-green-500 px-4 py-2 text-xs font-black uppercase tracking-wider mb-4">
-              Next Swift Tees Event
-            </p>
+           
 
             <h1 className="text-5xl md:text-8xl font-black tracking-tight leading-none mb-4">
               Swift Tees
@@ -106,7 +104,9 @@ export default function Home() {
               Questionable golf. Elite admin. One bunch of mates chasing glory,
               bragging rights and hopefully a fairway.
             </p>
-
+<p className="inline-flex items-center gap-2 rounded-full bg-green-500 px-4 py-2 text-xs font-black uppercase tracking-wider mb-4">
+  🟢 Next Swift Tees Event
+</p>
             <div className="rounded-3xl bg-white/10 border border-white/20 backdrop-blur p-4 md:p-6 mb-5">
               <p className="text-green-300 text-sm font-black uppercase tracking-wider">
                 Carden Park Weekend
