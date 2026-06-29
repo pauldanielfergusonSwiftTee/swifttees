@@ -105,13 +105,8 @@ export default function EventsPage() {
             accusations of handicap manipulation throughout the weekend.
           </p>
 
-         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-           <a
-  href="/weekend-bingo"
-  className="rounded-2xl bg-white text-green-950 px-5 py-4 text-center font-black"
->
-  🎯 Weekend Bingo
-</a>
+         <div className="grid grid-cols-3 md:grid-cols-3 gap-4">
+       
 
 <a
   href="/events/carden-park-2026/live-leaderboard"

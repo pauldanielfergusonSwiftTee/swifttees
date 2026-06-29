@@ -21,6 +21,9 @@ export default function LiveScoringPage() {
   const [scores, setScores] = useState<Record<string, number>>({});
   const [bonusWinners, setBonusWinners] = useState<Record<string, string>>({});
   const [savedMessage, setSavedMessage] = useState("");
+const [showRoundSelector, setShowRoundSelector] = useState(false);
+const [showGroupSelector, setShowGroupSelector] = useState(false);
+
 
   useEffect(() => {
     const savedSetup = localStorage.getItem("swiftTeesTournamentSetup");
@@ -198,75 +201,136 @@ export default function LiveScoringPage() {
           </a>
         </div>
 
-        <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-3 mb-4">
-          <p className="text-sm font-bold text-green-700 mb-2">Select Round</p>
+{/* Round / Group Selectors */}
 
-          <div className="grid grid-cols-2 gap-2">
-            {tournamentSetup.rounds.map((round: any) => (
-              <button
-                key={round.id}
-                onClick={() => {
-                  setRoundId(round.id);
-                  setSelectedGroupId(round.groups?.[0]?.id ?? null);
-                  setHole(1);
-                  setSavedMessage("");
-                }}
-                className={`rounded-2xl p-3 text-center font-black border ${
-                  roundId === round.id
-                    ? "bg-green-950 text-white border-green-900"
-                    : "bg-slate-50 text-green-950 border-slate-200"
-                }`}
-              >
-                <span className="block text-sm">{round.day}</span>
-                <span className="block text-xs opacity-80">{round.course}</span>
-                <span className="block text-[11px] opacity-80 mt-1">
-                  {formatLabel(round.format)}
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
+<div className="grid grid-cols-2 gap-3 mb-3">
+  {/* Course */}
 
-        <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-3 mb-4">
-          <p className="text-sm font-bold text-green-700 mb-2">Select Group</p>
+  <button
+    onClick={() => {
+      setShowRoundSelector(!showRoundSelector);
+      setShowGroupSelector(false);
+    }}
+    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm hover:border-green-700 transition"
+  >
+    <div className="flex items-center justify-between">
+      <p className="text-2xl font-black text-green-950 truncate">
+        {currentRound.course}
+      </p>
 
-          <div className="grid grid-cols-3 gap-2">
-            {currentRound.groups.map((group: any) => (
-              <button
-                key={group.id}
-                onClick={() => {
-                  setSelectedGroupId(group.id);
-                  setSavedMessage("");
-                }}
-                className={`rounded-2xl p-3 text-center font-black border ${
-                  selectedGroupId === group.id
-                    ? "bg-green-950 text-white border-green-900"
-                    : "bg-slate-50 text-green-950 border-slate-200"
-                }`}
-              >
-                <span className="block text-sm">{group.name}</span>
-                <span className="block text-xs opacity-80">
-                  {group.teeTime}
-                </span>
-              </button>
-            ))}
-          </div>
-        </section>
+      <span className="text-green-700 text-xl font-black">
+        {showRoundSelector ? "▲" : "▼"}
+      </span>
+    </div>
+
+   <p className="mt-2 text-xs font-bold text-slate-400 text-left">
+  Change
+</p>
+  </button>
+
+  {/* Group */}
+
+  <button
+    onClick={() => {
+      setShowGroupSelector(!showGroupSelector);
+      setShowRoundSelector(false);
+    }}
+    className="rounded-2xl border border-slate-200 bg-white px-4 py-3  shadow-sm hover:border-green-700 transition"
+  >
+    <div className="flex items-center justify-between">
+      <p className="text-2xl font-black text-green-950">
+        {selectedGroup.name}
+      </p>
+
+      <span className="text-green-700 text-xl font-black">
+        {showGroupSelector ? "▲" : "▼"}
+      </span>
+    </div>
+
+   <p className="mt-2 text-xs font-bold text-slate-400 text-left">
+  Change
+</p>
+  </button>
+</div>
+
+{showRoundSelector && (
+  <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-3 mb-3">
+    <div className="grid grid-cols-2 gap-2">
+      {tournamentSetup.rounds.map((round: any) => (
+        <button
+          key={round.id}
+          onClick={() => {
+            setRoundId(round.id);
+            setSelectedGroupId(round.groups?.[0]?.id ?? null);
+            setHole(1);
+            setSavedMessage("");
+            setShowRoundSelector(false);
+          }}
+          className={`rounded-2xl p-3 text-center font-black border ${
+            roundId === round.id
+              ? "bg-green-950 text-white border-green-900"
+              : "bg-slate-50 text-green-950 border-slate-200"
+          }`}
+        >
+          <span className="block text-lg">{round.course}</span>
+
+          <span className="block text-xs opacity-80 mt-1">
+            {round.day}
+          </span>
+        </button>
+      ))}
+    </div>
+  </section>
+)}
+
+{showGroupSelector && (
+  <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-3 mb-3">
+    <div className="grid grid-cols-3 gap-2">
+      {currentRound.groups.map((group: any) => (
+        <button
+          key={group.id}
+          onClick={() => {
+            setSelectedGroupId(group.id);
+            setSavedMessage("");
+            setShowGroupSelector(false);
+          }}
+          className={`rounded-2xl p-3 text-center font-black border ${
+            selectedGroupId === group.id
+              ? "bg-green-950 text-white border-green-900"
+              : "bg-slate-50 text-green-950 border-slate-200"
+          }`}
+        >
+          <span className="block text-base">
+            {group.name}
+          </span>
+
+          <span className="block text-xs opacity-80 mt-1">
+            {group.teeTime}
+          </span>
+        </button>
+      ))}
+    </div>
+  </section>
+)}
+
+
+
+
+
+
+
+  
 
         <section className="rounded-3xl bg-green-950 text-white border border-green-900 shadow-sm p-4 mb-4">
           <div className="text-center mb-4">
-            <p className="text-green-300 text-xs font-black uppercase tracking-wider">
-              {currentRound.day} • {currentRound.course}
-            </p>
+     
 
-            <p className="text-green-100 text-xs font-bold mt-1">
-              {selectedGroup.name} • {selectedGroup.teeTime} •{" "}
-              {formatLabel(currentRound.format)}
-            </p>
 
-            <h2 className="text-4xl font-black mt-2">⛳ Hole {hole} of 18</h2>
 
-            <div className="mt-2 flex justify-center gap-2 text-sm font-bold flex-wrap">
+<h2 className="text-5xl font-black leading-none">
+  Hole {hole}
+</h2>
+            <div className="mt-2 flex justify-center gap-2 text-m font-bold flex-wrap">
               <span className="rounded-full bg-white/10 px-3 py-1">
                 Par {currentHole.par}
               </span>
@@ -279,6 +343,51 @@ export default function LiveScoringPage() {
                 {currentHole.yards} yds
               </span>
             </div>
+
+
+<div className="mt-4 grid grid-cols-9 gap-2">
+  {currentRound.holes.map((item: any) => {
+    const holeNumber = item.hole;
+    const hasScores = holeHasScores(holeNumber);
+    const hasBonus = currentRound.bonusHoles?.some(
+      (bonus: any) => bonus.hole === holeNumber
+    );
+    const bonusWinner = getBonusWinner(holeNumber);
+
+    return (
+      <button
+        key={holeNumber}
+        onClick={() => {
+          setHole(holeNumber);
+          setSavedMessage("");
+        }}
+        className={`relative rounded-xl py-3 text-base font-black border ${
+          hole === holeNumber
+            ? "bg-white text-green-950 border-white"
+            : hasScores
+            ? "bg-green-500 text-white border-green-400"
+            : "bg-white/10 text-white border-white/20"
+        }`}
+      >
+        {holeNumber}
+
+        {hasBonus && (
+          <span
+            className={`absolute -top-1 -right-1 h-3 w-3 rounded-full border border-white ${
+              bonusWinner ? "bg-yellow-400" : "bg-yellow-200"
+            }`}
+          />
+        )}
+      </button>
+    );
+  })}
+</div>
+<div className="mt-3 flex flex-wrap justify-center gap-4 text-xs font-bold text-green-100">
+  <span>🟩 Saved</span>
+  <span>⬜ Current</span>
+  <span>⬛ Empty</span>
+  <span>⭐ Bonus</span>
+</div>
 
             {bonusHole && (
               <div className="mt-3 rounded-2xl bg-yellow-300 text-green-950 px-4 py-3 text-sm font-black">
@@ -310,42 +419,7 @@ export default function LiveScoringPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            <button
-              onClick={() => {
-                setHole((current) => Math.max(1, current - 1));
-                setSavedMessage("");
-              }}
-              className="rounded-xl bg-white/10 px-3 py-3 font-bold"
-            >
-              ← Prev
-            </button>
-
-            <select
-              value={hole}
-              onChange={(e) => {
-                setHole(Number(e.target.value));
-                setSavedMessage("");
-              }}
-              className="rounded-xl bg-white text-green-950 px-3 py-3 font-black text-center"
-            >
-              {currentRound.holes.map((item: any) => (
-                <option key={item.hole} value={item.hole}>
-                  Hole {item.hole}
-                </option>
-              ))}
-            </select>
-
-            <button
-              onClick={() => {
-                setHole((current) => Math.min(18, current + 1));
-                setSavedMessage("");
-              }}
-              className="rounded-xl bg-white/10 px-3 py-3 font-bold"
-            >
-              Next →
-            </button>
-          </div>
+          
 
           <div className="space-y-3">
             {!isScramble &&
@@ -481,56 +555,7 @@ export default function LiveScoringPage() {
           </button>
         </section>
 
-        <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-3">
-          <h2 className="text-xl font-black text-green-950 mb-3">
-            Hole Overview
-          </h2>
-
-          <div className="grid grid-cols-9 gap-2">
-            {currentRound.holes.map((item: any) => {
-              const holeNumber = item.hole;
-              const hasScores = holeHasScores(holeNumber);
-              const hasBonus = currentRound.bonusHoles?.some(
-                (bonus: any) => bonus.hole === holeNumber
-              );
-              const bonusWinner = getBonusWinner(holeNumber);
-
-              return (
-                <button
-                  key={holeNumber}
-                  onClick={() => {
-                    setHole(holeNumber);
-                    setSavedMessage("");
-                  }}
-                  className={`rounded-xl py-2 text-sm font-black border relative ${
-                    hole === holeNumber
-                      ? "bg-green-950 text-white border-green-900"
-                      : hasScores
-                      ? "bg-green-100 text-green-950 border-green-300"
-                      : "bg-slate-50 text-slate-500 border-slate-200"
-                  }`}
-                >
-                  {holeNumber}
-
-                  {hasBonus && (
-                    <span
-                      className={`absolute -top-1 -right-1 h-3 w-3 rounded-full border border-white ${
-                        bonusWinner ? "bg-yellow-400" : "bg-yellow-200"
-                      }`}
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="mt-3 grid grid-cols-4 gap-2 text-xs font-bold text-slate-500">
-            <p>🟩 Saved</p>
-            <p>⬛ Current</p>
-            <p>⬜ Empty</p>
-            <p>⭐ Bonus</p>
-          </div>
-        </section>
+        
 
         <div className="mt-4 text-center">
           <a
