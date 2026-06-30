@@ -1,0 +1,21 @@
+import { supabase } from "./supabase";
+
+export async function saveHoleScores(rows: any[]) {
+  const { error } = await supabase
+    .from("scores")
+    .upsert(rows, {
+      onConflict: "event_slug,round_number,player_id,hole_number",
+    });
+
+  if (error) throw error;
+}
+
+export async function saveBonusWinner(data: any) {
+  const { error } = await supabase
+    .from("bonus_winners")
+    .upsert(data, {
+      onConflict: "event_slug,round_number,hole_number,bonus_type",
+    });
+
+  if (error) throw error;
+}

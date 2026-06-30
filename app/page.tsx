@@ -102,7 +102,7 @@ export default function Home() {
 
             <p className="text-xl md:text-3xl font-bold text-green-100 max-w-3xl mb-6">
               Questionable golf. Elite admin. One bunch of mates chasing glory,
-              bragging rights and hopefully a fairway.
+              bragging rights and hopefully a fairway or two.
             </p>
 <p className="inline-flex items-center gap-2 rounded-full bg-green-500 px-4 py-2 text-xs font-black uppercase tracking-wider mb-4">
   🟢 Next Swift Tees Event

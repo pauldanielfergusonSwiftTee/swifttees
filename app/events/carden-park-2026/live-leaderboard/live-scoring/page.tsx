@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { saveHoleScores, saveBonusWinner } from "@/lib/scores";
+import { getTournamentSetupForUI } from "@/lib/tournaments";
+
+const EVENT_SLUG = "carden-park-2026";
 
 function teamDot(team: string) {
   if (team === "Blue") return "bg-blue-500";
@@ -8,9 +12,27 @@ function teamDot(team: string) {
   return "bg-slate-200 border border-slate-400";
 }
 
-function formatLabel(format: string) {
-  if (format === "scramblePairs") return "Scramble Pairs";
-  return "Stableford";
+function calculateStablefordPoints(
+  grossScore: number,
+  par: number,
+  strokeIndex: number,
+  handicap: number
+) {
+  if (!grossScore || grossScore <= 0) return 0;
+
+  const baseShots = Math.floor(handicap / 18);
+  const extraShots = handicap % 18;
+  const shotsReceived = baseShots + (strokeIndex <= extraShots ? 1 : 0);
+
+  const netScore = grossScore - shotsReceived;
+  const scoreVsPar = netScore - par;
+
+  if (scoreVsPar <= -3) return 5;
+  if (scoreVsPar === -2) return 4;
+  if (scoreVsPar === -1) return 3;
+  if (scoreVsPar === 0) return 2;
+  if (scoreVsPar === 1) return 1;
+  return 0;
 }
 
 export default function LiveScoringPage() {
@@ -21,25 +43,31 @@ export default function LiveScoringPage() {
   const [scores, setScores] = useState<Record<string, number>>({});
   const [bonusWinners, setBonusWinners] = useState<Record<string, string>>({});
   const [savedMessage, setSavedMessage] = useState("");
-const [showRoundSelector, setShowRoundSelector] = useState(false);
-const [showGroupSelector, setShowGroupSelector] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showRoundSelector, setShowRoundSelector] = useState(false);
+  const [showGroupSelector, setShowGroupSelector] = useState(false);
 
 
-  useEffect(() => {
-    const savedSetup = localStorage.getItem("swiftTeesTournamentSetup");
 
-    if (savedSetup) {
-      const parsedSetup = JSON.parse(savedSetup);
-      setTournamentSetup(parsedSetup);
+useEffect(() => {
+  async function loadTournamentSetup() {
+    try {
+      const setup = await getTournamentSetupForUI();
+      setTournamentSetup(setup);
 
-      const firstRound = parsedSetup.rounds?.[0];
+      const firstRound = setup.rounds?.[0];
 
       if (firstRound) {
         setRoundId(firstRound.id);
         setSelectedGroupId(firstRound.groups?.[0]?.id ?? null);
       }
+    } catch (error) {
+      console.error("Could not load tournament setup from Supabase:", error);
     }
-  }, []);
+  }
+
+  loadTournamentSetup();
+}, []);
 
   if (!tournamentSetup || !roundId || !selectedGroupId) {
     return (
@@ -133,23 +161,108 @@ const [showGroupSelector, setShowGroupSelector] = useState(false);
     return bonusWinners[bonusKey(holeNumber)] || "";
   }
 
-  function saveHole() {
-    const bonusMessage =
-      bonusHole && getBonusWinner()
-        ? ` Bonus winner: ${getBonusWinner()}.`
-        : "";
+  async function saveHole() {
+    setIsSaving(true);
+    setSavedMessage("");
 
-    const formatMessage = isScramble ? "scramble scores" : "scorecards";
+    try {
+      let rowsToSave: any[] = [];
 
-    setSavedMessage(
-      `${currentRound.day} ${currentRound.course} — Hole ${hole} ${formatMessage} updated.${bonusMessage}`
-    );
+      if (isScramble) {
+        rowsToSave =
+          selectedGroup.pairs
+            ?.map((pair: any) => {
+              const grossScore = getScore(pair.id);
 
-    if (hole < 18) {
-      setTimeout(() => {
-        setHole((current) => current + 1);
-        setSavedMessage("");
-      }, 800);
+              if (!grossScore) return null;
+
+              return {
+                event_slug: EVENT_SLUG,
+                round_number: currentRound.roundNumber ?? currentRound.id,
+                player_id: null,
+                hole_number: hole,
+                gross_score: grossScore,
+                group_number: selectedGroup.groupNumber ?? selectedGroup.id,
+                pair_number: pair.pairNumber,
+                score_type: "scramblePairs",
+                points: null,
+                event_handicap: pair.finalHandicap,
+              };
+            })
+            .filter(Boolean) ?? [];
+      } else {
+        rowsToSave = selectedGroup.players
+          .map((player: any) => {
+            const grossScore = getScore(player.name);
+
+            if (!grossScore) return null;
+
+            return {
+              event_slug: EVENT_SLUG,
+              round_number: currentRound.roundNumber ?? currentRound.id,
+             player_id: player.player_id,
+              hole_number: hole,
+              gross_score: grossScore,
+              group_number: selectedGroup.groupNumber ?? selectedGroup.id,
+              pair_number: null,
+              score_type: "stableford",
+              points: calculateStablefordPoints(
+                grossScore,
+                currentHole.par,
+                currentHole.strokeIndex,
+                player.eventHandicap
+              ),
+              event_handicap: player.eventHandicap,
+            };
+          })
+          .filter(Boolean);
+      }
+
+      
+if (rowsToSave.length > 0) {
+  await saveHoleScores(rowsToSave);
+}
+
+      
+
+      if (bonusHole && getBonusWinner()) {
+        
+        await saveBonusWinner({
+  event_slug: EVENT_SLUG,
+  round_number: currentRound.roundNumber ?? currentRound.id,
+  hole_number: hole,
+  bonus_type: bonusHole.type,
+  winner_player_id: getBonusWinner(),
+  points: bonusHole.points ?? 0,
+});
+
+       
+      }
+
+      const bonusMessage =
+        bonusHole && getBonusWinner()
+          ? ` Bonus winner: ${getBonusWinner()}.`
+          : "";
+
+      const formatMessage = isScramble ? "scramble scores" : "scorecards";
+
+      setSavedMessage(
+        `${currentRound.day} ${currentRound.course} — Hole ${hole} ${formatMessage} saved to Supabase.${bonusMessage}`
+      );
+
+      if (hole < 18) {
+        setTimeout(() => {
+          setHole((current) => current + 1);
+          setSavedMessage("");
+        }, 800);
+      }
+    } catch (error: any) {
+      console.error(error);
+      setSavedMessage(
+        `❌ Could not save hole ${hole}. ${error.message || "Please try again."}`
+      );
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -201,135 +314,114 @@ const [showGroupSelector, setShowGroupSelector] = useState(false);
           </a>
         </div>
 
-{/* Round / Group Selectors */}
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <button
+            onClick={() => {
+              setShowRoundSelector(!showRoundSelector);
+              setShowGroupSelector(false);
+            }}
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm hover:border-green-700 transition"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-2xl font-black text-green-950 truncate">
+                {currentRound.course}
+              </p>
 
-<div className="grid grid-cols-2 gap-3 mb-3">
-  {/* Course */}
+              <span className="text-green-700 text-xl font-black">
+                {showRoundSelector ? "▲" : "▼"}
+              </span>
+            </div>
 
-  <button
-    onClick={() => {
-      setShowRoundSelector(!showRoundSelector);
-      setShowGroupSelector(false);
-    }}
-    className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm hover:border-green-700 transition"
-  >
-    <div className="flex items-center justify-between">
-      <p className="text-2xl font-black text-green-950 truncate">
-        {currentRound.course}
-      </p>
+            <p className="mt-2 text-xs font-bold text-slate-400 text-left">
+              Change
+            </p>
+          </button>
 
-      <span className="text-green-700 text-xl font-black">
-        {showRoundSelector ? "▲" : "▼"}
-      </span>
-    </div>
+          <button
+            onClick={() => {
+              setShowGroupSelector(!showGroupSelector);
+              setShowRoundSelector(false);
+            }}
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm hover:border-green-700 transition"
+          >
+            <div className="flex items-center justify-between">
+              <p className="text-2xl font-black text-green-950">
+                {selectedGroup.name}
+              </p>
 
-   <p className="mt-2 text-xs font-bold text-slate-400 text-left">
-  Change
-</p>
-  </button>
+              <span className="text-green-700 text-xl font-black">
+                {showGroupSelector ? "▲" : "▼"}
+              </span>
+            </div>
 
-  {/* Group */}
+            <p className="mt-2 text-xs font-bold text-slate-400 text-left">
+              Change
+            </p>
+          </button>
+        </div>
 
-  <button
-    onClick={() => {
-      setShowGroupSelector(!showGroupSelector);
-      setShowRoundSelector(false);
-    }}
-    className="rounded-2xl border border-slate-200 bg-white px-4 py-3  shadow-sm hover:border-green-700 transition"
-  >
-    <div className="flex items-center justify-between">
-      <p className="text-2xl font-black text-green-950">
-        {selectedGroup.name}
-      </p>
+        {showRoundSelector && (
+          <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-3 mb-3">
+            <div className="grid grid-cols-2 gap-2">
+              {tournamentSetup.rounds.map((round: any) => (
+                <button
+                  key={round.id}
+                  onClick={() => {
+                    setRoundId(round.id);
+                    setSelectedGroupId(round.groups?.[0]?.id ?? null);
+                    setHole(1);
+                    setSavedMessage("");
+                    setShowRoundSelector(false);
+                  }}
+                  className={`rounded-2xl p-3 text-center font-black border ${
+                    roundId === round.id
+                      ? "bg-green-950 text-white border-green-900"
+                      : "bg-slate-50 text-green-950 border-slate-200"
+                  }`}
+                >
+                  <span className="block text-lg">{round.course}</span>
 
-      <span className="text-green-700 text-xl font-black">
-        {showGroupSelector ? "▲" : "▼"}
-      </span>
-    </div>
+                  <span className="block text-xs opacity-80 mt-1">
+                    {round.day}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
-   <p className="mt-2 text-xs font-bold text-slate-400 text-left">
-  Change
-</p>
-  </button>
-</div>
+        {showGroupSelector && (
+          <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-3 mb-3">
+            <div className="grid grid-cols-3 gap-2">
+              {currentRound.groups.map((group: any) => (
+                <button
+                  key={group.id}
+                  onClick={() => {
+                    setSelectedGroupId(group.id);
+                    setSavedMessage("");
+                    setShowGroupSelector(false);
+                  }}
+                  className={`rounded-2xl p-3 text-center font-black border ${
+                    selectedGroupId === group.id
+                      ? "bg-green-950 text-white border-green-900"
+                      : "bg-slate-50 text-green-950 border-slate-200"
+                  }`}
+                >
+                  <span className="block text-base">{group.name}</span>
 
-{showRoundSelector && (
-  <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-3 mb-3">
-    <div className="grid grid-cols-2 gap-2">
-      {tournamentSetup.rounds.map((round: any) => (
-        <button
-          key={round.id}
-          onClick={() => {
-            setRoundId(round.id);
-            setSelectedGroupId(round.groups?.[0]?.id ?? null);
-            setHole(1);
-            setSavedMessage("");
-            setShowRoundSelector(false);
-          }}
-          className={`rounded-2xl p-3 text-center font-black border ${
-            roundId === round.id
-              ? "bg-green-950 text-white border-green-900"
-              : "bg-slate-50 text-green-950 border-slate-200"
-          }`}
-        >
-          <span className="block text-lg">{round.course}</span>
-
-          <span className="block text-xs opacity-80 mt-1">
-            {round.day}
-          </span>
-        </button>
-      ))}
-    </div>
-  </section>
-)}
-
-{showGroupSelector && (
-  <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-3 mb-3">
-    <div className="grid grid-cols-3 gap-2">
-      {currentRound.groups.map((group: any) => (
-        <button
-          key={group.id}
-          onClick={() => {
-            setSelectedGroupId(group.id);
-            setSavedMessage("");
-            setShowGroupSelector(false);
-          }}
-          className={`rounded-2xl p-3 text-center font-black border ${
-            selectedGroupId === group.id
-              ? "bg-green-950 text-white border-green-900"
-              : "bg-slate-50 text-green-950 border-slate-200"
-          }`}
-        >
-          <span className="block text-base">
-            {group.name}
-          </span>
-
-          <span className="block text-xs opacity-80 mt-1">
-            {group.teeTime}
-          </span>
-        </button>
-      ))}
-    </div>
-  </section>
-)}
-
-
-
-
-
-
-
-  
+                  <span className="block text-xs opacity-80 mt-1">
+                    {group.teeTime}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="rounded-3xl bg-green-950 text-white border border-green-900 shadow-sm p-4 mb-4">
           <div className="text-center mb-4">
-     
+            <h2 className="text-5xl font-black leading-none">Hole {hole}</h2>
 
-
-
-<h2 className="text-5xl font-black leading-none">
-  Hole {hole}
-</h2>
             <div className="mt-2 flex justify-center gap-2 text-m font-bold flex-wrap">
               <span className="rounded-full bg-white/10 px-3 py-1">
                 Par {currentHole.par}
@@ -344,50 +436,50 @@ const [showGroupSelector, setShowGroupSelector] = useState(false);
               </span>
             </div>
 
+            <div className="mt-4 grid grid-cols-9 gap-2">
+              {currentRound.holes.map((item: any) => {
+                const holeNumber = item.hole;
+                const hasScores = holeHasScores(holeNumber);
+                const hasBonus = currentRound.bonusHoles?.some(
+                  (bonus: any) => bonus.hole === holeNumber
+                );
+                const bonusWinner = getBonusWinner(holeNumber);
 
-<div className="mt-4 grid grid-cols-9 gap-2">
-  {currentRound.holes.map((item: any) => {
-    const holeNumber = item.hole;
-    const hasScores = holeHasScores(holeNumber);
-    const hasBonus = currentRound.bonusHoles?.some(
-      (bonus: any) => bonus.hole === holeNumber
-    );
-    const bonusWinner = getBonusWinner(holeNumber);
+                return (
+                  <button
+                    key={holeNumber}
+                    onClick={() => {
+                      setHole(holeNumber);
+                      setSavedMessage("");
+                    }}
+                    className={`relative rounded-xl py-3 text-base font-black border ${
+                      hole === holeNumber
+                        ? "bg-white text-green-950 border-white"
+                        : hasScores
+                        ? "bg-green-500 text-white border-green-400"
+                        : "bg-white/10 text-white border-white/20"
+                    }`}
+                  >
+                    {holeNumber}
 
-    return (
-      <button
-        key={holeNumber}
-        onClick={() => {
-          setHole(holeNumber);
-          setSavedMessage("");
-        }}
-        className={`relative rounded-xl py-3 text-base font-black border ${
-          hole === holeNumber
-            ? "bg-white text-green-950 border-white"
-            : hasScores
-            ? "bg-green-500 text-white border-green-400"
-            : "bg-white/10 text-white border-white/20"
-        }`}
-      >
-        {holeNumber}
+                    {hasBonus && (
+                      <span
+                        className={`absolute -top-1 -right-1 h-3 w-3 rounded-full border border-white ${
+                          bonusWinner ? "bg-yellow-400" : "bg-yellow-200"
+                        }`}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
 
-        {hasBonus && (
-          <span
-            className={`absolute -top-1 -right-1 h-3 w-3 rounded-full border border-white ${
-              bonusWinner ? "bg-yellow-400" : "bg-yellow-200"
-            }`}
-          />
-        )}
-      </button>
-    );
-  })}
-</div>
-<div className="mt-3 flex flex-wrap justify-center gap-4 text-xs font-bold text-green-100">
-  <span>🟩 Saved</span>
-  <span>⬜ Current</span>
-  <span>⬛ Empty</span>
-  <span>⭐ Bonus</span>
-</div>
+            <div className="mt-3 flex flex-wrap justify-center gap-4 text-xs font-bold text-green-100">
+              <span>🟩 Entered</span>
+              <span>⬜ Current</span>
+              <span>⬛ Empty</span>
+              <span>⭐ Bonus</span>
+            </div>
 
             {bonusHole && (
               <div className="mt-3 rounded-2xl bg-yellow-300 text-green-950 px-4 py-3 text-sm font-black">
@@ -418,8 +510,6 @@ const [showGroupSelector, setShowGroupSelector] = useState(false);
               </div>
             )}
           </div>
-
-          
 
           <div className="space-y-3">
             {!isScramble &&
@@ -482,31 +572,25 @@ const [showGroupSelector, setShowGroupSelector] = useState(false);
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
+                      <p className="text-sm font-black text-green-700">
+                        👥 Pair {pair.pairNumber}
+                      </p>
 
+                      <p className="text-2xl font-black text-green-950">
+                        {pair.player1} + {pair.player2}
+                      </p>
 
+                      <div className="mt-2 inline-flex rounded-full bg-green-100 px-3 py-1">
+                        <span className="text-sm font-black text-green-900">
+                          {pair.finalHandicap} HCP
+                        </span>
+                      </div>
 
-                    <p className="text-sm font-black text-green-700">
-  👥 Pair {pair.pairNumber}
-</p>
-
-<p className="text-2xl font-black text-green-950">
-  {pair.player1} + {pair.player2}
-</p>
-
-<div className="mt-2 inline-flex rounded-full bg-green-100 px-3 py-1">
-  <span className="text-sm font-black text-green-900">
-    {pair.finalHandicap} HCP
-  </span>
-</div>
-
-{pair.calculatedHandicap !== pair.finalHandicap && (
-  <p className="mt-1 text-xs text-slate-500">
-    Calculated: {pair.calculatedHandicap}
-  </p>
-)}
-
-
-
+                      {pair.calculatedHandicap !== pair.finalHandicap && (
+                        <p className="mt-1 text-xs text-slate-500">
+                          Calculated: {pair.calculatedHandicap}
+                        </p>
+                      )}
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -541,21 +625,22 @@ const [showGroupSelector, setShowGroupSelector] = useState(false);
 
           {savedMessage && (
             <p className="mt-4 rounded-xl bg-green-600 px-4 py-3 text-center font-bold">
-              ✅ {savedMessage}
+              {savedMessage.startsWith("❌") ? savedMessage : `✅ ${savedMessage}`}
             </p>
           )}
 
           <button
             onClick={saveHole}
-            className="mt-4 w-full rounded-2xl bg-white text-green-950 px-5 py-4 text-xl font-black"
+            disabled={isSaving}
+            className="mt-4 w-full rounded-2xl bg-white text-green-950 px-5 py-4 text-xl font-black disabled:opacity-60"
           >
-            {isScramble
-              ? `Update Hole ${hole} Scramble Scores`
-              : `Update Hole ${hole} Scorecards`}
+            {isSaving
+              ? "Saving..."
+              : isScramble
+              ? `Save Hole ${hole} Scramble Scores`
+              : `Save Hole ${hole} Scorecards`}
           </button>
         </section>
-
-        
 
         <div className="mt-4 text-center">
           <a

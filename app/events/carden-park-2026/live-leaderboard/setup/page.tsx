@@ -1,20 +1,27 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getPlayers } from "@/lib/players";
+import { saveTournamentSetup } from "@/lib/tournaments";
 
-const players = [
-  "Gav",
-  "Wrighty",
-  "Carl",
-  "Adam",
-  "Dan",
-  "Liam",
-  "Stu",
-  "Phil",
-  "Painy",
-  "Paul",
-  "Ian",
-  "Taz",
+type Player = {
+  id: number;
+  name: string;
+};
+
+const fallbackPlayers: Player[] = [
+  { id: 1, name: "Gav" },
+  { id: 2, name: "Wrighty" },
+  { id: 3, name: "Carl" },
+  { id: 4, name: "Adam" },
+  { id: 5, name: "Dan" },
+  { id: 6, name: "Liam" },
+  { id: 7, name: "Stu" },
+  { id: 8, name: "Phil" },
+  { id: 9, name: "Painy" },
+  { id: 10, name: "Paul" },
+  { id: 11, name: "Ian" },
+  { id: 12, name: "Taz" },
 ];
 
 const rounds = [
@@ -117,7 +124,9 @@ type SetupState = {
 
 function makeInitialSetup(): SetupState {
   return {
-    handicaps: Object.fromEntries(players.map((player) => [player, ""])),
+    handicaps: Object.fromEntries(
+      fallbackPlayers.map((player) => [player.name, ""])
+    ),
     rounds: Object.fromEntries(
       rounds.map((round) => [
         round.round,
@@ -180,6 +189,35 @@ function normaliseSetup(savedSetup: SetupState): SetupState {
 }
 
 export default function TournamentSetupPage() {
+  const [players, setPlayers] = useState<Player[]>(fallbackPlayers);
+
+  useEffect(() => {
+    async function loadPlayers() {
+      try {
+        const supabasePlayers = await getPlayers();
+
+if (supabasePlayers.length > 0) {
+  setPlayers(supabasePlayers);
+} else {
+  console.warn("No players returned from Supabase, using fallback players");
+  setPlayers(fallbackPlayers);
+}
+
+        setSetup((current) => ({
+          ...current,
+          handicaps: {
+            ...Object.fromEntries(supabasePlayers.map((player) => [player.name, ""])),
+            ...current.handicaps,
+          },
+        }));
+      } catch (error) {
+        console.error("Could not load players:", error);
+        setPlayers(fallbackPlayers);
+      }
+    }
+
+    loadPlayers();
+  }, []);
   const [saved, setSaved] = useState(false);
   const [openSection, setOpenSection] = useState("handicaps");
   const [setup, setSetup] = useState<SetupState>(makeInitialSetup());
@@ -217,7 +255,11 @@ export default function TournamentSetupPage() {
     return "";
   }
 
-  function saveSetup() {
+  function getPlayerIdByName(playerName: string) {
+    return players.find((player) => player.name === playerName)?.id ?? null;
+  }
+
+ async function saveSetup() {
     const tournamentSetup = {
       eventName: "Carden Park 2026",
 
@@ -245,6 +287,7 @@ export default function TournamentSetupPage() {
               players: groupPlayers
                 .filter((player) => player !== "")
                 .map((player) => ({
+                  player_id: getPlayerIdByName(player),
                   name: player,
                   team: playerTeams[player] || "",
                   eventHandicap:
@@ -268,6 +311,8 @@ export default function TournamentSetupPage() {
                       return {
                         id: `${round.round}-${groupIndex + 1}-${pairIndex + 1}`,
                         pairNumber: pairIndex + 1,
+                        player1_id: getPlayerIdByName(pair.player1),
+                        player2_id: getPlayerIdByName(pair.player2),
                         player1: pair.player1,
                         player2: pair.player2,
                         calculatedHandicap,
@@ -301,7 +346,13 @@ export default function TournamentSetupPage() {
       JSON.stringify(tournamentSetup)
     );
 
-    setSaved(true);
+  try {
+  await saveTournamentSetup(tournamentSetup);
+  setSaved(true);
+} catch (error) {
+  console.error("Could not save tournament setup:", error);
+  alert("Could not save tournament setup. Check console for details.");
+}
   }
 
   function toggleSection(section: string) {
@@ -652,21 +703,21 @@ export default function TournamentSetupPage() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
                 {players.map((player) => (
                   <div
-                    key={player}
+                    key={player.id}
                     className="rounded-2xl bg-slate-50 border border-slate-200 p-3"
                   >
                     <label className="block text-sm font-black text-green-950 mb-1">
-                      {player}
+                      {player.name}
                     </label>
 
                     <input
                       type="number"
                       inputMode="numeric"
                       min="0"
-                      value={setup.handicaps[player]}
+                      value={setup.handicaps[player.name] ?? ""}
                       onChange={(e) =>
                         updateHandicap(
-                          player,
+                          player.name,
                           e.target.value === "" ? "" : Number(e.target.value)
                         )
                       }
@@ -816,8 +867,8 @@ export default function TournamentSetupPage() {
                                   <option value="">Player {slot}</option>
 
                                   {players.map((player) => (
-                                    <option key={player} value={player}>
-                                      {player}
+                                    <option key={player.id} value={player.name}>
+                                      {player.name}
                                     </option>
                                   ))}
                                 </select>
@@ -866,8 +917,8 @@ export default function TournamentSetupPage() {
                                         <option value="">Player 1</option>
 
                                         {players.map((player) => (
-                                          <option key={player} value={player}>
-                                            {player}
+                                          <option key={player.id} value={player.name}>
+                                            {player.name}
                                           </option>
                                         ))}
                                       </select>
@@ -888,8 +939,8 @@ export default function TournamentSetupPage() {
                                         <option value="">Player 2</option>
 
                                         {players.map((player) => (
-                                          <option key={player} value={player}>
-                                            {player}
+                                          <option key={player.id} value={player.name}>
+                                            {player.name}
                                           </option>
                                         ))}
                                       </select>
