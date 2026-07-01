@@ -36,16 +36,16 @@ export default function BottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
-      <div className="mx-auto grid max-w-md grid-cols-5 gap-1 px-2 py-2">
+      <div className="mx-auto grid max-w-md grid-cols-5 gap-1 px-2 py-1">
         {navItems.map((item) => {
           const isScorecard = pathname.includes("/live-scoring");
 
 const isActive =
-  item.label === "Home"
+  item.href === "/"
     ? pathname === "/"
-    : item.label === "Scorecard"
+    : item.href.includes("live-scoring")
     ? isScorecard
-    : item.label === "Carden"
+    : item.href === "/events/carden-park-2026"
     ? pathname.startsWith("/events/carden-park-2026") && !isScorecard
     : pathname === item.href || pathname.startsWith(item.href + "/");
 
@@ -53,7 +53,7 @@ const isActive =
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center rounded-2xl px-2 py-2 text-xs font-semibold transition-all duration-200 ${
+              className={`flex flex-col items-center justify-center rounded-2xl px-2 py-1.5 text-xs font-semibold transition-all duration-200 ${
                 isActive
                   ? "bg-green-700 text-white shadow-md"
                   : "text-slate-500 hover:bg-green-50 hover:text-green-700"

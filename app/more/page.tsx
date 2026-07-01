@@ -6,11 +6,16 @@ const moreLinks = [
   {
     title: "Overall Leaderboard",
     description: "Full standings and detailed results.",
-    href: "/leaderboard",
+    href: "/overall-leaderboard",
     icon: "🏆",
   },
 
-
+{
+  title: "Past Events",
+  description: "Browse previous Swift Tees weekends.",
+  href: "/events",
+  icon: "📅",
+},
   {
     title: "Hall of Fame",
     description: "Past winners, legends and questionable achievements.",
@@ -32,7 +37,7 @@ export default function MorePage() {
       <PageHeader
         eyebrow="Swift Tees"
         title="More"
-        subtitle="Everything else around the weekend."
+        subtitle="Explore Swift Tees beyond the live weekend."
       />
 
       <div className="grid gap-3">

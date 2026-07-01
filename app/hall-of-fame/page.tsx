@@ -1,17 +1,18 @@
+import PageContainer from "@/components/PageContainer";
+
 const awards = [
-   {
+  {
     icon: "🏌️",
     title: "Most Trips Attended",
     winner: "TBC",
     description: "Elite commitment to the cause.",
   },
-    {
+  {
     icon: "🏆",
     title: "Society Champion",
     winner: "TBC",
     description: "Current holder of the bragging rights.",
   },
- 
   {
     icon: "🎯",
     title: "Nearest Pin King",
@@ -40,32 +41,41 @@ const awards = [
 
 export default function HallOfFamePage() {
   return (
-    <main className="min-h-screen bg-green-950 text-white p-8">
-      <div className="max-w-6xl mx-auto">
-        <a href="/" className="text-green-300 text-sm">← Back to home</a>
+    <PageContainer className="bg-green-950 text-white">
+      <a href="/" className="text-green-300 text-sm">
+        ← Back to home
+      </a>
 
-        <h1 className="text-6xl font-black mt-6 mb-2">Hall of Fame</h1>
+      <h1 className="mt-6 mb-2 text-6xl font-black">
+        🏛️ Hall of Fame
+      </h1>
 
-        <p className="text-green-300 mb-10">
-          Glory, shame and highly questionable achievements.
-        </p>
+      <p className="mb-10 text-green-300">
+        Glory, shame and highly questionable achievements.
+      </p>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          {awards.map((award) => (
-            <div
-              key={award.title}
-              className="rounded-2xl bg-green-900 p-6 border border-green-800"
-            >
-              <p className="text-5xl mb-4">{award.icon}</p>
-              <h2 className="text-2xl font-black mb-2">{award.title}</h2>
-              <p className="text-green-300 font-bold mb-3">{award.winner}</p>
-              <p className="text-green-100 text-sm leading-6">
-                {award.description}
-              </p>
-            </div>
-          ))}
-        </div>
+      <div className="grid gap-6 md:grid-cols-3">
+        {awards.map((award) => (
+          <div
+            key={award.title}
+            className="rounded-2xl border border-green-800 bg-green-900 p-6"
+          >
+            <p className="mb-4 text-5xl">{award.icon}</p>
+
+            <h2 className="mb-2 text-2xl font-black">
+              {award.title}
+            </h2>
+
+            <p className="mb-3 font-bold text-green-300">
+              {award.winner}
+            </p>
+
+            <p className="text-sm leading-6 text-green-100">
+              {award.description}
+            </p>
+          </div>
+        ))}
       </div>
-    </main>
+    </PageContainer>
   );
 }

@@ -8,6 +8,7 @@ import {
   getBonusWinners,
 } from "@/lib/scores";
 import { getTournamentSetupForUI } from "@/lib/tournaments";
+import PageContainer from "@/components/PageContainer";
 
 const EVENT_SLUG = "carden-park-2026";
 

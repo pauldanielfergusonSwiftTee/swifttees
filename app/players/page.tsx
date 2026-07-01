@@ -1,3 +1,5 @@
+import PageContainer from "@/components/PageContainer";
+
 const players = [
   {
     name: "Dan",
@@ -106,8 +108,7 @@ const players = [
 
 export default function PlayersPage() {
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900 p-8">
-      <div className="max-w-6xl mx-auto">
+  <PageContainer className="bg-slate-50">
         <a href="/" className="text-green-700 text-sm font-bold">
           ← Back to home
         </a>
@@ -165,7 +166,7 @@ export default function PlayersPage() {
             </div>
           ))}
         </div>
-      </div>
-    </main>
+      
+    </PageContainer>
   );
 }

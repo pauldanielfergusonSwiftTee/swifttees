@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PageContainer from "@/components/PageContainer";
 
 const players = [
   { position: 1, name: "Carl", team: "White", points: 15, thru: 7, movement: "↑" },

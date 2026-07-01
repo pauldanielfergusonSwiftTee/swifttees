@@ -1,13 +1,14 @@
+import PageContainer from "@/components/PageContainer";
+
 export default function LeaderboardPage() {
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-900 p-6 md:p-8">
-      <div className="max-w-5xl mx-auto">
+  <PageContainer>
         <a href="/" className="text-green-700 text-sm font-bold">
           ← Back to home
         </a>
 
         <h1 className="text-4xl md:text-6xl font-black mt-6 mb-2 text-green-950">
-          Swift Tees Leaderboard
+           🏆 Overall Leaderboard
         </h1>
 
         <p className="text-slate-600 mb-8">
@@ -45,7 +46,7 @@ export default function LeaderboardPage() {
 
           <p className="mt-5 text-sm font-bold">View event →</p>
         </a>
-      </div>
-    </main>
+     
+     </PageContainer>
   );
 }

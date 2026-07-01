@@ -1,22 +1,119 @@
 "use client";
 
 import { useState } from "react";
+import PageContainer from "@/components/PageContainer";
 
 const players = [
-  { name: "Gav", team: "White", note: "Reliable society operator. Usually involved somewhere near the sharp end." },
-  { name: "Wrighty", team: "White", note: "Dangerous when the swing behaves. Always capable of a big weekend moment." },
-  { name: "Carl", team: "White", note: "Club-adjustment enthusiast. Never far from a tactical tweak." },
-  { name: "Adam", team: "White", note: "The shark. Long drive claims expected, evidence optional." },
+  {
+    name: "Gav",
+    team: "White",
+    nickname: "The Athlete",
+    handicap: 20,
+    trips: 4,
+    wins: 1,
+    bio: "One of the stronger contenders on paper if the scorecard reflects the experience and confidence",
+  },
+  {
+    name: "Wrighty",
+    team: "White",
+    nickname: "The Unbothered One",
+    handicap: 24,
+    trips: 3,
+    wins: 1,
+    bio: "While others obsess over handicaps and leaderboards, Wrighty is simply enjoying the ride. Usually from a buggy that can be identified by smell.",
+  },
+  {
+    name: "Carl",
+    team: "White",
+    nickname: "The Tinkerer",
+    handicap: 28,
+    trips: 4,
+    wins: 1,
+    bio: "New driver. New irons. New fitting. New putter. A good golfer never blames his tools. Carl likes to keep his options open.",
+  },
+  {
+    name: "Adam",
+    team: "White",
+    nickname: "The Shark",
+    handicap: 36,
+    trips: 2,
+    wins: 1,
+    bio: "Currently residing in the lower groupings, but sandbagging rumours persist. First and Last time as a 36 Handicap",
+  },
 
-  { name: "Dan", team: "Blue", note: "Steady presence and likely to quietly collect points." },
-  { name: "Liam", team: "Blue", note: "Can produce scoring bursts when it clicks." },
-  { name: "Stu", team: "Blue", note: "Birthday weekend energy. Central figure whether he likes it or not." },
-  { name: "Phil", team: "Blue", note: "Golf, squash cans and Saturday Flight 22 lore." },
+  {
+    name: "Dan",
+    team: "Blue",
+    nickname: "Mr Birkdale",
+    handicap: 20,
+    trips: 4,
+    wins: 1,
+    bio: "Dan has played Royal Birkdale.",
+  },
+  {
+    name: "Liam",
+    team: "Blue",
+    nickname: "The Balancing Act",
+    handicap: 24,
+    trips: 4,
+    wins: 1,
+    bio: "Capable golfer. Capable drinker. Big question is how long will the Madri help before it hinders...",
+  },
+  {
+    name: "Stu",
+    team: "Blue",
+    nickname: "The Guest of Honour",
+    handicap: 28,
+    trips: 4,
+    wins: 1,
+    bio: "This year's trip is all about Stu's 50th Will he be using his signature flop shot out (yes he will)",
+  },
+  {
+    name: "Phil",
+    team: "Blue",
+    nickname: "The Can Crusher",
+    handicap: 36,
+    trips: 1,
+    wins: 1,
+    bio: "First trip. Capable of hitting some very decent golf shots but occasionally launches  the club further than the ball",
+  },
 
-  { name: "Painy", team: "Green", note: "Competitive, dangerous and rarely short of confidence." },
-  { name: "Paul", team: "Green", note: "Elite admin. Questionable golf. Building the system and hoping it behaves." },
-  { name: "Ian", team: "Green", note: "Could quietly become a problem for the rest of the field." },
-  { name: "Taz", team: "Green", note: "Group content supplier. Golf form may vary. Entertainment value guaranteed." },
+  {
+    name: "Painy",
+    team: "Green",
+    nickname: "The Options Trader",
+    handicap: 20,
+    trips: 4,
+    wins: 1,
+    bio: "A solid golfer with a dangerous consistency. Maker of multiple plans. ",
+  },
+  {
+    name: "Paul",
+    team: "Green",
+    nickname: "What Does He Do?",
+    handicap: 24,
+    trips: 4,
+    wins: 1,
+    bio: "Who knows what he actually does. What we do know is that he spends an alarming amount of time organising golf trips",
+  },
+  {
+    name: "Ian",
+    team: "Green",
+    nickname: "The Silent Threat",
+    handicap: 28,
+    trips: 4,
+    wins: 1,
+    bio: "Never flustered. Never rushed. Never out of contention. Can quietly put together a serious score.",
+  },
+  {
+    name: "Taz",
+    team: "Green",
+    nickname: "The Rookie",
+    handicap: 36,
+    trips: 0,
+    wins: 0,
+    bio: "New to the game and blissfully unaware of the suffering that lies ahead. Shandy Drinker.",
+  },
 ];
 
 const teams = [
@@ -40,14 +137,13 @@ const teams = [
 export default function CardenParkEventPage() {
   const [openPlayers, setOpenPlayers] = useState(false);
   const [openSchedule, setOpenSchedule] = useState(false);
-  const [openTeams, setOpenTeams] = useState(false);
+ 
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-900 p-4 md:p-8">
-      <div className="max-w-5xl mx-auto">
-        <a href="/" className="text-green-700 text-sm font-bold">
-          ← Back to home
-        </a>
+   
+  <PageContainer className="md:px-8">
+    <div className="max-w-5xl mx-auto">
+       
 
         <section className="mt-4 mb-4 rounded-3xl bg-white border border-slate-200 shadow-sm overflow-hidden p-3 md:p-4">
           <div className="relative h-72 md:h-[420px] rounded-2xl overflow-hidden">
@@ -65,167 +161,168 @@ export default function CardenParkEventPage() {
               </p>
 
               <h1 className="text-4xl md:text-7xl font-black leading-tight">
-                Carden Park 2026
+                Carden Park Sep 2026
               </h1>
 
-              <p className="text-base md:text-xl text-green-100 mt-2 max-w-2xl">
-                26–27 July · Cheshire Course + Nicklaus Course · twelve golfers,
-                two days and plenty of leaderboard movement.
-              </p>
+             
             </div>
           </div>
         </section>
+
+<section className="mb-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+ <h2 className="mb-3 text-2xl font-black text-green-950">
+    The Weekend
+  </h2>
+  
+
+  <div className="space-y-3">
+    <div className="rounded-2xl bg-slate-50 p-3">
+      <p className="text-xs font-black uppercase text-green-700">Sunday 26 July</p>
+      <p className="font-black text-green-950">Cheshire Course · 13:10</p>
+    </div>
+
+    <div className="rounded-2xl bg-slate-50 p-3">
+      <p className="text-xs font-black uppercase text-green-700">Monday 27 July</p>
+      <p className="font-black text-green-950">Nicklaus Course · 12:25</p>
+    </div>
+
+    <div className="rounded-2xl bg-slate-50 p-3">
+      <p className="text-xs font-black uppercase text-green-700">Format</p>
+      <p className="font-black text-green-950">12 golfers · 3 teams · 2 rounds</p>
+    </div>
+  </div>
+</section>
+        
+<section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm mb-4">
+  <p className="text-sm font-bold text-green-700">Carden Cup</p>
+
+  <h2 className="mb-3 text-2xl font-black text-green-950">
+    The Teams
+  </h2>
+
+  <div className="grid gap-3">
+    {teams.map((team) => (
+      <div
+        key={team.name}
+        className={`rounded-2xl border p-3 ${team.colour}`}
+      >
+        <p className="font-black">{team.name}</p>
+
+        <div className="mt-2 flex flex-wrap gap-2">
+          {team.players.split(" • ").map((player) => (
+            <span
+              key={player}
+              className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700 shadow-sm"
+            >
+              {player}
+            </span>
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+</section>
+        
 
         
 
-        <section className="grid grid-cols-3 gap-3 mb-4">
-          <div className="rounded-2xl bg-white p-4 border border-slate-200 shadow-sm text-center">
-            <p className="text-green-700 text-xs font-bold">Dates</p>
-            <p className="text-lg font-black text-green-950">26–27 Jul</p>
-          </div>
-
-          <div className="rounded-2xl bg-white p-4 border border-slate-200 shadow-sm text-center">
-            <p className="text-green-700 text-xs font-bold">Rounds</p>
-            <p className="text-lg font-black text-green-950">2</p>
-          </div>
-
-          <div className="rounded-2xl bg-white p-4 border border-slate-200 shadow-sm text-center">
-            <p className="text-green-700 text-xs font-bold">Players</p>
-            <p className="text-lg font-black text-green-950">12</p>
-          </div>
-        </section>
+        
 
         <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mb-4">
-          <button
-            onClick={() => setOpenSchedule(!openSchedule)}
-            className="w-full flex items-center justify-between text-left"
-          >
-            <div>
-              <p className="text-green-700 text-sm font-bold">Schedule</p>
-              <h2 className="text-2xl font-black text-green-950">
-                Key Weekend Details
-              </h2>
-            </div>
+  <button
+    onClick={() => setOpenPlayers(!openPlayers)}
+    className="w-full flex items-center justify-between text-left"
+  >
+    <div>
+      <p className="text-green-700 text-sm font-bold">Squad</p>
+      <h2 className="text-2xl font-black text-green-950">
+        The Lads
+      </h2>
+    </div>
 
-            <span className="text-2xl font-black text-green-950">
-              {openSchedule ? "−" : "+"}
-            </span>
-          </button>
+    <span className="text-2xl font-black text-green-950">
+      {openPlayers ? "−" : "+"}
+    </span>
+  </button>
 
-          {openSchedule && (
-            <div className="mt-4 space-y-3">
-              <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
-                <p className="text-green-700 text-sm font-bold">Day 1</p>
-                <p className="font-black text-green-950">
-                  13:10 · Cheshire Course
-                </p>
-                <p className="text-sm text-slate-600">
-                  First round, check-in and dinner later.
-                </p>
-              </div>
+  {openPlayers && (
+    <div className="mt-4 space-y-6">
+      {["White", "Blue", "Green"].map((team) => (
+        <div key={team}>
+          <div className="mb-3 flex items-center gap-2">
+            <div
+              className={`h-3 w-3 rounded-full ${
+                team === "White"
+                  ? "bg-slate-400"
+                  : team === "Blue"
+                  ? "bg-blue-500"
+                  : "bg-green-500"
+              }`}
+            />
 
-              <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
-                <p className="text-green-700 text-sm font-bold">Day 2</p>
-                <p className="font-black text-green-950">
-                  12:25 · Nicklaus Course
-                </p>
-                <p className="text-sm text-slate-600">
-                  Final round, leaderboard pressure and awards afterwards.
-                </p>
-              </div>
+            <h3 className="text-lg font-black text-green-950">
+              {team} Team
+            </h3>
+          </div>
 
-              <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
-                <p className="text-green-700 text-sm font-bold">Venue</p>
-                <p className="font-black text-green-950">
-                  Carden Park Hotel, Golf Resort & Spa
-                </p>
-                <p className="text-sm text-slate-600">
-                  Dinner, bed and breakfast.
-                </p>
-              </div>
-            </div>
-          )}
-        </section>
-
-        <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mb-4">
-          <button
-            onClick={() => setOpenTeams(!openTeams)}
-            className="w-full flex items-center justify-between text-left"
-          >
-            <div>
-              <p className="text-green-700 text-sm font-bold">Carden Cup</p>
-              <h2 className="text-2xl font-black text-green-950">
-                Teams
-              </h2>
-            </div>
-
-            <span className="text-2xl font-black text-green-950">
-              {openTeams ? "−" : "+"}
-            </span>
-          </button>
-
-          {openTeams && (
-            <div className="mt-4 grid md:grid-cols-3 gap-3">
-              {teams.map((team) => (
-                <div
-                  key={team.name}
-                  className={`rounded-2xl border p-4 ${team.colour}`}
-                >
-                  <h3 className="text-xl font-black mb-2">
-                    {team.name}
-                  </h3>
-
-                  <p className="text-sm font-semibold text-slate-600">
-                    {team.players}
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mb-4">
-          <button
-            onClick={() => setOpenPlayers(!openPlayers)}
-            className="w-full flex items-center justify-between text-left"
-          >
-            <div>
-              <p className="text-green-700 text-sm font-bold">Squad</p>
-              <h2 className="text-2xl font-black text-green-950">
-                Players Involved
-              </h2>
-            </div>
-
-            <span className="text-2xl font-black text-green-950">
-              {openPlayers ? "−" : "+"}
-            </span>
-          </button>
-
-          {openPlayers && (
-            <div className="mt-4 grid md:grid-cols-2 gap-3">
-              {players.map((player) => (
+          <div className="space-y-3">
+            {players
+              .filter((player) => player.team === team)
+              .map((player) => (
                 <div
                   key={player.name}
-                  className="rounded-2xl bg-slate-50 border border-slate-200 p-4"
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 className="text-xl font-black text-green-950">
-                      {player.name}
-                    </h3>
+                  <div className="flex gap-4">
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-green-950 text-2xl font-black text-white">
+                      {player.name.charAt(0)}
+                    </div>
 
-                    <span className="rounded-full bg-white border border-slate-200 px-3 py-1 text-xs font-black text-slate-600">
-                      {player.team}
-                    </span>
+                    <div className="flex-1">
+                      <p className="text-xs font-black uppercase text-green-700">
+                        {player.nickname}
+                      </p>
+
+                      <h3 className="text-2xl font-black text-green-950">
+                        {player.name}
+                      </h3>
+
+                      <div className="mt-3 grid grid-cols-3 gap-2">
+                        <div className="rounded-xl border border-slate-200 bg-white p-2 text-center">
+                          <p className="text-[10px] text-slate-500">HCP</p>
+                          <p className="font-black text-green-950">
+                            {player.handicap}
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl border border-slate-200 bg-white p-2 text-center">
+                          <p className="text-[10px] text-slate-500">Trips</p>
+                          <p className="font-black text-green-950">
+                            {player.trips}
+                          </p>
+                        </div>
+
+                        <div className="rounded-xl border border-slate-200 bg-white p-2 text-center">
+                          <p className="text-[10px] text-slate-500">Wins</p>
+                          <p className="font-black text-green-950">
+                            {player.wins}
+                          </p>
+                        </div>
+                      </div>
+
+                      <p className="mt-3 text-sm leading-6 text-slate-600">
+                        {player.bio}
+                      </p>
+                    </div>
                   </div>
-
-                  <p className="text-sm text-slate-600 mt-2">
-                    {player.note}
-                  </p>
                 </div>
               ))}
-            </div>
-          )}
-        </section>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</section>
 
        <section className="mb-4 rounded-3xl bg-green-950 text-white p-4 md:p-6">
          
@@ -243,13 +340,13 @@ export default function CardenParkEventPage() {
               href="/events/carden-park-2026/live-leaderboard/live-scoring"
               className="rounded-2xl bg-green-500 text-white px-5 py-4 text-center font-black text-lg"
             >
-              ⛳ Update Scorecards
+              ⛳ Live Scorecards
             </a>
 
            
           </div>
         </section>
       </div>
-    </main>
+     </PageContainer>
   );
 }

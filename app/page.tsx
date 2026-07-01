@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import PageContainer from "@/components/PageContainer";
 
 export default function Home() {
   const [interestStats, setInterestStats] = useState({
@@ -100,12 +101,12 @@ export default function Home() {
               Swift Tees
             </h1>
 
-            <p className="text-xl md:text-3xl font-bold text-green-100 max-w-3xl mb-6">
-              Questionable golf. Elite admin. One bunch of mates chasing glory,
-              bragging rights and hopefully a fairway or two!
+            <p className="mt-3 max-w-xl text-lg md:text-2xl font-medium leading-relaxed text-slate-100 mb-8">
+              Questionable golf. Elite admin. A bunch of mates chasing glory,
+              bragging rights and unforgetable stories
             </p>
 <p className="inline-flex items-center gap-2 rounded-full bg-green-500 px-4 py-2 text-xs font-black uppercase tracking-wider mb-4">
-  🟢 Next Swift Tees Event
+  🟢 Next Event
 </p>
             <div className="rounded-3xl bg-white/10 border border-white/20 backdrop-blur p-4 md:p-6 mb-5">
               <p className="text-green-300 text-sm font-black uppercase tracking-wider">
@@ -297,11 +298,11 @@ export default function Home() {
           </a>
 
           <a
-            href="/leaderboard"
+            href="/overall-leaderboard"
             className="rounded-2xl bg-green-900 p-6 border border-green-800 hover:bg-green-800 text-white"
           >
             <p className="text-3xl mb-2">🏆</p>
-            <h3 className="text-xl font-bold">Society Leaderboard</h3>
+            <h3 className="text-xl font-bold">Overall Leaderboard</h3>
             <p className="text-green-200 text-sm">
               Scores, bragging rights and pain.
             </p>
@@ -318,6 +319,7 @@ export default function Home() {
             </p>
           </a>
         </div>
+        <div className="h-40 md:hidden" />
       </section>
     </main>
   );

@@ -133,9 +133,7 @@ export default function MatchCentrePage() {
             🏆 Live Leaderboard
           </h2>
 
-          <Link href="/leaderboard" className="text-sm font-black text-green-700">
-            Detail →
-          </Link>
+         
         </div>
 
         <div className="space-y-2">
@@ -200,7 +198,7 @@ export default function MatchCentrePage() {
 
       <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-2xl font-black text-green-950">
-          📝 Score Entry
+          📝 Live Scoring
         </h2>
 
         <p className="mt-1 text-sm text-slate-600">
@@ -211,7 +209,7 @@ export default function MatchCentrePage() {
           href="/events/carden-park-2026/live-leaderboard/live-scoring"
           className="mt-3 flex w-full items-center justify-center rounded-2xl bg-green-700 px-5 py-3.5 text-base font-black text-white"
         >
-          Continue Scoring →
+          Enter Scoring →
         </Link>
       </section>
     </PageContainer>
