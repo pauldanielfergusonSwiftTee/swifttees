@@ -52,72 +52,84 @@ export default function MatchCentrePage() {
     <PageContainer className="bg-slate-100 text-slate-900">
       <section className="rounded-3xl bg-green-950 p-5 text-white shadow-lg">
         <p className="text-xs font-black uppercase tracking-[0.25em] text-green-300">
-          🔥 Match Centre
+          🔥 Match Hub
         </p>
 
         <h1 className="mt-2 text-3xl font-black tracking-tight">
           Carden Park 2026
         </h1>
 
-        <p className="mt-2 text-sm font-bold text-green-100">
-          Round 1 • Hole 8
-        </p>
+       
       </section>
 
-     <section className="mt-4 rounded-3xl border border-amber-300 bg-amber-50 p-4 shadow-sm">
-  <p className="text-xs font-black uppercase tracking-wide text-green-700">
-      🚨 BREAKING NEWS
-  </p>
+    
 
-  <p className="mt-1 text-lg font-black leading-snug text-green-950">
-    Gav's birdie on 7 has cut Paul's lead to a single point.
-  </p>
+     <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+  <div className="grid grid-cols-3 gap-2">
+    {teamStandings.map((team) => (
+      <div
+        key={team.team}
+        className="rounded-xl bg-slate-50 py-2 text-center"
+      >
+        <div className="text-base">{team.icon}</div>
+
+        <div className="text-[10px] font-black uppercase text-green-950">
+          {team.team}
+        </div>
+
+        <div className="text-lg font-black text-green-950 leading-none">
+          {team.points}
+        </div>
+      </div>
+    ))}
+  </div>
 </section>
 
-      <section className="mt-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        
+ 
 
-        <div className="grid grid-cols-3 gap-2">
-          {teamStandings.map((team) => (
-            <div
-              key={team.team}
-              className="rounded-2xl bg-slate-50 p-2 text-center"
-            >
-              <p className="text-xl">{team.icon}</p>
+   <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
 
-              <p className="mt-1 text-xs font-black uppercase leading-tight text-green-950">
-                {team.team}
-              </p>
+  <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2">
+    <p className="text-[10px] font-black uppercase tracking-wide text-green-700">
+      🚨 BREAKING NEWS
+    </p>
 
-              <p className="mt-1 text-lg font-black text-green-950">
-                {team.points} pts
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
+    <p className="mt-0.5 text-sm font-black leading-snug text-green-950">
+      Gav's birdie on 7 cuts Paul's lead to one point.
+    </p>
+  </div>
 
-      <section className="mt-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-2xl font-black text-green-950">🎙️ Live Feed</h2>
+  <div className="mt-3 flex items-center justify-between">
+    <h2 className="text-lg font-black text-green-950">
+      🎙️ Live Feed
+    </h2>
 
-        <div className="mt-2 divide-y divide-slate-200">
-          {commentary.map((item, index) => (
-            <div key={index} className="py-2.5 first:pt-0 last:pb-0">
-              <p className="text-xs font-bold text-slate-400">{item.time}</p>
+    <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600">
+      LIVE
+    </span>
+  </div>
 
-             
+  <div className="mt-2 space-y-2">
+    {commentary.slice(0, 4).map((item, index) => (
+      <div
+        key={index}
+        className="flex gap-3 rounded-xl bg-slate-50 px-3 py-2"
+      >
+        <span className="min-w-14 text-[10px] font-bold text-slate-400">
+          {item.time}
+        </span>
 
-              <p className="mt-0.5 text-sm font-medium leading-5 text-slate-700">
-                {item.text}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
+        <p className="text-xs leading-5 text-slate-700">
+          {item.text}
+        </p>
+      </div>
+    ))}
+  </div>
+</section>
 
-      <section className="mt-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-2xl font-black text-green-950">
+         <h2 className="text-xl font-black text-green-950">
             🏆 Live Leaderboard
           </h2>
 
@@ -166,7 +178,7 @@ export default function MatchCentrePage() {
         </div>
       </section>
 
-      <section className="mt-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-2xl font-black text-green-950">
           ⚔️ Current Battle
         </h2>
@@ -186,7 +198,7 @@ export default function MatchCentrePage() {
         </div>
       </section>
 
-      <section className="mt-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <h2 className="text-2xl font-black text-green-950">
           📝 Score Entry
         </h2>

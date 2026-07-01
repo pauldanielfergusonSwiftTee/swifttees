@@ -175,7 +175,7 @@ export default function Home() {
                 href="/match-centre"
                 className="rounded-2xl bg-white px-5 py-4 text-center font-black text-green-950 shadow-sm text-lg hover:bg-green-50"
               >
-                🏆 Live Leaderboard TEST 
+                🏆 Match Hub 
               </a>
 
               <a

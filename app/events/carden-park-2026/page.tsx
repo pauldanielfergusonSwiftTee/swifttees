@@ -76,38 +76,7 @@ export default function CardenParkEventPage() {
           </div>
         </section>
 
-        <section className="mb-4 rounded-3xl bg-green-950 text-white p-4 md:p-6">
-          <h2 className="text-2xl md:text-4xl font-black mb-2">
-            Weekend Controls
-          </h2>
-
-          <p className="text-green-100 text-sm mb-4">
-            Main links for setup, scoring and following the live action.
-          </p>
-
-          <div className="grid grid-cols-1 gap-3">
-            <a
-              href="/events/carden-park-2026/live-leaderboard"
-              className="rounded-2xl bg-white text-green-950 px-5 py-4 text-center font-black text-lg"
-            >
-              🏆 Live Leaderboard
-            </a>
-
-            <a
-              href="/events/carden-park-2026/live-leaderboard/live-scoring"
-              className="rounded-2xl bg-green-500 text-white px-5 py-4 text-center font-black text-lg"
-            >
-              ⛳ Update Scorecards
-            </a>
-
-            <a
-              href="/events/carden-park-2026/live-leaderboard/setup"
-              className="rounded-2xl bg-white/10 border border-green-400 text-white px-5 py-4 text-center font-black text-lg"
-            >
-              ⚙️ Tournament Setup
-            </a>
-          </div>
-        </section>
+        
 
         <section className="grid grid-cols-3 gap-3 mb-4">
           <div className="rounded-2xl bg-white p-4 border border-slate-200 shadow-sm text-center">
@@ -258,25 +227,26 @@ export default function CardenParkEventPage() {
           )}
         </section>
 
-        <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mb-8">
-          <p className="text-green-700 text-sm font-bold">Format Notes</p>
-          <h2 className="text-2xl font-black text-green-950 mb-3">
-            Scoring Setup
-          </h2>
+       <section className="mb-4 rounded-3xl bg-green-950 text-white p-4 md:p-6">
+         
 
-          <div className="space-y-2 text-sm font-semibold text-slate-700">
-            <p className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-              Day 1 and Day 2 formats can be controlled from Tournament Setup.
-            </p>
 
-            <p className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-              Supports Stableford and Scramble Pairs, including pair handicaps.
-            </p>
+          <div className="grid grid-cols-1 gap-3">
+            <a
+              href="/match-centre"
+              className="rounded-2xl bg-white text-green-950 px-5 py-4 text-center font-black text-lg"
+            >
+              🏆 Live Leaderboard
+            </a>
 
-            <p className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-              Nearest pin and longest drive winners are selected from Update
-              Scorecards.
-            </p>
+            <a
+              href="/events/carden-park-2026/live-leaderboard/live-scoring"
+              className="rounded-2xl bg-green-500 text-white px-5 py-4 text-center font-black text-lg"
+            >
+              ⛳ Update Scorecards
+            </a>
+
+           
           </div>
         </section>
       </div>

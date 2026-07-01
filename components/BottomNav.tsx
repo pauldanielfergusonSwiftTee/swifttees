@@ -9,18 +9,18 @@ const navItems = [
     href: "/",
     icon: "🏠",
   },
+ {
+  label: "Carden Park",
+  href: "/events/carden-park-2026",
+  icon: "⛳",
+},
   {
-    label: "Events",
-    href: "/events",
-    icon: "📅",
-  },
-  {
-    label: "Live",
+    label: "Match Hub",
     href: "/match-centre",
     icon: "🔥",
   },
   {
-  label: "Scorecard",
+  label: "Scorecards",
   href: "/events/carden-park-2026/live-leaderboard/live-scoring",
   icon: "📝",
 },
@@ -38,14 +38,16 @@ export default function BottomNav() {
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 backdrop-blur md:hidden">
       <div className="mx-auto grid max-w-md grid-cols-5 gap-1 px-2 py-2">
         {navItems.map((item) => {
-          const isActive =
-  pathname === item.href ||
-  (item.href !== "/" &&
-    pathname.startsWith(item.href) &&
-    item.href !== "/events") ||
-  (item.label === "Events" &&
-    pathname.startsWith("/events") &&
-    !pathname.includes("/live-scoring"));
+          const isScorecard = pathname.includes("/live-scoring");
+
+const isActive =
+  item.label === "Home"
+    ? pathname === "/"
+    : item.label === "Scorecard"
+    ? isScorecard
+    : item.label === "Carden"
+    ? pathname.startsWith("/events/carden-park-2026") && !isScorecard
+    : pathname === item.href || pathname.startsWith(item.href + "/");
 
           return (
             <Link
@@ -58,7 +60,9 @@ export default function BottomNav() {
               }`}
             >
               <span className="text-lg">{item.icon}</span>
-              <span className="mt-1 text-[11px]">{item.label}</span>
+              <span className="mt-1 text-center text-[11px] font-medium leading-tight">
+  {item.label}
+</span>
             </Link>
           );
         })}
