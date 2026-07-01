@@ -4,35 +4,20 @@ import PageHeader from "@/components/PageHeader";
 
 const moreLinks = [
   {
-    title: "Leaderboard",
+    title: "Overall Leaderboard",
     description: "Full standings and detailed results.",
     href: "/leaderboard",
     icon: "🏆",
   },
-  {
-    title: "Players",
-    description: "Swift Tees members, teams and profiles.",
-    href: "/players",
-    icon: "👥",
-  },
-  {
-    title: "Gallery",
-    description: "Photos from trips and society weekends.",
-    href: "/gallery",
-    icon: "📸",
-  },
+
+
   {
     title: "Hall of Fame",
     description: "Past winners, legends and questionable achievements.",
     href: "/hall-of-fame",
     icon: "🏅",
   },
-  {
-    title: "Weekend Bingo",
-    description: "Side quests, chaos and bonus weekend fun.",
-    href: "/weekend-bingo",
-    icon: "🎯",
-  },
+ 
   {
     title: "Tournament Setup",
     description: "Admin setup for groups, rounds and scoring.",
