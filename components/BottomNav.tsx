@@ -39,8 +39,13 @@ export default function BottomNav() {
       <div className="mx-auto grid max-w-md grid-cols-5 gap-1 px-2 py-2">
         {navItems.map((item) => {
           const isActive =
-            pathname === item.href ||
-            (item.href !== "/" && pathname.startsWith(item.href));
+  pathname === item.href ||
+  (item.href !== "/" &&
+    pathname.startsWith(item.href) &&
+    item.href !== "/events") ||
+  (item.label === "Events" &&
+    pathname.startsWith("/events") &&
+    !pathname.includes("/live-scoring"));
 
           return (
             <Link

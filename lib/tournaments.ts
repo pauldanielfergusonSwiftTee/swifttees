@@ -36,13 +36,14 @@ export async function saveTournamentSetup(tournamentSetup: any) {
     const { data: savedRound, error: roundError } = await supabase
       .from("tournament_rounds")
       .insert({
-        tournament_id: tournamentId,
-        round_number: round.id,
-        day_label: round.day,
-        course: round.course,
-        format: round.format,
-        holes: round.holes,
-      })
+  tournament_id: tournamentId,
+  round_number: round.id,
+  day_label: round.day,
+  course: round.course,
+  format: round.format,
+  holes: round.holes,
+  bonus_holes: round.bonusHoles ?? [],
+})
       .select("id")
       .single();
 
@@ -108,7 +109,7 @@ export async function getTournamentSetupForUI() {
     course: round.course,
     format: round.format,
     holes: round.holes,
-    bonusHoles: [],
+    bonusHoles: round.bonus_holes ?? round.bonusHoles ?? round.bonuses ?? [],
     groups: groups
       .filter((g) => g.round_id === round.id)
       .map((g) => ({

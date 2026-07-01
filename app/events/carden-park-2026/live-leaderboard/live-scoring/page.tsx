@@ -12,6 +12,14 @@ function teamDot(team: string) {
   return "bg-slate-200 border border-slate-400";
 }
 
+function getBonusHoleNumber(bonus: any) {
+  return Number(bonus.hole ?? bonus.holeNumber ?? bonus.hole_number);
+}
+
+function getBonusType(bonus: any) {
+  return bonus.type ?? bonus.bonusType ?? bonus.bonus_type ?? "Bonus";
+}
+
 function calculateStablefordPoints(
   grossScore: number,
   par: number,
@@ -47,46 +55,44 @@ export default function LiveScoringPage() {
   const [showRoundSelector, setShowRoundSelector] = useState(false);
   const [showGroupSelector, setShowGroupSelector] = useState(false);
 
+  useEffect(() => {
+    async function loadTournamentSetup() {
+      try {
+        const setup = await getTournamentSetupForUI();
+        setTournamentSetup(setup);
 
+        const firstRound = setup.rounds?.[0];
 
-useEffect(() => {
-  async function loadTournamentSetup() {
-    try {
-      const setup = await getTournamentSetupForUI();
-      setTournamentSetup(setup);
-
-      const firstRound = setup.rounds?.[0];
-
-      if (firstRound) {
-        setRoundId(firstRound.id);
-        setSelectedGroupId(firstRound.groups?.[0]?.id ?? null);
+        if (firstRound) {
+          setRoundId(firstRound.id);
+          setSelectedGroupId(firstRound.groups?.[0]?.id ?? null);
+        }
+      } catch (error) {
+        console.error("Could not load tournament setup from Supabase:", error);
       }
-    } catch (error) {
-      console.error("Could not load tournament setup from Supabase:", error);
     }
-  }
 
-  loadTournamentSetup();
-}, []);
+    loadTournamentSetup();
+  }, []);
 
   if (!tournamentSetup || !roundId || !selectedGroupId) {
     return (
-      <main className="min-h-screen bg-slate-100 text-slate-900 p-6">
-        <div className="max-w-3xl mx-auto rounded-3xl bg-white border border-slate-200 shadow-sm p-5">
+      <main className="min-h-screen bg-slate-100 p-4 pb-56 text-slate-900">
+        <div className="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <h1 className="text-2xl font-black text-green-950">
             No tournament setup found
           </h1>
 
-          <p className="mt-2 text-slate-600 text-sm">
+          <p className="mt-2 text-sm text-slate-600">
             Go to Tournament Setup first, save the event setup, then return to
-            Update Scorecards.
+            score entry.
           </p>
 
           <a
             href="/events/carden-park-2026/live-leaderboard/setup"
-            className="mt-4 inline-block rounded-2xl bg-green-950 text-white px-5 py-3 font-black"
+            className="mt-4 inline-block rounded-2xl bg-green-950 px-5 py-3 font-black text-white"
           >
-            ⚙️ Go to Tournament Setup
+            ⚙️ Tournament Setup
           </a>
         </div>
       </main>
@@ -102,11 +108,18 @@ useEffect(() => {
   );
 
   const isScramble = currentRound.format === "scramblePairs";
-
   const currentHole = currentRound.holes.find((item: any) => item.hole === hole);
 
-  const bonusHole = currentRound.bonusHoles?.find(
-    (bonus: any) => bonus.hole === hole
+  const roundBonusHoles =
+    currentRound.bonusHoles ??
+    currentRound.bonus_holes ??
+    currentRound.bonuses ??
+    [];
+console.log("Scorecard currentRound:", currentRound);
+console.log("Scorecard roundBonusHoles:", roundBonusHoles);
+
+  const bonusHole = roundBonusHoles.find(
+    (bonus: any) => getBonusHoleNumber(bonus) === hole
   );
 
   const allRoundPlayers = Array.from(
@@ -173,7 +186,6 @@ useEffect(() => {
           selectedGroup.pairs
             ?.map((pair: any) => {
               const grossScore = getScore(pair.id);
-
               if (!grossScore) return null;
 
               return {
@@ -194,13 +206,12 @@ useEffect(() => {
         rowsToSave = selectedGroup.players
           .map((player: any) => {
             const grossScore = getScore(player.name);
-
             if (!grossScore) return null;
 
             return {
               event_slug: EVENT_SLUG,
               round_number: currentRound.roundNumber ?? currentRound.id,
-             player_id: player.player_id,
+              player_id: player.player_id,
               hole_number: hole,
               gross_score: grossScore,
               group_number: selectedGroup.groupNumber ?? selectedGroup.id,
@@ -218,25 +229,19 @@ useEffect(() => {
           .filter(Boolean);
       }
 
-      
-if (rowsToSave.length > 0) {
-  await saveHoleScores(rowsToSave);
-}
-
-      
+      if (rowsToSave.length > 0) {
+        await saveHoleScores(rowsToSave);
+      }
 
       if (bonusHole && getBonusWinner()) {
-        
         await saveBonusWinner({
-  event_slug: EVENT_SLUG,
-  round_number: currentRound.roundNumber ?? currentRound.id,
-  hole_number: hole,
-  bonus_type: bonusHole.type,
-  winner_player_id: getBonusWinner(),
-  points: bonusHole.points ?? 0,
-});
-
-       
+          event_slug: EVENT_SLUG,
+          round_number: currentRound.roundNumber ?? currentRound.id,
+          hole_number: hole,
+          bonus_type: getBonusType(bonusHole),
+          winner_player_id: getBonusWinner(),
+          points: bonusHole.points ?? 0,
+        });
       }
 
       const bonusMessage =
@@ -247,7 +252,7 @@ if (rowsToSave.length > 0) {
       const formatMessage = isScramble ? "scramble scores" : "scorecards";
 
       setSavedMessage(
-        `${currentRound.day} ${currentRound.course} — Hole ${hole} ${formatMessage} saved to Supabase.${bonusMessage}`
+        `${currentRound.day} ${currentRound.course} — Hole ${hole} ${formatMessage} saved.${bonusMessage}`
       );
 
       if (hole < 18) {
@@ -279,60 +284,33 @@ if (rowsToSave.length > 0) {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 text-slate-900 p-3 md:p-8">
-      <div className="max-w-3xl mx-auto">
-        <a
-          href="/events/carden-park-2026"
-          className="text-green-700 text-sm font-bold"
-        >
-          ← Back to {tournamentSetup.eventName || "Carden Park"}
-        </a>
-
-        <div className="mt-4 mb-4">
-          <p className="text-green-700 font-bold text-sm">
-            {tournamentSetup.eventName || "Carden Park 2026"}
-          </p>
-
-          <h1 className="text-3xl md:text-6xl font-black text-green-950">
-            {isScramble ? "Update Scramble Scorecards" : "Update Scorecards"}
+    <main className="min-h-screen bg-slate-100 p-3 pb-64 text-slate-900 md:p-8 md:pb-16">
+      <div className="mx-auto max-w-3xl">
+        <div className="mb-3">
+          <h1 className="text-2xl font-black text-green-950">
+            {currentRound.course} • {selectedGroup.name}
           </h1>
-
-          <p className="text-slate-600 mt-1 text-sm">
-            {isScramble
-              ? "Enter one score per scramble pair for each hole."
-              : "Enter scores hole-by-hole for your group."}{" "}
-            Team standings and the live leaderboard update automatically.
-          </p>
         </div>
 
-        <div className="mt-3">
-          <a
-            href="/events/carden-park-2026/live-leaderboard"
-            className="mt-5 mb-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-4 text-lg font-black text-green-950 shadow-sm transition hover:border-green-700 hover:bg-slate-50"
-          >
-            🏆 Live Leaderboard
-          </a>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 mb-3">
+        <div className="mb-3 grid grid-cols-2 gap-2">
           <button
             onClick={() => {
               setShowRoundSelector(!showRoundSelector);
               setShowGroupSelector(false);
             }}
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm hover:border-green-700 transition"
+            className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm transition hover:border-green-700"
           >
-            <div className="flex items-center justify-between">
-              <p className="text-2xl font-black text-green-950 truncate">
+            <div className="flex items-center justify-between gap-2">
+              <p className="truncate text-xl font-black text-green-950">
                 {currentRound.course}
               </p>
 
-              <span className="text-green-700 text-xl font-black">
+              <span className="text-lg font-black text-green-700">
                 {showRoundSelector ? "▲" : "▼"}
               </span>
             </div>
 
-            <p className="mt-2 text-xs font-bold text-slate-400 text-left">
+            <p className="mt-1 text-left text-xs font-bold text-slate-400">
               Change
             </p>
           </button>
@@ -342,26 +320,26 @@ if (rowsToSave.length > 0) {
               setShowGroupSelector(!showGroupSelector);
               setShowRoundSelector(false);
             }}
-            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm hover:border-green-700 transition"
+            className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm transition hover:border-green-700"
           >
-            <div className="flex items-center justify-between">
-              <p className="text-2xl font-black text-green-950">
+            <div className="flex items-center justify-between gap-2">
+              <p className="truncate text-xl font-black text-green-950">
                 {selectedGroup.name}
               </p>
 
-              <span className="text-green-700 text-xl font-black">
+              <span className="text-lg font-black text-green-700">
                 {showGroupSelector ? "▲" : "▼"}
               </span>
             </div>
 
-            <p className="mt-2 text-xs font-bold text-slate-400 text-left">
+            <p className="mt-1 text-left text-xs font-bold text-slate-400">
               Change
             </p>
           </button>
         </div>
 
         {showRoundSelector && (
-          <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-3 mb-3">
+          <section className="mb-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
             <div className="grid grid-cols-2 gap-2">
               {tournamentSetup.rounds.map((round: any) => (
                 <button
@@ -373,16 +351,18 @@ if (rowsToSave.length > 0) {
                     setSavedMessage("");
                     setShowRoundSelector(false);
                   }}
-                  className={`rounded-2xl p-3 text-center font-black border ${
+                  className={`rounded-2xl border p-2 text-center font-black ${
                     roundId === round.id
-                      ? "bg-green-950 text-white border-green-900"
-                      : "bg-slate-50 text-green-950 border-slate-200"
+                      ? "border-green-900 bg-green-950 text-white"
+                      : "border-slate-200 bg-slate-50 text-green-950"
                   }`}
                 >
-                  <span className="block text-lg">{round.course}</span>
-
-                  <span className="block text-xs opacity-80 mt-1">
-                    {round.day}
+                  <span className="block text-base">{round.course}</span>
+                  <span className="mt-1 block text-xs opacity-80">
+                    {round.day} •{" "}
+                    {round.format === "scramblePairs"
+                      ? "Scramble"
+                      : "Stableford"}
                   </span>
                 </button>
               ))}
@@ -391,7 +371,7 @@ if (rowsToSave.length > 0) {
         )}
 
         {showGroupSelector && (
-          <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-3 mb-3">
+          <section className="mb-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
             <div className="grid grid-cols-3 gap-2">
               {currentRound.groups.map((group: any) => (
                 <button
@@ -401,15 +381,14 @@ if (rowsToSave.length > 0) {
                     setSavedMessage("");
                     setShowGroupSelector(false);
                   }}
-                  className={`rounded-2xl p-3 text-center font-black border ${
+                  className={`rounded-2xl border p-2 text-center font-black ${
                     selectedGroupId === group.id
-                      ? "bg-green-950 text-white border-green-900"
-                      : "bg-slate-50 text-green-950 border-slate-200"
+                      ? "border-green-900 bg-green-950 text-white"
+                      : "border-slate-200 bg-slate-50 text-green-950"
                   }`}
                 >
-                  <span className="block text-base">{group.name}</span>
-
-                  <span className="block text-xs opacity-80 mt-1">
+                  <span className="block text-sm">{group.name}</span>
+                  <span className="mt-1 block text-[11px] opacity-80">
                     {group.teeTime}
                   </span>
                 </button>
@@ -418,11 +397,11 @@ if (rowsToSave.length > 0) {
           </section>
         )}
 
-        <section className="rounded-3xl bg-green-950 text-white border border-green-900 shadow-sm p-4 mb-4">
-          <div className="text-center mb-4">
-            <h2 className="text-5xl font-black leading-none">Hole {hole}</h2>
+        <section className="rounded-3xl border border-green-900 bg-green-950 p-3 text-white shadow-sm">
+          <div className="mb-3 text-center">
+            <h2 className="text-4xl font-black leading-none">Hole {hole}</h2>
 
-            <div className="mt-2 flex justify-center gap-2 text-m font-bold flex-wrap">
+            <div className="mt-2 flex flex-wrap justify-center gap-2 text-sm font-bold">
               <span className="rounded-full bg-white/10 px-3 py-1">
                 Par {currentHole.par}
               </span>
@@ -436,14 +415,13 @@ if (rowsToSave.length > 0) {
               </span>
             </div>
 
-            <div className="mt-4 grid grid-cols-9 gap-2">
+            <div className="mt-3 grid grid-cols-9 gap-1.5">
               {currentRound.holes.map((item: any) => {
                 const holeNumber = item.hole;
                 const hasScores = holeHasScores(holeNumber);
-                const hasBonus = currentRound.bonusHoles?.some(
-                  (bonus: any) => bonus.hole === holeNumber
+                const hasBonus = roundBonusHoles.some(
+                  (bonus: any) => getBonusHoleNumber(bonus) === holeNumber
                 );
-                const bonusWinner = getBonusWinner(holeNumber);
 
                 return (
                   <button
@@ -452,48 +430,39 @@ if (rowsToSave.length > 0) {
                       setHole(holeNumber);
                       setSavedMessage("");
                     }}
-                    className={`relative rounded-xl py-3 text-base font-black border ${
+                    className={`relative rounded-lg border py-2 text-sm font-black ${
                       hole === holeNumber
-                        ? "bg-white text-green-950 border-white"
+                        ? "border-white bg-white text-green-950"
                         : hasScores
-                        ? "bg-green-500 text-white border-green-400"
-                        : "bg-white/10 text-white border-white/20"
+                        ? "border-green-400 bg-green-500 text-white"
+                        : "border-white/20 bg-white/10 text-white"
                     }`}
                   >
-                    {holeNumber}
+                    <span>{holeNumber}</span>
 
                     {hasBonus && (
-                      <span
-                        className={`absolute -top-1 -right-1 h-3 w-3 rounded-full border border-white ${
-                          bonusWinner ? "bg-yellow-400" : "bg-yellow-200"
-                        }`}
-                      />
+                      <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-yellow-300 text-[9px] font-black text-green-950 ring-1 ring-white">
+                        ⭐
+                      </span>
                     )}
                   </button>
                 );
               })}
             </div>
 
-            <div className="mt-3 flex flex-wrap justify-center gap-4 text-xs font-bold text-green-100">
-              <span>🟩 Entered</span>
-              <span>⬜ Current</span>
-              <span>⬛ Empty</span>
-              <span>⭐ Bonus</span>
-            </div>
-
             {bonusHole && (
-              <div className="mt-3 rounded-2xl bg-yellow-300 text-green-950 px-4 py-3 text-sm font-black">
+              <div className="mt-3 rounded-2xl bg-yellow-300 px-3 py-2 text-sm font-black text-green-950">
                 <p>
-                  ⭐ Bonus Hole: {bonusHole.type}
-                  {bonusHole.points ? ` — ${bonusHole.points} pts` : ""}
+                  ⭐ Bonus Hole • {getBonusType(bonusHole)}
+                  {bonusHole.points ? ` • ${bonusHole.points} pts` : ""}
                 </p>
 
                 <select
                   value={getBonusWinner()}
                   onChange={(e) => setBonusWinner(e.target.value)}
-                  className="mt-2 w-full rounded-xl bg-white px-3 py-3 text-green-950 font-black border border-yellow-500"
+                  className="mt-2 w-full rounded-xl border border-yellow-500 bg-white px-3 py-2 font-black text-green-950"
                 >
-                  <option value="">Select winner from all players</option>
+                  <option value="">Select bonus winner</option>
 
                   {allRoundPlayers.map((playerName: any, index: number) => (
                     <option key={`${playerName}-${index}`} value={playerName}>
@@ -501,34 +470,29 @@ if (rowsToSave.length > 0) {
                     </option>
                   ))}
                 </select>
-
-                {getBonusWinner() && (
-                  <p className="mt-2 text-xs">
-                    Winner selected: {getBonusWinner()}
-                  </p>
-                )}
               </div>
             )}
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2">
             {!isScramble &&
               selectedGroup.players.map((player: any) => (
                 <div
                   key={player.name}
-                  className="rounded-2xl bg-white text-green-950 p-3 flex items-center justify-between gap-3"
+                  className="flex items-center justify-between gap-2 rounded-2xl bg-white p-2.5 text-green-950"
                 >
-                  <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex min-w-0 items-center gap-2">
                     <span
-                      className={`h-3 w-3 rounded-full shrink-0 ${teamDot(
+                      className={`h-3 w-3 shrink-0 rounded-full ${teamDot(
                         player.team
                       )}`}
                     />
 
-                    <div>
-                      <label className="text-xl font-black">
+                    <div className="min-w-0">
+                      <label className="block truncate text-lg font-black">
                         {player.name}
                       </label>
+
                       <p className="text-xs font-bold text-slate-500">
                         {player.team || "No Team"} • HCP{" "}
                         {player.eventHandicap}
@@ -536,10 +500,10 @@ if (rowsToSave.length > 0) {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex shrink-0 items-center gap-1.5">
                     <button
                       onClick={() => changeScore(player.name, -1)}
-                      className="h-10 w-10 rounded-xl bg-slate-100 border border-slate-200 text-xl font-black"
+                      className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 text-xl font-black"
                     >
                       −
                     </button>
@@ -550,13 +514,13 @@ if (rowsToSave.length > 0) {
                       min="0"
                       value={getScore(player.name) || ""}
                       onChange={(e) => setScore(player.name, e.target.value)}
-                      className="w-16 rounded-xl border border-slate-300 px-2 py-2 text-center text-2xl font-black"
+                      className="w-14 rounded-xl border border-slate-300 px-2 py-1.5 text-center text-2xl font-black"
                       placeholder="-"
                     />
 
                     <button
                       onClick={() => changeScore(player.name, 1)}
-                      className="h-10 w-10 rounded-xl bg-slate-100 border border-slate-200 text-xl font-black"
+                      className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 text-xl font-black"
                     >
                       +
                     </button>
@@ -568,35 +532,27 @@ if (rowsToSave.length > 0) {
               selectedGroup.pairs?.map((pair: any) => (
                 <div
                   key={pair.id}
-                  className="rounded-2xl bg-white text-green-950 p-3"
+                  className="rounded-2xl bg-white p-2.5 text-green-950"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-black text-green-700">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-xs font-black text-green-700">
                         👥 Pair {pair.pairNumber}
                       </p>
 
-                      <p className="text-2xl font-black text-green-950">
+                      <p className="truncate text-lg font-black text-green-950">
                         {pair.player1} + {pair.player2}
                       </p>
 
-                      <div className="mt-2 inline-flex rounded-full bg-green-100 px-3 py-1">
-                        <span className="text-sm font-black text-green-900">
-                          {pair.finalHandicap} HCP
-                        </span>
-                      </div>
-
-                      {pair.calculatedHandicap !== pair.finalHandicap && (
-                        <p className="mt-1 text-xs text-slate-500">
-                          Calculated: {pair.calculatedHandicap}
-                        </p>
-                      )}
+                      <p className="mt-1 text-xs font-bold text-slate-500">
+                        {pair.finalHandicap} HCP
+                      </p>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex shrink-0 items-center gap-1.5">
                       <button
                         onClick={() => changeScore(pair.id, -1)}
-                        className="h-10 w-10 rounded-xl bg-slate-100 border border-slate-200 text-xl font-black"
+                        className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 text-xl font-black"
                       >
                         −
                       </button>
@@ -607,13 +563,13 @@ if (rowsToSave.length > 0) {
                         min="0"
                         value={getScore(pair.id) || ""}
                         onChange={(e) => setScore(pair.id, e.target.value)}
-                        className="w-16 rounded-xl border border-slate-300 px-2 py-2 text-center text-2xl font-black"
+                        className="w-14 rounded-xl border border-slate-300 px-2 py-1.5 text-center text-2xl font-black"
                         placeholder="-"
                       />
 
                       <button
                         onClick={() => changeScore(pair.id, 1)}
-                        className="h-10 w-10 rounded-xl bg-slate-100 border border-slate-200 text-xl font-black"
+                        className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 text-xl font-black"
                       >
                         +
                       </button>
@@ -624,15 +580,17 @@ if (rowsToSave.length > 0) {
           </div>
 
           {savedMessage && (
-            <p className="mt-4 rounded-xl bg-green-600 px-4 py-3 text-center font-bold">
-              {savedMessage.startsWith("❌") ? savedMessage : `✅ ${savedMessage}`}
+            <p className="mt-3 rounded-xl bg-green-600 px-3 py-2 text-center text-sm font-bold">
+              {savedMessage.startsWith("❌")
+                ? savedMessage
+                : `✅ ${savedMessage}`}
             </p>
           )}
 
           <button
             onClick={saveHole}
             disabled={isSaving}
-            className="mt-4 w-full rounded-2xl bg-white text-green-950 px-5 py-4 text-xl font-black disabled:opacity-60"
+            className="mt-3 w-full rounded-2xl bg-white px-5 py-3.5 text-lg font-black text-green-950 disabled:opacity-60"
           >
             {isSaving
               ? "Saving..."
@@ -642,14 +600,21 @@ if (rowsToSave.length > 0) {
           </button>
         </section>
 
-        <div className="mt-4 text-center">
+        <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+          <a
+            href="/match-centre"
+            className="flex w-full items-center justify-center rounded-2xl bg-green-700 px-5 py-3 text-base font-black text-white"
+          >
+            🔥 Match Centre
+          </a>
+
           <a
             href="/events/carden-park-2026/live-leaderboard/setup"
-            className="text-sm font-bold text-green-700"
+            className="mt-2 flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-base font-black text-green-950 shadow-sm"
           >
-            ⚙️ Back to Tournament Setup
+            ⚙️ Tournament Setup
           </a>
-        </div>
+        </section>
       </div>
     </main>
   );

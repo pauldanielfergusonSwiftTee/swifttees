@@ -75,9 +75,7 @@ export default function MatchCentrePage() {
 </section>
 
       <section className="mt-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-2xl font-black text-green-950">
-          🏆 Team Battle
-        </h2>
+        
 
         <div className="grid grid-cols-3 gap-2">
           {teamStandings.map((team) => (
