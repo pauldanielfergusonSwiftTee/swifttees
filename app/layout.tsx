@@ -14,8 +14,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SwiftTees",
-  description: "Golf Society",
+  title: {
+    default: "Swift Tees",
+    template: "%s | Swift Tees",
+  },
+  description: "Swift Tees Golf Society",
+};
+
+import type { Metadata, Viewport } from "next";
+
+export const viewport: Viewport = {
+  themeColor: "#052e16",
 };
 
 export default function RootLayout({
