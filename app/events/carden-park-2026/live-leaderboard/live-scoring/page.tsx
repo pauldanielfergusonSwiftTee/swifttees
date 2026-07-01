@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { saveHoleScores, saveBonusWinner } from "@/lib/scores";
+import {
+  saveHoleScores,
+  saveBonusWinner,
+  getScores,
+  getBonusWinners,
+} from "@/lib/scores";
 import { getTournamentSetupForUI } from "@/lib/tournaments";
 
 const EVENT_SLUG = "carden-park-2026";
@@ -67,6 +72,63 @@ export default function LiveScoringPage() {
           setRoundId(firstRound.id);
           setSelectedGroupId(firstRound.groups?.[0]?.id ?? null);
         }
+
+        try {
+          const savedScores = await getScores(EVENT_SLUG);
+          const savedBonuses = await getBonusWinners(EVENT_SLUG);
+
+          const loadedScores: Record<string, number> = {};
+
+          savedScores.forEach((row: any) => {
+            const round = setup.rounds.find(
+              (r: any) =>
+                Number(r.roundNumber ?? r.id) === Number(row.round_number)
+            );
+
+            if (!round) return;
+
+            const group = round.groups.find(
+              (g: any) =>
+                Number(g.groupNumber ?? g.id) === Number(row.group_number)
+            );
+
+            if (!group) return;
+
+            if (row.score_type === "scramblePairs") {
+              const pair = group.pairs?.find(
+                (p: any) => Number(p.pairNumber) === Number(row.pair_number)
+              );
+
+              if (!pair) return;
+
+              loadedScores[
+                `${round.id}-${group.id}-${row.hole_number}-${pair.id}`
+              ] = row.gross_score;
+            } else {
+              const player = group.players?.find(
+                (p: any) => p.player_id === row.player_id
+              );
+
+              if (!player) return;
+
+              loadedScores[
+                `${round.id}-${group.id}-${row.hole_number}-${player.name}`
+              ] = row.gross_score;
+            }
+          });
+
+          const loadedBonuses: Record<string, string> = {};
+
+          savedBonuses.forEach((row: any) => {
+            loadedBonuses[`${row.round_number}-${row.hole_number}`] =
+              row.winner_player_id;
+          });
+
+          setScores(loadedScores);
+          setBonusWinners(loadedBonuses);
+        } catch (scoreError) {
+          console.error("Could not load saved scores:", scoreError);
+        }
       } catch (error) {
         console.error("Could not load tournament setup from Supabase:", error);
       }
@@ -115,8 +177,6 @@ export default function LiveScoringPage() {
     currentRound.bonus_holes ??
     currentRound.bonuses ??
     [];
-console.log("Scorecard currentRound:", currentRound);
-console.log("Scorecard roundBonusHoles:", roundBonusHoles);
 
   const bonusHole = roundBonusHoles.find(
     (bonus: any) => getBonusHoleNumber(bonus) === hole
@@ -586,11 +646,13 @@ console.log("Scorecard roundBonusHoles:", roundBonusHoles);
                 : `✅ ${savedMessage}`}
             </p>
           )}
+        </section>
 
+        <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
           <button
             onClick={saveHole}
             disabled={isSaving}
-            className="mt-3 w-full rounded-2xl bg-white px-5 py-3.5 text-lg font-black text-green-950 disabled:opacity-60"
+            className="w-full rounded-2xl bg-green-700 px-5 py-3.5 text-lg font-black text-white shadow-sm disabled:opacity-60"
           >
             {isSaving
               ? "Saving..."
@@ -598,22 +660,22 @@ console.log("Scorecard roundBonusHoles:", roundBonusHoles);
               ? `Save Hole ${hole} Scramble Scores`
               : `Save Hole ${hole} Scorecards`}
           </button>
-        </section>
 
-        <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-          <a
-            href="/match-centre"
-            className="flex w-full items-center justify-center rounded-2xl bg-green-700 px-5 py-3 text-base font-black text-white"
-          >
-            🔥 Match Centre
-          </a>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <a
+              href="/match-centre"
+              className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-black text-green-950 shadow-sm transition hover:border-green-700"
+            >
+              🔥 Match Centre
+            </a>
 
-          <a
-            href="/events/carden-park-2026/live-leaderboard/setup"
-            className="mt-2 flex w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-base font-black text-green-950 shadow-sm"
-          >
-            ⚙️ Tournament Setup
-          </a>
+            <a
+              href="/events/carden-park-2026/live-leaderboard/setup"
+              className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-black text-green-950 shadow-sm transition hover:border-green-700"
+            >
+              ⚙️ Setup
+            </a>
+          </div>
         </section>
       </div>
     </main>
