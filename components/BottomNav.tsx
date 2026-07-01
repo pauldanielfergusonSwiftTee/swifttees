@@ -20,10 +20,10 @@ const navItems = [
     icon: "🔥",
   },
   {
-    label: "Leaderboard",
-    href: "/leaderboard",
-    icon: "🏆",
-  },
+  label: "Scorecard",
+  href: "/events/carden-park-2026/live-leaderboard/live-scoring",
+  icon: "📝",
+},
   {
     label: "More",
     href: "/more",

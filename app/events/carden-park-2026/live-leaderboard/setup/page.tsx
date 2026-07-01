@@ -656,7 +656,7 @@ if (supabasePlayers.length > 0) {
     <main className="min-h-screen bg-slate-100 text-slate-900 p-3 md:p-8">
       <div className="max-w-6xl mx-auto">
         <a
-          href="/events/carden-park-2026/live-leaderboard"
+          href="/match-centre"
           className="text-green-700 text-sm font-bold"
         >
           ← Back to Live Leaderboard
@@ -1165,7 +1165,7 @@ if (supabasePlayers.length > 0) {
               </p>
 
               <a
-                href="/events/carden-park-2026/live-leaderboard"
+                href="/match-centre"
                 className="block rounded-2xl bg-green-950 text-white px-4 py-3 text-center font-black mb-3"
               >
                 🏆 View Live Leaderboard
