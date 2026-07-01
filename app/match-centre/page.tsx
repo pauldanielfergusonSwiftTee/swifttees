@@ -2,18 +2,18 @@ import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
 
 const leaderboard = [
-  { pos: 1, name: "Paul", points: 19, movement: "—", statusIcon: "😬" },
-  { pos: 2, name: "Gav", points: 18, movement: "▲", statusIcon: "🔥" },
-  { pos: 3, name: "Dan", points: 16, movement: "▼", statusIcon: "📉" },
-  { pos: 4, name: "Carl", points: 14, movement: "—", statusIcon: "⚔️" },
-  { pos: 5, name: "Wrighty", points: 14, movement: "▲", statusIcon: "🐦" },
-  { pos: 6, name: "Liam", points: 13, movement: "—", statusIcon: "⚔️" },
-  { pos: 7, name: "Adam", points: 12, movement: "▼", statusIcon: "💣" },
-  { pos: 8, name: "Taz", points: 11, movement: "▲", statusIcon: "⭐" },
-  { pos: 9, name: "Phil", points: 10, movement: "—", statusIcon: "" },
-  { pos: 10, name: "Ian", points: 9, movement: "▼", statusIcon: "📉" },
-  { pos: 11, name: "Stu", points: 8, movement: "—", statusIcon: "🎂" },
-  { pos: 12, name: "Painy", points: 7, movement: "▼", statusIcon: "😬" },
+  { pos: 1, name: "Paul", points: 19, movement: "—", highlight: "😬" },
+  { pos: 2, name: "Gav", points: 18, movement: "▲", highlight: "🔥" },
+  { pos: 3, name: "Dan", points: 16, movement: "▼", highlight: "📉" },
+  { pos: 4, name: "Carl", points: 14, movement: "—", highlight: "⚔️" },
+  { pos: 5, name: "Wrighty", points: 14, movement: "▲", highlight: "🐦" },
+  { pos: 6, name: "Liam", points: 13, movement: "—", highlight: "⚔️" },
+  { pos: 7, name: "Adam", points: 12, movement: "▼", highlight: "💣" },
+  { pos: 8, name: "Taz", points: 11, movement: "▲", highlight: "⭐" },
+  { pos: 9, name: "Phil", points: 10, movement: "—", highlight: "" },
+  { pos: 10, name: "Ian", points: 9, movement: "▼", highlight: "📉" },
+  { pos: 11, name: "Stu", points: 8, movement: "—", highlight: "🎂" },
+  { pos: 12, name: "Painy", points: 7, movement: "▼", highlight: "😬" },
 ];
 
 const commentary = [
@@ -107,9 +107,7 @@ export default function MatchCentrePage() {
             <div key={index} className="py-2.5 first:pt-0 last:pb-0">
               <p className="text-xs font-bold text-slate-400">{item.time}</p>
 
-              <p className="mt-1 text-sm font-black text-green-950">
-                {item.title}
-              </p>
+             
 
               <p className="mt-0.5 text-sm font-medium leading-5 text-slate-700">
                 {item.text}
