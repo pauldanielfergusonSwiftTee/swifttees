@@ -64,9 +64,9 @@ export default function MatchCentrePage() {
         </p>
       </section>
 
-     <section className="sticky top-0 z-40 mt-4 rounded-3xl border border-slate-200 bg-slate-50 p-4 shadow-sm">
+     <section className="mt-4 rounded-3xl border border-amber-300 bg-amber-50 p-4 shadow-sm">
   <p className="text-xs font-black uppercase tracking-wide text-green-700">
-    🔥 Breaking News 
+      🚨 BREAKING NEWS
   </p>
 
   <p className="mt-1 text-lg font-black leading-snug text-green-950">
