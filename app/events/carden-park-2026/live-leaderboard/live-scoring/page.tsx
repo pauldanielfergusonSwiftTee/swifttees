@@ -6,6 +6,7 @@ import {
   saveBonusWinner,
   getScores,
   getBonusWinners,
+  resetEventScores,
 } from "@/lib/scores";
 import { getTournamentSetupForUI } from "@/lib/tournaments";
 import PageContainer from "@/components/PageContainer";
@@ -249,17 +250,22 @@ export default function LiveScoringPage() {
               if (!grossScore) return null;
 
               return {
-                event_slug: EVENT_SLUG,
-                round_number: currentRound.roundNumber ?? currentRound.id,
-                player_id: null,
-                hole_number: hole,
-                gross_score: grossScore,
-                group_number: selectedGroup.groupNumber ?? selectedGroup.id,
-                pair_number: pair.pairNumber,
-                score_type: "scramblePairs",
-                points: null,
-                event_handicap: pair.finalHandicap,
-              };
+  event_slug: EVENT_SLUG,
+  round_number: currentRound.roundNumber ?? currentRound.id,
+  player_id: null,
+  hole_number: hole,
+  gross_score: grossScore,
+  group_number: selectedGroup.groupNumber ?? selectedGroup.id,
+  pair_number: pair.pairNumber,
+  score_type: "scramblePairs",
+  points: calculateStablefordPoints(
+    grossScore,
+    currentHole.par,
+    currentHole.strokeIndex,
+    pair.finalHandicap
+  ),
+  event_handicap: pair.finalHandicap,
+};
             })
             .filter(Boolean) ?? [];
       } else {
@@ -330,6 +336,39 @@ export default function LiveScoringPage() {
       setIsSaving(false);
     }
   }
+
+async function resetScores() {
+  const password = window.prompt("Enter reset password");
+
+  if (password !== "reset") {
+    alert("Incorrect password");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    "This will delete all Stableford scores, scramble scores and bonus winners for both days. Are you sure?"
+  );
+
+  if (!confirmed) return;
+
+  try {
+    setIsSaving(true);
+    await resetEventScores(EVENT_SLUG);
+
+    setScores({});
+    setBonusWinners({});
+    setHole(1);
+    setSavedMessage("All scores reset for both days.");
+  } catch (error: any) {
+    console.error(error);
+    setSavedMessage(
+      `❌ Could not reset scores. ${error.message || "Please try again."}`
+    );
+  } finally {
+    setIsSaving(false);
+  }
+}
+
 
   function holeHasScores(holeNumber: number) {
     if (isScramble) {
@@ -612,7 +651,13 @@ export default function LiveScoringPage() {
             >
               🏆 Leaderboard
             </a>
-
+<button
+  onClick={resetScores}
+  disabled={isSaving}
+  className="flex items-center justify-center rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-black text-red-700 shadow-sm disabled:opacity-60"
+>
+  Reset All Scores
+</button>
             
           </div>
         </section>

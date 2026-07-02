@@ -18,15 +18,16 @@ export async function saveHoleScores(rows: any[]) {
 
 if (scrambleRows.length) {
   const scrambleRowsForTable = scrambleRows.map((row) => ({
-    event_slug: row.event_slug,
-    round_number: row.round_number,
-    group_number: row.group_number,
-    pair_number: row.pair_number,
-    hole_number: row.hole_number,
-    gross_score: row.gross_score,
-    event_handicap: row.event_handicap,
-    updated_at: new Date().toISOString(),
-  }));
+  event_slug: row.event_slug,
+  round_number: row.round_number,
+  group_number: row.group_number,
+  pair_number: row.pair_number,
+  hole_number: row.hole_number,
+  gross_score: row.gross_score,
+  event_handicap: row.event_handicap,
+  points: row.points ?? 0,
+  updated_at: new Date().toISOString(),
+}));
 
   const { error } = await supabase
     .from("scramble_scores")
@@ -65,4 +66,38 @@ export async function getBonusWinners(eventSlug: string) {
   if (error) throw error;
 
   return data ?? [];
+}
+export async function getScrambleScores(eventSlug: string) {
+  const { data, error } = await supabase
+    .from("scramble_scores")
+    .select("*")
+    .eq("event_slug", eventSlug);
+
+  if (error) throw error;
+
+  return data ?? [];
+}
+export async function resetEventScores(eventSlug: string) {
+  console.log("RESETTING EVENT:", eventSlug);
+
+  const { error: scoresError, count } = await supabase
+    .from("scores")
+    .delete({ count: "exact" })
+    .eq("event_slug", eventSlug);
+
+  console.log("DELETE SCORES:", { count, scoresError });
+
+  if (scoresError) throw scoresError;
+
+  const { error: scrambleError, count: scrambleCount } = await supabase
+    .from("scramble_scores")
+    .delete({ count: "exact" })
+    .eq("event_slug", eventSlug);
+
+  console.log("DELETE SCRAMBLE:", {
+    count: scrambleCount,
+    scrambleError,
+  });
+
+  if (scrambleError) throw scrambleError;
 }
