@@ -662,20 +662,15 @@ export default function LiveScoringPage() {
               : `Save Hole ${hole} Scorecards`}
           </button>
 
-          <div className="mt-2 grid grid-cols-2 gap-2">
+          <div className="mt-2 grid grid-cols-1 gap-2">
             <a
               href="/match-centre"
               className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-black text-green-950 shadow-sm transition hover:border-green-700"
             >
-              🔥 Match Centre
+              🔥 Match Hub
             </a>
 
-            <a
-              href="/events/carden-park-2026/live-leaderboard/setup"
-              className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-black text-green-950 shadow-sm transition hover:border-green-700"
-            >
-              ⚙️ Setup
-            </a>
+            
           </div>
         </section>
       </div>

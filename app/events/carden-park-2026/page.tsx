@@ -4,23 +4,31 @@ import { useState } from "react";
 import PageContainer from "@/components/PageContainer";
 
 const players = [
-  
+  {
+    name: "Gav",
+    team: "White",
+    nickname: "Mr Stableford",
+    handicap: 20,
+    trips: 4,
+    
+    bio: "One of the stronger contenders on paper if the scorecard reflects the experience. Most likely to seen examining the scorecards.",
+  },
    {
     name: "Stu",
     team: "Blue",
     nickname: "The Guest of Honour",
     handicap: 28,
     trips: 4,
-    wins: 1,
-    bio: "The man of the moment as Swift Tees celebrates the big 5-0.. Expect smiles, decent golf... and at least one unnecessary flop shot",
+  
+    bio: "The man of the moment as Swift Tees celebrates his big 5-0. Expect laughs, decent golf... and at least one unnecessary flop shot",
   },
  {
     name: "Paul",
     team: "Green",
     nickname: "THe Organiser",
     handicap: 24,
-    trips: 4,
-    wins: 1,
+    trips: 5,
+    
     bio: "Chief organiser of Swift Tees. Quietly climbing the golfing ranks while making sure everyone else gets there on time.",
   },
   {
@@ -28,8 +36,8 @@ const players = [
     team: "White",
     nickname: "The Unbothered One",
     handicap: 24,
-    trips: 3,
-    wins: 1,
+    trips: 4,
+  
     bio: "While others obsess over handicaps and leaderboards, Wrighty is simply enjoying the ride. Usually from a suspiciously smelling buggy.",
   },
   {
@@ -37,8 +45,8 @@ const players = [
     team: "White",
     nickname: "The Tinkerer",
     handicap: 28,
-    trips: 4,
-    wins: 1,
+    trips: 1,
+    
     bio: "New driver. New irons. New fitting. A good golfer never blames his tools. Carl likes to keep his options open.",
   },
   {
@@ -46,9 +54,9 @@ const players = [
     team: "White",
     nickname: "The Shark",
     handicap: 36,
-    trips: 2,
-    wins: 1,
-    bio: "Currently residing in the lower groupings, unofficially causing a few raised eyebrows. First, and probably last, time as a 36 Handicap",
+    trips: 1,
+
+    bio: "Currently residing in the lower groupings, unofficially causing a few raised eyebrows. First, and last, time as a 36 Handicap",
   },
 
   {
@@ -56,8 +64,8 @@ const players = [
     team: "Blue",
     nickname: "The Contender",
     handicap: 20,
-    trips: 4,
-    wins: 1,
+    trips: 2,
+    
     bio: "One of the society's genuine contenders. Quietly goes about his business while everyone else creates the drama.",
   },
   {
@@ -66,8 +74,8 @@ const players = [
     nickname: "The Balancing Act",
     handicap: 24,
     trips: 4,
-    wins: 1,
-    bio: "Capable golfer. Capable drinker. The only question is how long will the Madri help before it hinders...",
+    
+    bio: "Capable golfer. Capable drinker. The only question is how long will the beers help before they hinder...",
   },
  
   {
@@ -80,23 +88,15 @@ const players = [
     bio: "First trip. Capable of hitting some decent golf shots but occasionally launches the club further than the ball. Won't let the golf get in the way of the drinking",
   },
 
-   {
-    name: "Gav",
-    team: "White",
-    nickname: "Mr Stableford",
-    handicap: 20,
-    trips: 4,
-    wins: 1,
-    bio: "One of the stronger contenders on paper if the scorecard reflects the talent. Most likely to reach for a calculator",
-  },
+   
   {
     name: "Painy",
     team: "Green",
     nickname: "The Options Trader",
     handicap: 20,
     trips: 4,
-    wins: 1,
-    bio: "Once the undisputed man to beat. A solid golfer with a dangerous consistency... and a diary full of backup plans.",
+    
+    bio: "Once the undisputed man to beat. Stil a solid golfer with a dangerous consistency... and a diary full of backup plans.",
   },
   
   {
@@ -105,17 +105,17 @@ const players = [
     nickname: "The Steady Hand",
     handicap: 28,
     trips: 4,
-    wins: 1,
-    bio: "Never flustered. Never rushed. Never far away. Capable of quietly putting together a very decent score.",
+    
+    bio: "Never flustered. Never rushed. Never far away from contention. Capable of quietly putting together a very decent score.",
   },
   {
     name: "Taz",
     team: "Green",
     nickname: "The Rookie",
     handicap: 36,
-    trips: 0,
-    wins: 0,
-    bio: "New to the game and blissfully unaware of the suffering that lies ahead. Still convinced the next swing thought will fix everything.",
+    trips: 1,
+    
+    bio: "New to the game and blissfully unaware of the suffering that lies ahead. Still convinced he's one swing thought away from greatness.",
   },
 ];
 
@@ -143,7 +143,7 @@ const predictions = [
     icon: "⚪",
     rating: "⭐⭐⭐⭐☆",
     score: "8.5/10",
-    text: "The White Team might be the most unpredictable side in the competition. Gav will demand nothing less than victory and will almost certainly have the points permutations worked out before the first tee shot lands. Carl arrives with the newest and most expensive equipment in the society, hoping this is finally the set that delivers glory, while Wrighty continues to prove that clubs older than Carl can still get the job done. Adam completes the quartet as the wildcard— capable of surprising everyone and never short on distance. If White click, they'll be incredibly hard to stop. If not, expect plenty of post-round analysis... particularly from Gav and Carl.",
+    text: "The White Team might be the most unpredictable side in the competition. Gav will demand nothing less than victory and will almost certainly have the points permutations worked out before the first tee shot lands. Carl arrives with the newest and most expensive equipment in the UK, hoping this is finally the set that delivers glory, while Wrighty continues to prove that even clubs older than Carl can still get the job done. Adam completes the quartet as the wildcard— capable of surprising everyone and never short on distance. If the Whites click, they'll be incredibly hard to stop. If not, expect plenty of post-round analysis... particularly from Gav and Carl.",
   },
   {
     team: "Blue Team",
@@ -157,7 +157,7 @@ const predictions = [
     icon: "🟢",
     rating: "⭐⭐⭐⭐☆",
     score: "8/10",
-    text: "The Green Team may not make the biggest noise before the weekend, but don't be fooled. Painy remains one of the society's steadiest golfers, Paul has quietly improved in the last couple of years, while Ian offers calm consistency and rarely lets the occasion get to him. Taz rounds things off with some beginners luck, endless optimism and the belief that one good swing might just unlock his golf forever. This team feels like the dark horse—less drama, plenty of encouragement, and every chance of quietly climbing the leaderboard while everyone else is watching the favourites.",
+    text: "The Green Team may not make the biggest noise before the weekend, but don't be fooled. Painy remains one of the society's steadiest golfers, Paul has quietly improved in the last couple of years, and ca nput a score together while Ian offers calm consistency and rarely lets the occasion get to him. Taz rounds things off with some beginners innocence, endless optimism and the belief that one good swing might just unlock his golf forever. This team feels like the dark horse—less drama, plenty of encouragement, and every chance of quietly climbing the leaderboard while everyone else is watching the favourites.",
   },
 ];
 
@@ -368,27 +368,22 @@ export default function CardenParkEventPage() {
                         {player.name}
                       </h3>
 
-                      <div className="mt-3 grid grid-cols-3 gap-2">
+                      <div className="mt-3 grid grid-cols-2 gap-2">
                         <div className="rounded-xl border border-slate-200 bg-white p-2 text-center">
-                          <p className="text-[10px] text-slate-500">HCP</p>
+                          <p className="text-[12px] text-slate-500">HCP</p>
                           <p className="font-black text-green-950">
                             {player.handicap}
                           </p>
                         </div>
 
                         <div className="rounded-xl border border-slate-200 bg-white p-2 text-center">
-                          <p className="text-[10px] text-slate-500">Trips</p>
+                          <p className="text-[12px] text-slate-500">Trips</p>
                           <p className="font-black text-green-950">
                             {player.trips}
                           </p>
                         </div>
 
-                        <div className="rounded-xl border border-slate-200 bg-white p-2 text-center">
-                          <p className="text-[10px] text-slate-500">Wins</p>
-                          <p className="font-black text-green-950">
-                            {player.wins}
-                          </p>
-                        </div>
+                        
                       </div>
 
                       <p className="mt-3 text-sm leading-6 text-slate-600">
