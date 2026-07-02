@@ -4,14 +4,24 @@ import { useState } from "react";
 import PageContainer from "@/components/PageContainer";
 
 const players = [
-  {
-    name: "Gav",
-    team: "White",
-    nickname: "The Athlete",
-    handicap: 20,
+  
+   {
+    name: "Stu",
+    team: "Blue",
+    nickname: "The Guest of Honour",
+    handicap: 28,
     trips: 4,
     wins: 1,
-    bio: "One of the stronger contenders on paper if the scorecard reflects the experience and confidence",
+    bio: "The man of the moment as Swift Tees celebrates the big 5-0.. Expect smiles, decent golf... and at least one unnecessary flop shot",
+  },
+ {
+    name: "Paul",
+    team: "Green",
+    nickname: "THe Organiser",
+    handicap: 24,
+    trips: 4,
+    wins: 1,
+    bio: "Chief organiser of Swift Tees. Quietly climbing the golfing ranks while making sure everyone else gets there on time.",
   },
   {
     name: "Wrighty",
@@ -20,7 +30,7 @@ const players = [
     handicap: 24,
     trips: 3,
     wins: 1,
-    bio: "While others obsess over handicaps and leaderboards, Wrighty is simply enjoying the ride. Usually from a buggy that can be identified by smell.",
+    bio: "While others obsess over handicaps and leaderboards, Wrighty is simply enjoying the ride. Usually from a suspiciously smelling buggy.",
   },
   {
     name: "Carl",
@@ -29,7 +39,7 @@ const players = [
     handicap: 28,
     trips: 4,
     wins: 1,
-    bio: "New driver. New irons. New fitting. New putter. A good golfer never blames his tools. Carl likes to keep his options open.",
+    bio: "New driver. New irons. New fitting. A good golfer never blames his tools. Carl likes to keep his options open.",
   },
   {
     name: "Adam",
@@ -38,17 +48,17 @@ const players = [
     handicap: 36,
     trips: 2,
     wins: 1,
-    bio: "Currently residing in the lower groupings, but sandbagging rumours persist. First and Last time as a 36 Handicap",
+    bio: "Currently residing in the lower groupings, unofficially causing a few raised eyebrows. First, and probably last, time as a 36 Handicap",
   },
 
   {
     name: "Dan",
     team: "Blue",
-    nickname: "Mr Birkdale",
+    nickname: "The Contender",
     handicap: 20,
     trips: 4,
     wins: 1,
-    bio: "Dan has played Royal Birkdale.",
+    bio: "One of the society's genuine contenders. Quietly goes about his business while everyone else creates the drama.",
   },
   {
     name: "Liam",
@@ -57,17 +67,9 @@ const players = [
     handicap: 24,
     trips: 4,
     wins: 1,
-    bio: "Capable golfer. Capable drinker. Big question is how long will the Madri help before it hinders...",
+    bio: "Capable golfer. Capable drinker. The only question is how long will the Madri help before it hinders...",
   },
-  {
-    name: "Stu",
-    team: "Blue",
-    nickname: "The Guest of Honour",
-    handicap: 28,
-    trips: 4,
-    wins: 1,
-    bio: "This year's trip is all about Stu's 50th Will he be using his signature flop shot out (yes he will)",
-  },
+ 
   {
     name: "Phil",
     team: "Blue",
@@ -75,9 +77,18 @@ const players = [
     handicap: 36,
     trips: 1,
     wins: 1,
-    bio: "First trip. Capable of hitting some very decent golf shots but occasionally launches  the club further than the ball",
+    bio: "First trip. Capable of hitting some decent golf shots but occasionally launches the club further than the ball. Won't let the golf get in the way of the drinking",
   },
 
+   {
+    name: "Gav",
+    team: "White",
+    nickname: "Mr Stableford",
+    handicap: 20,
+    trips: 4,
+    wins: 1,
+    bio: "One of the stronger contenders on paper if the scorecard reflects the talent. Most likely to reach for a calculator",
+  },
   {
     name: "Painy",
     team: "Green",
@@ -85,25 +96,17 @@ const players = [
     handicap: 20,
     trips: 4,
     wins: 1,
-    bio: "A solid golfer with a dangerous consistency. Maker of multiple plans. ",
+    bio: "Once the undisputed man to beat. A solid golfer with a dangerous consistency... and a diary full of backup plans.",
   },
-  {
-    name: "Paul",
-    team: "Green",
-    nickname: "What Does He Do?",
-    handicap: 24,
-    trips: 4,
-    wins: 1,
-    bio: "Spends an alarming amount of time organising golf trips. Can paly ok on his day",
-  },
+  
   {
     name: "Ian",
     team: "Green",
-    nickname: "The Silent Threat",
+    nickname: "The Steady Hand",
     handicap: 28,
     trips: 4,
     wins: 1,
-    bio: "Never flustered. Never rushed. Never out of contention. Can quietly put together a serious score.",
+    bio: "Never flustered. Never rushed. Never far away. Capable of quietly putting together a very decent score.",
   },
   {
     name: "Taz",
@@ -112,7 +115,7 @@ const players = [
     handicap: 36,
     trips: 0,
     wins: 0,
-    bio: "New to the game and blissfully unaware of the suffering that lies ahead. Shandy Drinker.",
+    bio: "New to the game and blissfully unaware of the suffering that lies ahead. Still convinced the next swing thought will fix everything.",
   },
 ];
 
@@ -140,21 +143,21 @@ const predictions = [
     icon: "⚪",
     rating: "⭐⭐⭐⭐☆",
     score: "8.5/10",
-    text: "The White Team might be the most unpredictable side in the competition. Gav will demand nothing less than victory and will almost certainly have the points permutations worked out before the first tee shot lands. Carl arrives with the newest and most expensive equipment in the society, hoping this is finally the set that delivers glory, while Wrighty continues to prove that clubs older than some hatchbacks can still get the job done. Adam completes the quartet as the wildcard—capable of surprising everyone and never short on confidence. If White click, they'll be incredibly hard to stop. If not, expect plenty of post-round analysis... particularly from Gav and Carl.",
+    text: "The White Team might be the most unpredictable side in the competition. Gav will demand nothing less than victory and will almost certainly have the points permutations worked out before the first tee shot lands. Carl arrives with the newest and most expensive equipment in the society, hoping this is finally the set that delivers glory, while Wrighty continues to prove that clubs older than Carl can still get the job done. Adam completes the quartet as the wildcard— capable of surprising everyone and never short on distance. If White click, they'll be incredibly hard to stop. If not, expect plenty of post-round analysis... particularly from Gav and Carl.",
   },
   {
     team: "Blue Team",
     icon: "🔵",
     rating: "⭐⭐⭐⭐⭐",
     score: "9/10",
-    text: "On paper, this looks like the most balanced team in the field. Dan is always a genuine contender when he's anywhere near his best, Liam quietly strings together solid rounds while pretending he hardly plays, Stu is capable of moments of brilliance and is more interested in everyone having a great weekend than the pressure of winning, and Phil brings experience, laughs and enough enthusiasm to keep morale high. There isn't an obvious weakness here, making Blue a strong favourite if everyone performs to their handicap.",
+    text: "On paper, this looks like the most balanced team in the field. Dan is always a genuine contender when he's anywhere near his best, Liam quietly strings together solid rounds while pretending he hardly plays, Stu is capable of moments of brilliance but can be more interested in everyone having a great weekend, and Phil brings the social aspect and hydration to keep morale high. There isn't an obvious weakness here, making Blue a strong favourite if everyone performs to their handicap.",
   },
   {
     team: "Green Team",
     icon: "🟢",
     rating: "⭐⭐⭐⭐☆",
     score: "8/10",
-    text: "The Green Team may not make the biggest noise before the weekend, but don't be fooled. Painy remains one of the society's steadiest golfers, Paul has quietly improved year after year and arrives determined to justify his place in the higher group, while Ian offers calm consistency and rarely lets the occasion get to him. Taz rounds things off with a brand-new set of clubs, endless optimism and the belief that one good swing might just unlock golf forever. This team feels like the dark horse—less drama, plenty of encouragement, and every chance of quietly climbing the leaderboard while everyone else is watching the favourites.",
+    text: "The Green Team may not make the biggest noise before the weekend, but don't be fooled. Painy remains one of the society's steadiest golfers, Paul has quietly improved in the last couple of years, while Ian offers calm consistency and rarely lets the occasion get to him. Taz rounds things off with some beginners luck, endless optimism and the belief that one good swing might just unlock his golf forever. This team feels like the dark horse—less drama, plenty of encouragement, and every chance of quietly climbing the leaderboard while everyone else is watching the favourites.",
   },
 ];
 
