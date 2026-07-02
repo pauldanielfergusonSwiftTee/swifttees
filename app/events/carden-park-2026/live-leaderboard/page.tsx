@@ -2,21 +2,20 @@
 
 import { useEffect, useState } from "react";
 import PageContainer from "@/components/PageContainer";
+import { getPlayers } from "@/lib/players";
+import { getScores } from "@/lib/scores";
 
-const players = [
-  { position: 1, name: "Carl", team: "White", points: 15, thru: 7, movement: "↑" },
-  { position: 2, name: "Phil", team: "Blue", points: 12, thru: 7, movement: "↑" },
-  { position: 3, name: "Paul", team: "Green", points: 10, thru: 6, movement: "—" },
-  { position: 4, name: "Stu", team: "Blue", points: 8, thru: 6, movement: "↓" },
-  { position: 5, name: "Gav", team: "White", points: 7, thru: 5, movement: "—" },
-  { position: 6, name: "Painy", team: "Green", points: 6, thru: 5, movement: "↓" },
-  { position: 7, name: "Dan", team: "Blue", points: 5, thru: 5, movement: "—" },
-  { position: 8, name: "Wrighty", team: "White", points: 5, thru: 5, movement: "↑" },
-  { position: 9, name: "Liam", team: "Blue", points: 4, thru: 4, movement: "↓" },
-  { position: 10, name: "Ian", team: "Green", points: 4, thru: 4, movement: "—" },
-  { position: 11, name: "Adam", team: "White", points: 3, thru: 4, movement: "↓" },
-  { position: 12, name: "Taz", team: "Green", points: 2, thru: 3, movement: "—" },
-];
+const EVENT_SLUG = "carden-park-2026";
+
+type LeaderboardPlayer = {
+  position: number;
+  id: number;
+  name: string;
+  team: string;
+  points: number;
+  thru: number;
+  movement: string;
+};
 
 const teams = [
   { position: 1, name: "White", points: 22, thru: "avg 6" },
@@ -40,6 +39,8 @@ function movementStyle(movement: string) {
 
 export default function CardenParkLiveLeaderboardPage() {
 const [lastUpdated, setLastUpdated] = useState(new Date());
+const [players, setPlayers] = useState<LeaderboardPlayer[]>([]);
+const [loading, setLoading] = useState(true);
 
 useEffect(() => {
   const interval = setInterval(() => {
@@ -47,6 +48,69 @@ useEffect(() => {
   }, 1000);
 
   return () => clearInterval(interval);
+}, []);
+
+useEffect(() => {
+  async function loadLeaderboard() {
+    try {
+      setLoading(true);
+
+      const [allPlayers, scores] = await Promise.all([
+        getPlayers(),
+        getScores(EVENT_SLUG),
+      ]);
+
+      const stablefordScores = scores.filter(
+        (score: any) =>
+          score.score_type === "stableford" && score.player_id !== null
+      );
+
+      const leaderboard = allPlayers.map((player: any) => {
+        const playerScores = stablefordScores.filter(
+          (score: any) => Number(score.player_id) === Number(player.id)
+        );
+
+        return {
+          id: player.id,
+          name: player.name,
+          team: "White", // Temporary - we'll load real teams next
+          points: playerScores.reduce(
+            (total: number, score: any) => total + Number(score.points ?? 0),
+            0
+          ),
+          thru:
+            playerScores.length > 0
+              ? Math.max(
+                  ...playerScores.map((score: any) =>
+                    Number(score.hole_number)
+                  )
+                )
+              : 0,
+          movement: "—",
+        };
+      });
+
+      leaderboard.sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        return b.thru - a.thru;
+      });
+
+      setPlayers(
+        leaderboard.map((player, index) => ({
+          ...player,
+          position: index + 1,
+        }))
+      );
+
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error("Could not load leaderboard:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  loadLeaderboard();
 }, []);
 
 function timeAgo(date: Date) {

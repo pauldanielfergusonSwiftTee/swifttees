@@ -3,12 +3,13 @@ import { supabase } from "./supabase";
 export type Player = {
   id: number;
   name: string;
+  team: string;
 };
 
 export async function getPlayers(): Promise<Player[]> {
   const { data, error } = await supabase
     .from("players")
-    .select("id, name")
+    .select("id, name, team")
     .order("id", { ascending: true });
 
   if (error) {
@@ -22,7 +23,7 @@ export async function getPlayers(): Promise<Player[]> {
 export async function getPlayerById(id: number): Promise<Player | null> {
   const { data, error } = await supabase
     .from("players")
-    .select("id, name")
+    .select("id, name, team")
     .eq("id", id)
     .single();
 

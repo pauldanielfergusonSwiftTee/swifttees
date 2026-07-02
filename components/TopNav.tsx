@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 const navItems = [
   { label: "Home", href: "/" },
   { label: "Carden Park", href: "/events/carden-park-2026" },
-  { label: "Match Hub", href: "/match-centre" },
+  { label: "Leaderboard", href: "/match-centre" },
   {
     label: "Scorecard",
     href: "/events/carden-park-2026/live-leaderboard/live-scoring",

@@ -1,20 +1,22 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
+import { getPlayers } from "@/lib/players";
+import { getScores } from "@/lib/scores";
 
-const leaderboard = [
-  { pos: 1, name: "Paul", points: 19, through: 12, movement: "—", highlight: "😬" },
-  { pos: 2, name: "Gav", points: 18, through: 12, movement: "▲", highlight: "🔥" },
-  { pos: 3, name: "Dan", points: 16, through: 12, movement: "▼", highlight: "📉" },
-  { pos: 4, name: "Carl", points: 14, through: 12, movement: "—", highlight: "⚔️" },
-  { pos: 5, name: "Wrighty", points: 14, through: 12, movement: "▲", highlight: "🐦" },
-  { pos: 6, name: "Liam", points: 13, through: 12, movement: "—", highlight: "⚔️" },
-  { pos: 7, name: "Adam", points: 12, through: 12, movement: "▼", highlight: "💣" },
-  { pos: 8, name: "Taz", points: 11, through: 12, movement: "▲", highlight: "⭐" },
-  { pos: 9, name: "Phil", points: 10, through: 12, movement: "—", highlight: "" },
-  { pos: 10, name: "Ian", points: 9, through: 12, movement: "▼", highlight: "📉" },
-  { pos: 11, name: "Stu", points: 8, through: 12, movement: "—", highlight: "🎂" },
-  { pos: 12, name: "Painy", points: 7, through: 12, movement: "▼", highlight: "😬" },
-];
+const EVENT_SLUG = "carden-park-2026";
+
+type LeaderboardRow = {
+  pos: number;
+  id: number;
+  name: string;
+  points: number;
+  through: number;
+  movement: string;
+  highlight: string;
+};
 
 const commentary = [
   {
@@ -35,11 +37,12 @@ const commentary = [
   },
 ];
 
-const teamStandings = [
-  { team: "Blue", points: 78, through: 11, icon: "🥇" },
-  { team: "Green", points: 75, through: 11, icon: "🥈" },
-  { team: "Red", points: 70, through: 11, icon: "🥉" },
-];
+type TeamStanding = {
+  team: string;
+  points: number;
+  through: number;
+  icon: string;
+};
 
 function movementStyle(movement: string) {
   if (movement === "▲") return "text-green-700";
@@ -48,6 +51,79 @@ function movementStyle(movement: string) {
 }
 
 export default function MatchCentrePage() {
+  const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
+const [teamStandings, setTeamStandings] = useState<TeamStanding[]>([]);
+useEffect(() => {
+  async function loadLeaderboard() {
+    const [players, scores] = await Promise.all([
+      getPlayers(),
+      getScores(EVENT_SLUG),
+    ]);
+console.log("MATCH CENTRE PLAYERS:", players);
+console.log("MATCH CENTRE SCORES:", scores);
+    const stablefordScores = scores.filter(
+      (score: any) => score.score_type === "stableford" && score.player_id
+    );
+
+    const rows = players.map((player: any) => {
+      const playerScores = stablefordScores.filter(
+        (score: any) => Number(score.player_id) === Number(player.id)
+      );
+
+      return {
+        id: player.id,
+        name: player.name,
+        team: player.team,
+        points: playerScores.reduce(
+          (total: number, score: any) => total + Number(score.points ?? 0),
+          0
+        ),
+        through:
+          playerScores.length > 0
+            ? Math.max(...playerScores.map((score: any) => Number(score.hole_number)))
+            : 0,
+        movement: "—",
+        highlight: "",
+      };
+    });
+
+    rows.sort((a, b) => b.points - a.points || b.through - a.through);
+
+    setLeaderboard(
+      rows.map((player, index) => ({
+        ...player,
+        pos: index + 1,
+      }))
+    );
+    const teams = rows.reduce((acc: Record<string, TeamStanding>, player: any) => {
+  if (!acc[player.team]) {
+    acc[player.team] = {
+      team: player.team,
+      points: 0,
+      through: 0,
+      icon: "",
+    };
+  }
+
+  acc[player.team].points += player.points;
+  acc[player.team].through = Math.max(acc[player.team].through, player.through);
+
+  return acc;
+}, {});
+
+const sortedTeams = Object.values(teams)
+  .sort((a, b) => b.points - a.points)
+  .map((team, index) => ({
+    ...team,
+    icon: index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉",
+  }));
+
+setTeamStandings(sortedTeams);
+  }
+
+  loadLeaderboard();
+}, []);
+  
   return (
     <PageContainer className="bg-slate-100 text-slate-900">
       <section className="rounded-3xl bg-green-950 p-5 text-white shadow-lg">

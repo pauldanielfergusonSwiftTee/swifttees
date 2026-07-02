@@ -667,7 +667,7 @@ export default function LiveScoringPage() {
               href="/match-centre"
               className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-black text-green-950 shadow-sm transition hover:border-green-700"
             >
-              🔥 Match Hub
+              🏆 Leaderboard
             </a>
 
             

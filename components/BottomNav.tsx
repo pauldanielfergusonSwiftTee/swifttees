@@ -15,9 +15,9 @@ const navItems = [
   icon: "⛳",
 },
   {
-    label: "Match Hub",
+    label: "Leaderboard",
     href: "/match-centre",
-    icon: "🔥",
+    icon: "🏆",
   },
   {
   label: "Scorecards",
