@@ -94,7 +94,7 @@ const players = [
     handicap: 24,
     trips: 4,
     wins: 1,
-    bio: "Who knows what he actually does. What we do know is that he spends an alarming amount of time organising golf trips",
+    bio: "Spends an alarming amount of time organising golf trips. Can paly ok on his day",
   },
   {
     name: "Ian",
@@ -134,10 +134,36 @@ const teams = [
   },
 ];
 
+const predictions = [
+  {
+    team: "White Team",
+    icon: "⚪",
+    rating: "⭐⭐⭐⭐☆",
+    score: "8.5/10",
+    text: "The White Team might be the most unpredictable side in the competition. Gav will demand nothing less than victory and will almost certainly have the points permutations worked out before the first tee shot lands. Carl arrives with the newest and most expensive equipment in the society, hoping this is finally the set that delivers glory, while Wrighty continues to prove that clubs older than some hatchbacks can still get the job done. Adam completes the quartet as the wildcard—capable of surprising everyone and never short on confidence. If White click, they'll be incredibly hard to stop. If not, expect plenty of post-round analysis... particularly from Gav and Carl.",
+  },
+  {
+    team: "Blue Team",
+    icon: "🔵",
+    rating: "⭐⭐⭐⭐⭐",
+    score: "9/10",
+    text: "On paper, this looks like the most balanced team in the field. Dan is always a genuine contender when he's anywhere near his best, Liam quietly strings together solid rounds while pretending he hardly plays, Stu is capable of moments of brilliance and is more interested in everyone having a great weekend than the pressure of winning, and Phil brings experience, laughs and enough enthusiasm to keep morale high. There isn't an obvious weakness here, making Blue a strong favourite if everyone performs to their handicap.",
+  },
+  {
+    team: "Green Team",
+    icon: "🟢",
+    rating: "⭐⭐⭐⭐☆",
+    score: "8/10",
+    text: "The Green Team may not make the biggest noise before the weekend, but don't be fooled. Painy remains one of the society's steadiest golfers, Paul has quietly improved year after year and arrives determined to justify his place in the higher group, while Ian offers calm consistency and rarely lets the occasion get to him. Taz rounds things off with a brand-new set of clubs, endless optimism and the belief that one good swing might just unlock golf forever. This team feels like the dark horse—less drama, plenty of encouragement, and every chance of quietly climbing the leaderboard while everyone else is watching the favourites.",
+  },
+];
+
+
+
 export default function CardenParkEventPage() {
   const [openPlayers, setOpenPlayers] = useState(false);
   const [openSchedule, setOpenSchedule] = useState(false);
- 
+ const [openPredictions, setOpenPredictions] = useState(false);
 
   return (
    
@@ -161,7 +187,7 @@ export default function CardenParkEventPage() {
               </p>
 
               <h1 className="text-4xl md:text-7xl font-black leading-tight">
-                Carden Park Sep 2026
+                Carden Park July 2026
               </h1>
 
              
@@ -224,7 +250,53 @@ export default function CardenParkEventPage() {
 </section>
         
 
-        
+   <section className="rounded-3xl bg-white border border-slate-200 shadow-sm p-4 mb-4">
+  <button
+    onClick={() => setOpenPredictions(!openPredictions)}
+    className="w-full flex items-center justify-between text-left"
+  >
+    <div>
+      <p className="text-green-700 text-sm font-bold">Preview</p>
+      <h2 className="text-2xl font-black text-green-950">
+        The Predictions
+      </h2>
+    </div>
+
+    <span className="text-2xl font-black text-green-950">
+      {openPredictions ? "−" : "+"}
+    </span>
+  </button>
+
+  {openPredictions && (
+    <div className="mt-4 space-y-3">
+      {predictions.map((prediction) => (
+        <div
+          key={prediction.team}
+          className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-xl font-black text-green-950">
+                {prediction.icon} {prediction.team}
+              </h3>
+
+              <p className="mt-1 text-sm font-black text-amber-500">
+                {prediction.rating}
+                <span className="ml-2 text-slate-500">
+                  {prediction.score}
+                </span>
+              </p>
+            </div>
+          </div>
+
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            {prediction.text}
+          </p>
+        </div>
+      ))}
+    </div>
+  )}
+</section>     
 
         
 
@@ -265,13 +337,19 @@ export default function CardenParkEventPage() {
             </h3>
           </div>
 
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
             {players
               .filter((player) => player.team === team)
               .map((player) => (
                 <div
                   key={player.name}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                  className={`rounded-2xl border p-4 ${
+  team === "White"
+    ? "border-slate-200 bg-slate-50"
+    : team === "Blue"
+    ? "border-blue-200 bg-blue-50"
+    : "border-green-200 bg-green-50"
+}`}
                 >
                   <div className="flex gap-4">
                     <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-green-950 text-2xl font-black text-white">
