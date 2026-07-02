@@ -189,6 +189,13 @@ function normaliseSetup(savedSetup: SetupState): SetupState {
 }
 
 export default function TournamentSetupPage() {
+
+const [authenticated, setAuthenticated] = useState(false);
+const [password, setPassword] = useState("");
+
+const ADMIN_PASSWORD = "swift";
+
+
   const [players, setPlayers] = useState<Player[]>(fallbackPlayers);
 
   useEffect(() => {
@@ -620,6 +627,8 @@ if (supabasePlayers.length > 0) {
   }) {
     const isOpen = openSection === id;
 
+
+
     return (
       <button
         onClick={() => toggleSection(id)}
@@ -651,6 +660,48 @@ if (supabasePlayers.length > 0) {
       </button>
     );
   }
+
+if (!authenticated) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-slate-100 p-6">
+      <div className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-6 shadow-lg">
+        <h1 className="mb-2 text-2xl font-black text-green-950">
+          🔒 Tournament Setup
+        </h1>
+
+        <p className="mb-5 text-sm text-slate-600">
+          Enter the admin password.
+        </p>
+
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && password === ADMIN_PASSWORD) {
+              setAuthenticated(true);
+            }
+          }}
+          className="w-full rounded-xl border border-slate-300 px-4 py-3"
+          placeholder="Password"
+        />
+
+        <button
+          onClick={() => {
+            if (password === ADMIN_PASSWORD) {
+              setAuthenticated(true);
+            } else {
+              alert("Incorrect password");
+            }
+          }}
+          className="mt-4 w-full rounded-xl bg-green-700 py-3 font-black text-white"
+        >
+          Continue
+        </button>
+      </div>
+    </main>
+  );
+}
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-900 p-3 md:p-8">

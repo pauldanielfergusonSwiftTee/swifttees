@@ -86,12 +86,7 @@ export default function Home() {
               priority
             />
 
-            <a
-              href="/events"
-              className="rounded-full bg-white/15 border border-white/20 px-4 py-2 text-sm font-bold text-white backdrop-blur hover:bg-white/25"
-            >
-              Past Events
-            </a>
+            
           </div>
 
           <div className="mt-auto pb-8 text-white">
@@ -101,7 +96,7 @@ export default function Home() {
               Swift Tees
             </h1>
 
-            <p className="mt-3 max-w-xl text-lg md:text-2xl font-medium leading-relaxed text-slate-100 mb-8">
+            <p className="mt-4 mb-8 max-w-2xl text-2xl md:text-4xl font-black leading-tight text-white drop-shadow-md">
               Questionable golf. Elite admin. A bunch of mates chasing glory,
               bragging rights and unforgetable stories
             </p>

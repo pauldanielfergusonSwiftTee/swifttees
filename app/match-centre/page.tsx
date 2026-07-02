@@ -2,18 +2,18 @@ import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
 
 const leaderboard = [
-  { pos: 1, name: "Paul", points: 19, movement: "—", highlight: "😬" },
-  { pos: 2, name: "Gav", points: 18, movement: "▲", highlight: "🔥" },
-  { pos: 3, name: "Dan", points: 16, movement: "▼", highlight: "📉" },
-  { pos: 4, name: "Carl", points: 14, movement: "—", highlight: "⚔️" },
-  { pos: 5, name: "Wrighty", points: 14, movement: "▲", highlight: "🐦" },
-  { pos: 6, name: "Liam", points: 13, movement: "—", highlight: "⚔️" },
-  { pos: 7, name: "Adam", points: 12, movement: "▼", highlight: "💣" },
-  { pos: 8, name: "Taz", points: 11, movement: "▲", highlight: "⭐" },
-  { pos: 9, name: "Phil", points: 10, movement: "—", highlight: "" },
-  { pos: 10, name: "Ian", points: 9, movement: "▼", highlight: "📉" },
-  { pos: 11, name: "Stu", points: 8, movement: "—", highlight: "🎂" },
-  { pos: 12, name: "Painy", points: 7, movement: "▼", highlight: "😬" },
+  { pos: 1, name: "Paul", points: 19, through: 12, movement: "—", highlight: "😬" },
+  { pos: 2, name: "Gav", points: 18, through: 12, movement: "▲", highlight: "🔥" },
+  { pos: 3, name: "Dan", points: 16, through: 12, movement: "▼", highlight: "📉" },
+  { pos: 4, name: "Carl", points: 14, through: 12, movement: "—", highlight: "⚔️" },
+  { pos: 5, name: "Wrighty", points: 14, through: 12, movement: "▲", highlight: "🐦" },
+  { pos: 6, name: "Liam", points: 13, through: 12, movement: "—", highlight: "⚔️" },
+  { pos: 7, name: "Adam", points: 12, through: 12, movement: "▼", highlight: "💣" },
+  { pos: 8, name: "Taz", points: 11, through: 12, movement: "▲", highlight: "⭐" },
+  { pos: 9, name: "Phil", points: 10, through: 12, movement: "—", highlight: "" },
+  { pos: 10, name: "Ian", points: 9, through: 12, movement: "▼", highlight: "📉" },
+  { pos: 11, name: "Stu", points: 8, through: 12, movement: "—", highlight: "🎂" },
+  { pos: 12, name: "Painy", points: 7, through: 12, movement: "▼", highlight: "😬" },
 ];
 
 const commentary = [
@@ -36,9 +36,9 @@ const commentary = [
 ];
 
 const teamStandings = [
-  { team: "Blue", points: 78, icon: "🥇" },
-  { team: "Green", points: 75, icon: "🥈" },
-  { team: "Red", points: 70, icon: "🥉" },
+  { team: "Blue", points: 78, through: 11, icon: "🥇" },
+  { team: "Green", points: 75, through: 11, icon: "🥈" },
+  { team: "Red", points: 70, through: 11, icon: "🥉" },
 ];
 
 function movementStyle(movement: string) {
@@ -52,11 +52,11 @@ export default function MatchCentrePage() {
     <PageContainer className="bg-slate-100 text-slate-900">
       <section className="rounded-3xl bg-green-950 p-5 text-white shadow-lg">
         <p className="text-xs font-black uppercase tracking-[0.25em] text-green-300">
-          🔥 Match Hub
+          🔥 Match Hub - Carden Park
         </p>
 
         <h1 className="mt-2 text-3xl font-black tracking-tight">
-          Carden Park 2026
+          Latest Scores
         </h1>
 
        
@@ -80,6 +80,10 @@ export default function MatchCentrePage() {
         <div className="text-lg font-black text-green-950 leading-none">
           {team.points}
         </div>
+
+        <div className="mt-0.5 text-[10px] font-semibold text-slate-900">
+    Thru {team.through}
+  </div>
       </div>
     ))}
   </div>
@@ -151,7 +155,9 @@ export default function MatchCentrePage() {
                   <p className="text-base font-black text-green-950">
                     {player.name}
                   </p>
-
+  <p className="text-xs font-semibold text-slate-500">
+    Thru {player.through} holes
+  </p>
                  
                 </div>
               </div>

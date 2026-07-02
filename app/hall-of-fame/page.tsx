@@ -1,76 +1,87 @@
 import PageContainer from "@/components/PageContainer";
 
 const awards = [
-  {
-    icon: "🏌️",
-    title: "Most Trips Attended",
-    winner: "TBC",
-    description: "Elite commitment to the cause.",
-  },
+  
   {
     icon: "🏆",
     title: "Society Champion",
     winner: "TBC",
-    description: "Current holder of the bragging rights.",
+    description: "Current holder of the bragging rights. Crowned at the end of each season as the overall Swift Tees champion. The biggest prize in the society",
   },
   {
     icon: "🎯",
     title: "Nearest Pin King",
     winner: "TBC",
-    description: "Most likely to accidentally hit a good iron shot.",
+    description: "Precision under pressure. Awarded to the player with the most Nearest the Pin victories.",
   },
   {
     icon: "🚀",
     title: "Long Drive King",
     winner: "TBC",
-    description: "Big stick energy. Accuracy not guaranteed.",
+    description: "Given to the golfer who dominates the Long Drive challenges throughout the season. Power helps. Fairways help more.",
   },
   {
-    icon: "🌲",
-    title: "Most Lost Balls",
-    winner: "TBC",
-    description: "Doing their bit for the local wildlife.",
-  },
+  icon: "🔥",
+  title: "Hot Streak",
+  winner: "TBC",
+  description:
+    "Awarded to the player with the longest run of scoring holes during the season. When the momentum builds, everybody else is chasing.",
+},
+{
+  icon: "📈",
+  title: "Biggest Climber",
+  winner: "TBC",
+  description:
+    "Awarded to the player who gained the most places on the leaderboard during a single event. Never out of the fight.",
+},
   {
     icon: "🍺",
     title: "Social Secretary",
     winner: "TBC",
-    description: "Sets the pace early. Often too early.",
+    description: "Celebrating the player who keeps spirits high throughout the weekend, both on and off the course.",
+  },
+  {
+    icon: "🏌️",
+    title: "Most Trips Attended",
+    winner: "TBC",
+    description: "Elite commitment to the cause. Awarded to the golfer with the highest number of Swift Tees weekends attended. Loyalty, commitment and questionable life choices rewarded.",
   },
 ];
 
 export default function HallOfFamePage() {
   return (
-    <PageContainer className="bg-green-950 text-white">
-      <a href="/" className="text-green-300 text-sm">
+    <PageContainer>
+      <a href="/" className="text-sm font-bold text-green-700">
         ← Back to home
       </a>
 
-      <h1 className="mt-6 mb-2 text-6xl font-black">
+      <h1 className="mt-6 text-5xl font-black text-green-950">
         🏛️ Hall of Fame
       </h1>
 
-      <p className="mb-10 text-green-300">
-        Glory, shame and highly questionable achievements.
+      <p className="mt-2 mb-8 text-slate-600">
+        Glory, legends and highly questionable achievements from Swift Tees history.
       </p>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {awards.map((award) => (
           <div
             key={award.title}
-            className="rounded-2xl border border-green-800 bg-green-900 p-6"
+            className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md"
           >
-            <p className="mb-4 text-5xl">{award.icon}</p>
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-green-50 text-4xl">
+              {award.icon}
+            </div>
 
-            <h2 className="mb-2 text-2xl font-black">
+            <h2 className="text-2xl font-black text-green-950">
               {award.title}
             </h2>
 
-            <p className="mb-3 font-bold text-green-300">
+            <p className="mt-2 font-bold text-green-700">
               {award.winner}
             </p>
 
-            <p className="text-sm leading-6 text-green-100">
+            <p className="mt-3 text-sm leading-6 text-slate-600">
               {award.description}
             </p>
           </div>
