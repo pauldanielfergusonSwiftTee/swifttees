@@ -58,8 +58,7 @@ export default function LiveScoringPage() {
   const [bonusWinners, setBonusWinners] = useState<Record<string, string>>({});
   const [savedMessage, setSavedMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [showRoundSelector, setShowRoundSelector] = useState(false);
-  const [showGroupSelector, setShowGroupSelector] = useState(false);
+ 
 
   useEffect(() => {
     async function loadTournamentSetup() {
@@ -353,110 +352,54 @@ export default function LiveScoringPage() {
           </h1>
         </div>
 
-        <div className="mb-3 grid grid-cols-2 gap-2">
-          <button
-            onClick={() => {
-              setShowRoundSelector(!showRoundSelector);
-              setShowGroupSelector(false);
-            }}
-            className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm transition hover:border-green-700"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <p className="truncate text-xl font-black text-green-950">
-                {currentRound.course}
-              </p>
+        <div className="mb-3 space-y-2">
+  <div className="grid grid-cols-2 gap-2">
+    {tournamentSetup.rounds.map((round: any) => (
+      <button
+        key={round.id}
+        onClick={() => {
+          setRoundId(round.id);
+          setSelectedGroupId(round.groups?.[0]?.id ?? null);
+          setHole(1);
+          setSavedMessage("");
+        }}
+        className={`rounded-2xl border p-2 text-center font-black ${
+          roundId === round.id
+            ? "border-green-900 bg-green-950 text-white"
+            : "border-slate-200 bg-white text-green-950"
+        }`}
+      >
+        <span className="block text-sm">{round.course}</span>
+        <span className="mt-1 block text-[11px] opacity-80">
+          {round.day} •{" "}
+          {round.format === "scramblePairs" ? "Scramble" : "Stableford"}
+        </span>
+      </button>
+    ))}
+  </div>
 
-              <span className="text-lg font-black text-green-700">
-                {showRoundSelector ? "▲" : "▼"}
-              </span>
-            </div>
-
-            <p className="mt-1 text-left text-xs font-bold text-slate-400">
-              Change
-            </p>
-          </button>
-
-          <button
-            onClick={() => {
-              setShowGroupSelector(!showGroupSelector);
-              setShowRoundSelector(false);
-            }}
-            className="rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm transition hover:border-green-700"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <p className="truncate text-xl font-black text-green-950">
-                {selectedGroup.name}
-              </p>
-
-              <span className="text-lg font-black text-green-700">
-                {showGroupSelector ? "▲" : "▼"}
-              </span>
-            </div>
-
-            <p className="mt-1 text-left text-xs font-bold text-slate-400">
-              Change
-            </p>
-          </button>
-        </div>
-
-        {showRoundSelector && (
-          <section className="mb-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-            <div className="grid grid-cols-2 gap-2">
-              {tournamentSetup.rounds.map((round: any) => (
-                <button
-                  key={round.id}
-                  onClick={() => {
-                    setRoundId(round.id);
-                    setSelectedGroupId(round.groups?.[0]?.id ?? null);
-                    setHole(1);
-                    setSavedMessage("");
-                    setShowRoundSelector(false);
-                  }}
-                  className={`rounded-2xl border p-2 text-center font-black ${
-                    roundId === round.id
-                      ? "border-green-900 bg-green-950 text-white"
-                      : "border-slate-200 bg-slate-50 text-green-950"
-                  }`}
-                >
-                  <span className="block text-base">{round.course}</span>
-                  <span className="mt-1 block text-xs opacity-80">
-                    {round.day} •{" "}
-                    {round.format === "scramblePairs"
-                      ? "Scramble"
-                      : "Stableford"}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {showGroupSelector && (
-          <section className="mb-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-            <div className="grid grid-cols-3 gap-2">
-              {currentRound.groups.map((group: any) => (
-                <button
-                  key={group.id}
-                  onClick={() => {
-                    setSelectedGroupId(group.id);
-                    setSavedMessage("");
-                    setShowGroupSelector(false);
-                  }}
-                  className={`rounded-2xl border p-2 text-center font-black ${
-                    selectedGroupId === group.id
-                      ? "border-green-900 bg-green-950 text-white"
-                      : "border-slate-200 bg-slate-50 text-green-950"
-                  }`}
-                >
-                  <span className="block text-sm">{group.name}</span>
-                  <span className="mt-1 block text-[11px] opacity-80">
-                    {group.teeTime}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
+  <div className="grid grid-cols-3 gap-2">
+    {currentRound.groups.map((group: any) => (
+      <button
+        key={group.id}
+        onClick={() => {
+          setSelectedGroupId(group.id);
+          setSavedMessage("");
+        }}
+        className={`rounded-2xl border p-2 text-center font-black ${
+          selectedGroupId === group.id
+            ? "border-green-900 bg-green-950 text-white"
+            : "border-slate-200 bg-white text-green-950"
+        }`}
+      >
+        <span className="block text-sm">{group.name}</span>
+        <span className="mt-1 block text-[11px] opacity-80">
+          {group.teeTime}
+        </span>
+      </button>
+    ))}
+  </div>
+</div>
 
         <section className="rounded-3xl border border-green-900 bg-green-950 p-3 text-white shadow-sm">
           <div className="mb-3 text-center">
