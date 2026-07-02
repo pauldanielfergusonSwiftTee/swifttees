@@ -14,17 +14,19 @@ type LeaderboardRow = {
   pos: number;
   id: number;
   name: string;
+  team: string;
   points: number;
   through: number;
+  courseLabel: string;
   movement: string;
   highlight: string;
-  team: string;
 };
 
 type TeamStanding = {
   team: string;
   points: number;
   through: number;
+  courseLabel: string;
   icon: string;
 };
 
@@ -53,6 +55,15 @@ function movementStyle(movement: string) {
   return "text-slate-400";
 }
 
+function courseShortName(course: string) {
+  return course?.replace(" Course", "") || "Live";
+}
+
+function progressText(courseLabel: string, through: number) {
+  if (through >= 18) return `${courseLabel} • Finished ✅`;
+  return `${courseLabel} • Thru ${through}`;
+}
+
 function getRoundNumber(round: any) {
   return Number(round.roundNumber ?? round.round_number ?? round.id);
 }
@@ -61,12 +72,39 @@ function getGroupNumber(group: any) {
   return Number(group.groupNumber ?? group.group_number ?? group.id);
 }
 
-function getPairNumber(player: any) {
-  return Number(player.pairNumber ?? player.pair_number);
-}
+function getCurrentRoundInfo(tournamentSetup: any, scores: any[], scrambleScores: any[]) {
+  const allRows = [
+    ...scores.map((score: any) => ({
+      round_number: score.round_number,
+      hole_number: score.hole_number,
+      updated_at: score.updated_at,
+    })),
+    ...scrambleScores.map((score: any) => ({
+      round_number: score.round_number,
+      hole_number: score.hole_number,
+      updated_at: score.updated_at,
+    })),
+  ];
 
-function getPlayerName(player: any) {
-  return player.name ?? player.playerName ?? player.player_name;
+  const latestRow = allRows
+    .filter((row: any) => row.round_number)
+    .sort(
+      (a: any, b: any) =>
+        new Date(b.updated_at ?? 0).getTime() -
+        new Date(a.updated_at ?? 0).getTime()
+    )[0];
+
+  const fallbackRound = tournamentSetup?.rounds?.[0];
+
+  const currentRound =
+    tournamentSetup?.rounds?.find(
+      (round: any) => getRoundNumber(round) === Number(latestRow?.round_number)
+    ) ?? fallbackRound;
+
+  return {
+    roundNumber: getRoundNumber(currentRound),
+    courseLabel: courseShortName(currentRound?.course),
+  };
 }
 
 export default function MatchCentrePage() {
@@ -82,22 +120,25 @@ export default function MatchCentrePage() {
         getTournamentSetupForUI(),
       ]);
 
+    const currentRoundInfo = getCurrentRoundInfo(
+      tournamentSetup,
+      scores,
+      scrambleScores
+    );
+
     const stablefordScores = scores.filter(
       (score: any) => score.score_type === "stableford" && score.player_id
     );
 
     const scramblePointsByPlayerId: Record<number, number> = {};
-const scrambleThroughByPlayerId: Record<number, number> = {};
+    const scrambleThroughByPlayerId: Record<number, number> = {};
 
     scrambleScores.forEach((scrambleScore: any) => {
       const roundNumber = Number(scrambleScore.round_number);
       const groupNumber = Number(scrambleScore.group_number);
       const pairNumber = Number(scrambleScore.pair_number);
       const holeNumber = Number(scrambleScore.hole_number);
-
-      const scramblePoints = Number(
-        scrambleScore.points ?? scrambleScore.stableford_points ?? 0
-      );
+      const scramblePoints = Number(scrambleScore.points ?? 0);
 
       const round = tournamentSetup.rounds?.find(
         (round: any) => getRoundNumber(round) === roundNumber
@@ -107,26 +148,23 @@ const scrambleThroughByPlayerId: Record<number, number> = {};
         (group: any) => getGroupNumber(group) === groupNumber
       );
 
-      const pairPlayers =
-        group?.players?.filter(
-          (player: any) => getPairNumber(player) === pairNumber
-        ) ?? [];
-
       const pair = group?.pairs?.find(
-  (pair: any) => Number(pair.pairNumber) === pairNumber
-);
+        (pair: any) => Number(pair.pairNumber) === pairNumber
+      );
 
-const playerIds = [pair?.player1_id, pair?.player2_id].filter(Boolean);
+      const playerIds = [pair?.player1_id, pair?.player2_id].filter(Boolean);
 
-playerIds.forEach((playerId: any) => {
-  scramblePointsByPlayerId[Number(playerId)] =
-    (scramblePointsByPlayerId[Number(playerId)] ?? 0) + scramblePoints;
+      playerIds.forEach((playerId: any) => {
+        scramblePointsByPlayerId[Number(playerId)] =
+          (scramblePointsByPlayerId[Number(playerId)] ?? 0) + scramblePoints;
 
-  scrambleThroughByPlayerId[Number(playerId)] = Math.max(
-    scrambleThroughByPlayerId[Number(playerId)] ?? 0,
-    holeNumber
-  );
-});
+        if (roundNumber === currentRoundInfo.roundNumber) {
+          scrambleThroughByPlayerId[Number(playerId)] = Math.max(
+            scrambleThroughByPlayerId[Number(playerId)] ?? 0,
+            holeNumber
+          );
+        }
+      });
     });
 
     const rows = players.map((player: any) => {
@@ -139,15 +177,23 @@ playerIds.forEach((playerId: any) => {
         0
       );
 
+      const currentRoundPlayerScores = playerScores.filter(
+        (score: any) =>
+          Number(score.round_number) === Number(currentRoundInfo.roundNumber)
+      );
+
       const stablefordThrough =
-        playerScores.length > 0
+        currentRoundPlayerScores.length > 0
           ? Math.max(
-              ...playerScores.map((score: any) => Number(score.hole_number))
+              ...currentRoundPlayerScores.map((score: any) =>
+                Number(score.hole_number)
+              )
             )
           : 0;
 
       const scramblePoints = scramblePointsByPlayerId[Number(player.id)] ?? 0;
-const scrambleThrough = scrambleThroughByPlayerId[Number(player.id)] ?? 0;
+      const scrambleThrough =
+        scrambleThroughByPlayerId[Number(player.id)] ?? 0;
 
       return {
         id: player.id,
@@ -155,6 +201,7 @@ const scrambleThrough = scrambleThroughByPlayerId[Number(player.id)] ?? 0;
         team: player.team,
         points: stablefordPoints + scramblePoints,
         through: Math.max(stablefordThrough, scrambleThrough),
+        courseLabel: currentRoundInfo.courseLabel,
         movement: "—",
         highlight: "",
       };
@@ -169,13 +216,14 @@ const scrambleThrough = scrambleThroughByPlayerId[Number(player.id)] ?? 0;
       }))
     );
 
-    const teams = rows.reduce(
-      (acc: Record<string, TeamStanding>, player: any) => {
+    const teams = rows.reduce<Record<string, TeamStanding>>(
+  (acc, player) => {
         if (!acc[player.team]) {
           acc[player.team] = {
             team: player.team,
             points: 0,
             through: 0,
+            courseLabel: player.courseLabel,
             icon: "",
           };
         }
@@ -194,6 +242,8 @@ const scrambleThrough = scrambleThroughByPlayerId[Number(player.id)] ?? 0;
         teamPlayers.length > 0
           ? Math.min(...teamPlayers.map((player) => player.through))
           : 0;
+
+      team.courseLabel = currentRoundInfo.courseLabel;
     });
 
     const sortedTeams = Object.values(teams)
@@ -258,6 +308,10 @@ const scrambleThrough = scrambleThroughByPlayerId[Number(player.id)] ?? 0;
         <h1 className="mt-2 text-3xl font-black tracking-tight">
           Latest Scores
         </h1>
+
+        <p className="mt-1 text-sm font-semibold text-green-100">
+          Updates instantly as scores are entered
+        </p>
       </section>
 
       <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
@@ -273,12 +327,12 @@ const scrambleThrough = scrambleThroughByPlayerId[Number(player.id)] ?? 0;
                 {team.team}
               </div>
 
-              <div className="text-lg font-black text-green-950 leading-none">
+              <div className="text-lg font-black leading-none text-green-950">
                 {team.points}
               </div>
 
               <div className="mt-0.5 text-[10px] font-semibold text-slate-900">
-                Thru {team.through}
+                {progressText(team.courseLabel, team.through)}
               </div>
             </div>
           ))}
@@ -297,10 +351,15 @@ const scrambleThrough = scrambleThroughByPlayerId[Number(player.id)] ?? 0;
         </div>
 
         <div className="mt-3 flex items-center justify-between">
-          <h2 className="text-lg font-black text-green-950">🎙️ Live Feed</h2>
+          <div>
+            <h2 className="text-lg font-black text-green-950">🎙️ Live Feed</h2>
+            <p className="text-[10px] text-slate-400">
+              Updates instantly as scores are entered
+            </p>
+          </div>
 
-          <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600">
-            LIVE
+          <span className="animate-pulse rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600">
+            ● LIVE
           </span>
         </div>
 
@@ -344,19 +403,21 @@ const scrambleThrough = scrambleThroughByPlayerId[Number(player.id)] ?? 0;
                   </p>
 
                   <p className="text-xs font-semibold text-slate-500">
-                    Thru {player.through} holes
+                    {progressText(player.courseLabel, player.through)}
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 text-right">
-                <span
-                  className={`text-base font-black ${movementStyle(
-                    player.movement
-                  )}`}
-                >
-                  {player.movement}
-                </span>
+                {player.movement !== "—" && (
+                  <span
+                    className={`text-base font-black ${movementStyle(
+                      player.movement
+                    )}`}
+                  >
+                    {player.movement}
+                  </span>
+                )}
 
                 {player.highlight && (
                   <span className="text-base">{player.highlight}</span>
