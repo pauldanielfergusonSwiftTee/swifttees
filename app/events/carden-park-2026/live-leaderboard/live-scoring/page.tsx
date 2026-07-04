@@ -3,13 +3,14 @@
 import { useEffect, useState } from "react";
 import {
   saveHoleScores,
+  deleteHoleScores,
   saveBonusWinner,
   getScores,
+  getScrambleScores,
   getBonusWinners,
   resetEventScores,
 } from "@/lib/scores";
 import { getTournamentSetupForUI } from "@/lib/tournaments";
-import PageContainer from "@/components/PageContainer";
 
 const EVENT_SLUG = "carden-park-2026";
 
@@ -59,7 +60,6 @@ export default function LiveScoringPage() {
   const [bonusWinners, setBonusWinners] = useState<Record<string, string>>({});
   const [savedMessage, setSavedMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
- 
 
   useEffect(() => {
     async function loadTournamentSetup() {
@@ -74,64 +74,69 @@ export default function LiveScoringPage() {
           setSelectedGroupId(firstRound.groups?.[0]?.id ?? null);
         }
 
-        try {
-          const savedScores = await getScores(EVENT_SLUG);
-          const savedBonuses = await getBonusWinners(EVENT_SLUG);
+        const savedScores = await getScores(EVENT_SLUG);
+        const savedScrambleScores = await getScrambleScores(EVENT_SLUG);
+        const savedBonuses = await getBonusWinners(EVENT_SLUG);
 
-          const loadedScores: Record<string, number> = {};
+        const loadedScores: Record<string, number> = {};
 
-          savedScores.forEach((row: any) => {
-            const round = setup.rounds.find(
-              (r: any) =>
-                Number(r.roundNumber ?? r.id) === Number(row.round_number)
-            );
+        savedScores.forEach((row: any) => {
+          const round = setup.rounds.find(
+            (r: any) => Number(r.roundNumber ?? r.id) === Number(row.round_number)
+          );
 
-            if (!round) return;
+          if (!round) return;
 
-            const group = round.groups.find(
-              (g: any) =>
-                Number(g.groupNumber ?? g.id) === Number(row.group_number)
-            );
+          const group = round.groups.find(
+            (g: any) => Number(g.groupNumber ?? g.id) === Number(row.group_number)
+          );
 
-            if (!group) return;
+          if (!group) return;
 
-            if (row.score_type === "scramblePairs") {
-              const pair = group.pairs?.find(
-                (p: any) => Number(p.pairNumber) === Number(row.pair_number)
-              );
+          const player = group.players?.find(
+            (p: any) => Number(p.player_id) === Number(row.player_id)
+          );
 
-              if (!pair) return;
+          if (!player) return;
 
-              loadedScores[
-                `${round.id}-${group.id}-${row.hole_number}-${pair.id}`
-              ] = row.gross_score;
-            } else {
-              const player = group.players?.find(
-                (p: any) => p.player_id === row.player_id
-              );
+          loadedScores[`${round.id}-${group.id}-${row.hole_number}-${player.name}`] =
+            row.gross_score;
+        });
 
-              if (!player) return;
+        savedScrambleScores.forEach((row: any) => {
+          const round = setup.rounds.find(
+            (r: any) => Number(r.roundNumber ?? r.id) === Number(row.round_number)
+          );
 
-              loadedScores[
-                `${round.id}-${group.id}-${row.hole_number}-${player.name}`
-              ] = row.gross_score;
-            }
-          });
+          if (!round) return;
 
-          const loadedBonuses: Record<string, string> = {};
+          const group = round.groups.find(
+            (g: any) => Number(g.groupNumber ?? g.id) === Number(row.group_number)
+          );
 
-          savedBonuses.forEach((row: any) => {
-            loadedBonuses[`${row.round_number}-${row.hole_number}`] =
-              row.winner_player_id;
-          });
+          if (!group) return;
 
-          setScores(loadedScores);
-          setBonusWinners(loadedBonuses);
-        } catch (scoreError) {
-          console.error("Could not load saved scores:", scoreError);
-        }
+          const pair = group.pairs?.find(
+            (p: any) => Number(p.pairNumber) === Number(row.pair_number)
+          );
+
+          if (!pair) return;
+
+          loadedScores[`${round.id}-${group.id}-${row.hole_number}-${pair.id}`] =
+            row.gross_score;
+        });
+
+        const loadedBonuses: Record<string, string> = {};
+
+        savedBonuses.forEach((row: any) => {
+          loadedBonuses[`${row.round_number}-${row.hole_number}`] =
+            row.winner_player_id;
+        });
+
+        setScores(loadedScores);
+        setBonusWinners(loadedBonuses);
       } catch (error) {
-        console.error("Could not load tournament setup from Supabase:", error);
+        console.error("Could not load scoring page data:", error);
       }
     }
 
@@ -208,20 +213,34 @@ export default function LiveScoringPage() {
     const currentScore = scores[key] || 0;
     const newScore = Math.max(0, currentScore + amount);
 
-    setScores((current) => ({
-      ...current,
-      [key]: newScore,
-    }));
+    setScores((current) => {
+      const updated = { ...current };
+
+      if (newScore === 0) {
+        delete updated[key];
+      } else {
+        updated[key] = newScore;
+      }
+
+      return updated;
+    });
   }
 
   function setScore(id: string, value: string) {
     const key = scoreKey(id);
     const numberValue = Number(value);
 
-    setScores((current) => ({
-      ...current,
-      [key]: numberValue,
-    }));
+    setScores((current) => {
+      const updated = { ...current };
+
+      if (!value || numberValue <= 0) {
+        delete updated[key];
+      } else {
+        updated[key] = numberValue;
+      }
+
+      return updated;
+    });
   }
 
   function setBonusWinner(playerName: string) {
@@ -241,38 +260,60 @@ export default function LiveScoringPage() {
 
     try {
       let rowsToSave: any[] = [];
+      let rowsToDelete: any[] = [];
 
       if (isScramble) {
         rowsToSave =
           selectedGroup.pairs
             ?.map((pair: any) => {
               const grossScore = getScore(pair.id);
-              if (!grossScore) return null;
+
+              if (!grossScore) {
+                rowsToDelete.push({
+                  event_slug: EVENT_SLUG,
+                  round_number: currentRound.roundNumber ?? currentRound.id,
+                  hole_number: hole,
+                  group_number: selectedGroup.groupNumber ?? selectedGroup.id,
+                  pair_number: pair.pairNumber,
+                });
+
+                return null;
+              }
 
               return {
-  event_slug: EVENT_SLUG,
-  round_number: currentRound.roundNumber ?? currentRound.id,
-  player_id: null,
-  hole_number: hole,
-  gross_score: grossScore,
-  group_number: selectedGroup.groupNumber ?? selectedGroup.id,
-  pair_number: pair.pairNumber,
-  score_type: "scramblePairs",
-  points: calculateStablefordPoints(
-    grossScore,
-    currentHole.par,
-    currentHole.strokeIndex,
-    pair.finalHandicap
-  ),
-  event_handicap: pair.finalHandicap,
-};
+                event_slug: EVENT_SLUG,
+                round_number: currentRound.roundNumber ?? currentRound.id,
+                player_id: null,
+                hole_number: hole,
+                gross_score: grossScore,
+                group_number: selectedGroup.groupNumber ?? selectedGroup.id,
+                pair_number: pair.pairNumber,
+                score_type: "scramblePairs",
+                points: calculateStablefordPoints(
+                  grossScore,
+                  currentHole.par,
+                  currentHole.strokeIndex,
+                  pair.finalHandicap
+                ),
+                event_handicap: pair.finalHandicap,
+              };
             })
             .filter(Boolean) ?? [];
       } else {
         rowsToSave = selectedGroup.players
           .map((player: any) => {
             const grossScore = getScore(player.name);
-            if (!grossScore) return null;
+
+            if (!grossScore) {
+              rowsToDelete.push({
+                event_slug: EVENT_SLUG,
+                round_number: currentRound.roundNumber ?? currentRound.id,
+                player_id: player.player_id,
+                hole_number: hole,
+              });
+
+              return null;
+            }
 
             return {
               event_slug: EVENT_SLUG,
@@ -293,6 +334,10 @@ export default function LiveScoringPage() {
             };
           })
           .filter(Boolean);
+      }
+
+      if (rowsToDelete.length > 0) {
+        await deleteHoleScores(rowsToDelete);
       }
 
       if (rowsToSave.length > 0) {
@@ -337,38 +382,37 @@ export default function LiveScoringPage() {
     }
   }
 
-async function resetScores() {
-  const password = window.prompt("Enter reset password");
+  async function resetScores() {
+    const password = window.prompt("Enter reset password");
 
-  if (password !== "reset") {
-    alert("Incorrect password");
-    return;
-  }
+    if (password !== "reset") {
+      alert("Incorrect password");
+      return;
+    }
 
-  const confirmed = window.confirm(
-    "This will delete all Stableford scores, scramble scores and bonus winners for both days. Are you sure?"
-  );
-
-  if (!confirmed) return;
-
-  try {
-    setIsSaving(true);
-    await resetEventScores(EVENT_SLUG);
-
-    setScores({});
-    setBonusWinners({});
-    setHole(1);
-    setSavedMessage("All scores reset for both days.");
-  } catch (error: any) {
-    console.error(error);
-    setSavedMessage(
-      `❌ Could not reset scores. ${error.message || "Please try again."}`
+    const confirmed = window.confirm(
+      "This will delete all Stableford scores and scramble scores for both days. Are you sure?"
     );
-  } finally {
-    setIsSaving(false);
-  }
-}
 
+    if (!confirmed) return;
+
+    try {
+      setIsSaving(true);
+      await resetEventScores(EVENT_SLUG);
+
+      setScores({});
+      setBonusWinners({});
+      setHole(1);
+      setSavedMessage("All scores reset for both days.");
+    } catch (error: any) {
+      console.error(error);
+      setSavedMessage(
+        `❌ Could not reset scores. ${error.message || "Please try again."}`
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
 
   function holeHasScores(holeNumber: number) {
     if (isScramble) {
@@ -392,53 +436,55 @@ async function resetScores() {
         </div>
 
         <div className="mb-3 space-y-2">
-  <div className="grid grid-cols-2 gap-2">
-    {tournamentSetup.rounds.map((round: any) => (
-      <button
-        key={round.id}
-        onClick={() => {
-          setRoundId(round.id);
-          setSelectedGroupId(round.groups?.[0]?.id ?? null);
-          setHole(1);
-          setSavedMessage("");
-        }}
-        className={`rounded-2xl border p-2 text-center font-black ${
-          roundId === round.id
-            ? "border-green-900 bg-green-950 text-white"
-            : "border-slate-200 bg-white text-green-950"
-        }`}
-      >
-        <span className="block text-sm">{round.course}</span>
-        <span className="mt-1 block text-[11px] opacity-80">
-          {round.day} •{" "}
-          {round.format === "scramblePairs" ? "Scramble" : "Stableford"}
-        </span>
-      </button>
-    ))}
-  </div>
+          <div className="grid grid-cols-2 gap-2">
+            {tournamentSetup.rounds.map((round: any) => (
+              <button
+                key={round.id}
+                onClick={() => {
+                  setRoundId(round.id);
+                  setSelectedGroupId(round.groups?.[0]?.id ?? null);
+                  setHole(1);
+                  setSavedMessage("");
+                }}
+                className={`rounded-2xl border p-2 text-center font-black ${
+                  roundId === round.id
+                    ? "border-green-900 bg-green-950 text-white"
+                    : "border-slate-200 bg-white text-green-950"
+                }`}
+              >
+                <span className="block text-sm">{round.course}</span>
+                <span className="mt-1 block text-[11px] opacity-80">
+                  {round.day} •{" "}
+                  {round.format === "scramblePairs"
+                    ? "Scramble"
+                    : "Stableford"}
+                </span>
+              </button>
+            ))}
+          </div>
 
-  <div className="grid grid-cols-3 gap-2">
-    {currentRound.groups.map((group: any) => (
-      <button
-        key={group.id}
-        onClick={() => {
-          setSelectedGroupId(group.id);
-          setSavedMessage("");
-        }}
-        className={`rounded-2xl border p-2 text-center font-black ${
-          selectedGroupId === group.id
-            ? "border-green-900 bg-green-950 text-white"
-            : "border-slate-200 bg-white text-green-950"
-        }`}
-      >
-        <span className="block text-sm">{group.name}</span>
-        <span className="mt-1 block text-[11px] opacity-80">
-          {group.teeTime}
-        </span>
-      </button>
-    ))}
-  </div>
-</div>
+          <div className="grid grid-cols-3 gap-2">
+            {currentRound.groups.map((group: any) => (
+              <button
+                key={group.id}
+                onClick={() => {
+                  setSelectedGroupId(group.id);
+                  setSavedMessage("");
+                }}
+                className={`rounded-2xl border p-2 text-center font-black ${
+                  selectedGroupId === group.id
+                    ? "border-green-900 bg-green-950 text-white"
+                    : "border-slate-200 bg-white text-green-950"
+                }`}
+              >
+                <span className="block text-sm">{group.name}</span>
+                <span className="mt-1 block text-[11px] opacity-80">
+                  {group.teeTime}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
 
         <section className="rounded-3xl border border-green-900 bg-green-950 p-3 text-white shadow-sm">
           <div className="mb-3 text-center">
@@ -651,14 +697,14 @@ async function resetScores() {
             >
               🏆 Leaderboard
             </a>
-<button
-  onClick={resetScores}
-  disabled={isSaving}
-  className="flex items-center justify-center rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-black text-red-700 shadow-sm disabled:opacity-60"
->
-  Reset All Scores
-</button>
-            
+
+            <button
+              onClick={resetScores}
+              disabled={isSaving}
+              className="flex items-center justify-center rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-black text-red-700 shadow-sm disabled:opacity-60"
+            >
+              Reset All Scores
+            </button>
           </div>
         </section>
       </div>

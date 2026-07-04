@@ -306,12 +306,10 @@ export default function MatchCentrePage() {
         </p>
 
         <h1 className="mt-2 text-3xl font-black tracking-tight">
-          Latest Scores
+          Leaderboards
         </h1>
 
-        <p className="mt-1 text-sm font-semibold text-green-100">
-          Updates instantly as scores are entered
-        </p>
+      
       </section>
 
       <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">

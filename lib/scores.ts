@@ -39,6 +39,37 @@ if (scrambleRows.length) {
 }
 }
 
+export async function deleteHoleScores(rows: any[]) {
+  if (!rows.length) return;
+
+  const stablefordRows = rows.filter((row) => row.player_id);
+  const scrambleRows = rows.filter((row) => !row.player_id && row.group_number);
+
+  for (const row of stablefordRows) {
+    const { error } = await supabase
+      .from("scores")
+      .delete()
+      .eq("event_slug", row.event_slug)
+      .eq("round_number", row.round_number)
+      .eq("player_id", row.player_id)
+      .eq("hole_number", row.hole_number);
+
+    if (error) throw error;
+  }
+
+  for (const row of scrambleRows) {
+    const { error } = await supabase
+      .from("scramble_scores")
+      .delete()
+      .eq("event_slug", row.event_slug)
+      .eq("round_number", row.round_number)
+      .eq("pair_number", row.pair_number)
+      .eq("hole_number", row.hole_number);
+
+    if (error) throw error;
+  }
+}
+
 export async function getScores(eventSlug: string) {
   const { data, error } = await supabase
     .from("scores")
