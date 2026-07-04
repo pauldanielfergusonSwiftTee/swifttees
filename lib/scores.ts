@@ -32,7 +32,7 @@ if (scrambleRows.length) {
   const { error } = await supabase
     .from("scramble_scores")
     .upsert(scrambleRowsForTable, {
-      onConflict: "event_slug,round_number,pair_number,hole_number",
+      onConflict: "event_slug,round_number,group_number,pair_number,hole_number",
     });
 
   if (error) throw error;
@@ -50,9 +50,10 @@ export async function deleteHoleScores(rows: any[]) {
       .from("scores")
       .delete()
       .eq("event_slug", row.event_slug)
-      .eq("round_number", row.round_number)
-      .eq("player_id", row.player_id)
-      .eq("hole_number", row.hole_number);
+  .eq("round_number", row.round_number)
+  .eq("group_number", row.group_number)
+  .eq("pair_number", row.pair_number)
+  .eq("hole_number", row.hole_number);
 
     if (error) throw error;
   }
@@ -82,9 +83,11 @@ export async function getScores(eventSlug: string) {
 }
 
 export async function saveBonusWinner(data: any) {
-  const { error } = await supabase.from("bonus_winners").upsert(data, {
-    onConflict: "event_slug,round_number,hole_number,bonus_type",
-  });
+  const { error } = await supabase
+    .from("bonus_winners")
+    .upsert(data, {
+      onConflict: "event_slug,round_number,hole,bonus_type",
+    });
 
   if (error) throw error;
 }

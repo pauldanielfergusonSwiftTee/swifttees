@@ -186,11 +186,11 @@ export default function CardenParkEventPage() {
 
             <div className="absolute bottom-5 left-5 right-5 text-white">
               <p className="inline-block bg-green-600 text-white text-xs font-black uppercase tracking-wider px-3 py-2 rounded-xl mb-3">
-                Weekend Hub
+                Carden Park
               </p>
 
               <h1 className="text-4xl md:text-7xl font-black leading-tight">
-                Carden Park July 2026
+                Stu's Big Birthday July 2026
               </h1>
 
              

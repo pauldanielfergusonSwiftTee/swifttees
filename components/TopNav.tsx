@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 
 const navItems = [
   { label: "Home", href: "/" },
-  { label: "Carden Park", href: "/events/carden-park-2026" },
+  { label: "Stu's B'day", href: "/events/carden-park-2026" },
   { label: "Leaderboard", href: "/match-centre" },
   {
     label: "Scorecard",
@@ -27,9 +27,11 @@ export default function TopNav() {
         <div className="flex gap-2">
           {navItems.map((item) => {
             const isActive =
-              item.href === "/"
-                ? pathname === "/"
-                : pathname === item.href || pathname.startsWith(item.href + "/");
+  item.href === "/"
+    ? pathname === "/"
+    : item.href === "/events/carden-park-2026"
+    ? pathname === "/events/carden-park-2026"
+    : pathname === item.href || pathname.startsWith(item.href + "/");
 
             return (
               <Link

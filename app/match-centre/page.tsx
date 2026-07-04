@@ -1,14 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
 import { getPlayers } from "@/lib/players";
-import { getScores, getScrambleScores } from "@/lib/scores";
+import {
+  getScores,
+  getScrambleScores,
+  getBonusWinners,
+} from "@/lib/scores";
 import { getTournamentSetupForUI } from "@/lib/tournaments";
 import { supabase } from "@/lib/supabase";
 
 const EVENT_SLUG = "carden-park-2026";
+
+type Movement = {
+  icon: string;
+  text: string;
+};
 
 type LeaderboardRow = {
   pos: number;
@@ -18,7 +27,7 @@ type LeaderboardRow = {
   points: number;
   through: number;
   courseLabel: string;
-  movement: string;
+  movement: Movement;
   highlight: string;
 };
 
@@ -49,10 +58,18 @@ const commentary = [
   },
 ];
 
-function movementStyle(movement: string) {
-  if (movement === "▲") return "text-green-700";
-  if (movement === "▼") return "text-red-600";
+function movementStyle(icon: string) {
+  if (icon === "▲" || icon === "🚀") return "text-green-700";
+  if (icon === "▼" || icon === "📉") return "text-red-600";
+  if (icon === "👑") return "text-yellow-600";
   return "text-slate-400";
+}
+
+function teamDot(team: string) {
+  if (team === "Blue") return "bg-blue-500";
+  if (team === "Green") return "bg-green-500";
+  if (team === "White") return "bg-white border border-slate-400";
+  return "bg-slate-300";
 }
 
 function courseShortName(course: string) {
@@ -72,7 +89,11 @@ function getGroupNumber(group: any) {
   return Number(group.groupNumber ?? group.group_number ?? group.id);
 }
 
-function getCurrentRoundInfo(tournamentSetup: any, scores: any[], scrambleScores: any[]) {
+function getCurrentRoundInfo(
+  tournamentSetup: any,
+  scores: any[],
+  scrambleScores: any[]
+) {
   const allRows = [
     ...scores.map((score: any) => ({
       round_number: score.round_number,
@@ -110,15 +131,22 @@ function getCurrentRoundInfo(tournamentSetup: any, scores: any[], scrambleScores
 export default function MatchCentrePage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [teamStandings, setTeamStandings] = useState<TeamStanding[]>([]);
+  const previousPositionsRef = useRef<Record<number, number>>({});
 
   async function loadLeaderboard() {
-    const [players, scores, scrambleScores, tournamentSetup] =
-      await Promise.all([
-        getPlayers(),
-        getScores(EVENT_SLUG),
-        getScrambleScores(EVENT_SLUG),
-        getTournamentSetupForUI(),
-      ]);
+    const [
+  players,
+  scores,
+  scrambleScores,
+  bonusWinners,
+  tournamentSetup,
+] = await Promise.all([
+  getPlayers(),
+  getScores(EVENT_SLUG),
+  getScrambleScores(EVENT_SLUG),
+  getBonusWinners(EVENT_SLUG),
+  getTournamentSetupForUI(),
+]);
 
     const currentRoundInfo = getCurrentRoundInfo(
       tournamentSetup,
@@ -132,6 +160,15 @@ export default function MatchCentrePage() {
 
     const scramblePointsByPlayerId: Record<number, number> = {};
     const scrambleThroughByPlayerId: Record<number, number> = {};
+const bonusPointsByPlayerName: Record<string, number> = {};
+
+bonusWinners.forEach((bonus: any) => {
+  if (!bonus.winner_player_name) return;
+
+  bonusPointsByPlayerName[bonus.winner_player_name] =
+    (bonusPointsByPlayerName[bonus.winner_player_name] ?? 0) +
+    Number(bonus.points ?? 0);
+});
 
     scrambleScores.forEach((scrambleScore: any) => {
       const roundNumber = Number(scrambleScore.round_number);
@@ -192,35 +229,89 @@ export default function MatchCentrePage() {
           : 0;
 
       const scramblePoints = scramblePointsByPlayerId[Number(player.id)] ?? 0;
+      const bonusPoints = bonusPointsByPlayerName[player.name] ?? 0;
       const scrambleThrough =
         scrambleThroughByPlayerId[Number(player.id)] ?? 0;
 
       return {
         id: player.id,
         name: player.name,
-        team: player.team,
-        points: stablefordPoints + scramblePoints,
+        team: player.team || "",
+        points: stablefordPoints + scramblePoints + bonusPoints,
         through: Math.max(stablefordThrough, scrambleThrough),
         courseLabel: currentRoundInfo.courseLabel,
-        movement: "—",
+        movement: {
+          icon: "—",
+          text: "No movement",
+        },
         highlight: "",
       };
     });
 
     rows.sort((a, b) => b.points - a.points || b.through - a.through);
 
-    setLeaderboard(
-      rows.map((player, index) => ({
+    const previousPositions = previousPositionsRef.current;
+
+    const rowsWithPositions = rows.map((player, index) => {
+      const newPosition = index + 1;
+      const oldPosition = previousPositions[player.id];
+
+      let movement = {
+        icon: "—",
+        text: "No movement",
+      };
+
+      if (oldPosition) {
+        const placesMoved = oldPosition - newPosition;
+
+        if (newPosition === 1 && oldPosition !== 1) {
+          movement = {
+            icon: "👑",
+            text: "Took the lead",
+          };
+        } else if (placesMoved >= 3) {
+          movement = {
+            icon: "🚀",
+            text: `Up ${placesMoved}`,
+          };
+        } else if (placesMoved > 0) {
+          movement = {
+            icon: "▲",
+            text: `Up ${placesMoved}`,
+          };
+        } else if (placesMoved <= -3) {
+          movement = {
+            icon: "📉",
+            text: `Down ${Math.abs(placesMoved)}`,
+          };
+        } else if (placesMoved < 0) {
+          movement = {
+            icon: "▼",
+            text: `Down ${Math.abs(placesMoved)}`,
+          };
+        }
+      }
+
+      return {
         ...player,
-        pos: index + 1,
-      }))
+        pos: newPosition,
+        movement,
+      };
+    });
+
+    setLeaderboard(rowsWithPositions);
+
+    previousPositionsRef.current = Object.fromEntries(
+      rowsWithPositions.map((player) => [player.id, player.pos])
     );
 
-    const teams = rows.reduce<Record<string, TeamStanding>>(
-  (acc, player) => {
-        if (!acc[player.team]) {
-          acc[player.team] = {
-            team: player.team,
+    const teams = rowsWithPositions.reduce<Record<string, TeamStanding>>(
+      (acc, player) => {
+        const teamName = player.team || "No Team";
+
+        if (!acc[teamName]) {
+          acc[teamName] = {
+            team: teamName,
             points: 0,
             through: 0,
             courseLabel: player.courseLabel,
@@ -228,7 +319,7 @@ export default function MatchCentrePage() {
           };
         }
 
-        acc[player.team].points += player.points;
+        acc[teamName].points += player.points;
 
         return acc;
       },
@@ -236,7 +327,9 @@ export default function MatchCentrePage() {
     );
 
     Object.values(teams).forEach((team) => {
-      const teamPlayers = rows.filter((player) => player.team === team.team);
+      const teamPlayers = rowsWithPositions.filter(
+        (player) => (player.team || "No Team") === team.team
+      );
 
       team.through =
         teamPlayers.length > 0
@@ -308,8 +401,6 @@ export default function MatchCentrePage() {
         <h1 className="mt-2 text-3xl font-black tracking-tight">
           Leaderboards
         </h1>
-
-      
       </section>
 
       <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
@@ -388,7 +479,11 @@ export default function MatchCentrePage() {
           {leaderboard.map((player) => (
             <div
               key={player.id}
-              className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-2.5"
+              className={`flex items-center justify-between rounded-2xl px-3 py-2.5 ${
+                player.pos === 1
+                  ? "border border-yellow-300 bg-yellow-50"
+                  : "bg-slate-50"
+              }`}
             >
               <div className="flex items-center gap-3">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-950 text-sm font-black text-white">
@@ -396,27 +491,39 @@ export default function MatchCentrePage() {
                 </span>
 
                 <div>
-                  <p className="text-base font-black text-green-950">
-                    {player.name}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-3 w-3 rounded-full ${teamDot(player.team)}`}
+                    />
+
+                    <p className="text-base font-black text-green-950">
+                      {player.name}
+                    </p>
+
+                    {player.movement.icon !== "—" && (
+                      <span
+                        title={player.movement.text}
+                        className={`text-base font-black ${movementStyle(
+                          player.movement.icon
+                        )}`}
+                      >
+                        {player.movement.icon}
+                      </span>
+                    )}
+                  </div>
 
                   <p className="text-xs font-semibold text-slate-500">
-                    {progressText(player.courseLabel, player.through)}
+                    {player.pos === 1
+                      ? `🔥 Current Leader • ${progressText(
+                          player.courseLabel,
+                          player.through
+                        )}`
+                      : progressText(player.courseLabel, player.through)}
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 text-right">
-                {player.movement !== "—" && (
-                  <span
-                    className={`text-base font-black ${movementStyle(
-                      player.movement
-                    )}`}
-                  >
-                    {player.movement}
-                  </span>
-                )}
-
                 {player.highlight && (
                   <span className="text-base">{player.highlight}</span>
                 )}

@@ -999,7 +999,7 @@ if (!authenticated) {
 
                                     <div className="mt-3 rounded-xl bg-slate-50 border border-slate-200 p-3">
                                       <p className="text-xs font-bold text-slate-500">
-                                        Calculated Pair HCP
+                                        Calculated Scramble HCP
                                       </p>
 
                                       <p className="text-xl font-black text-green-950">
@@ -1016,7 +1016,7 @@ if (!authenticated) {
                                       )}
 
                                       <label className="block text-xs font-bold text-slate-500 mt-3 mb-1">
-                                        Final Pair HCP
+                                        Scramble Pair HCP
                                       </label>
 
                                       <input

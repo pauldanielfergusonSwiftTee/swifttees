@@ -105,7 +105,7 @@ export default function Home() {
 </p>
             <div className="rounded-3xl bg-white/10 border border-white/20 backdrop-blur p-4 md:p-6 mb-5">
               <p className="text-green-300 text-sm font-black uppercase tracking-wider">
-                Carden Park Weekend
+                Stu's Big 50th Weekend
               </p>
 
               <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 mt-2">

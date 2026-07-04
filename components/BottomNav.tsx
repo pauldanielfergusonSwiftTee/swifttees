@@ -10,7 +10,7 @@ const navItems = [
     icon: "🏠",
   },
  {
-  label: "Carden Park",
+  label: "Stu's B'day",
   href: "/events/carden-park-2026",
   icon: "⛳",
 },

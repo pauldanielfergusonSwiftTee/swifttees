@@ -17,7 +17,8 @@ const EVENT_SLUG = "carden-park-2026";
 function teamDot(team: string) {
   if (team === "Blue") return "bg-blue-500";
   if (team === "Green") return "bg-green-500";
-  return "bg-slate-200 border border-slate-400";
+  if (team === "White") return "bg-white border border-slate-400";
+  return "bg-slate-300 border border-slate-400";
 }
 
 function getBonusHoleNumber(bonus: any) {
@@ -129,9 +130,9 @@ export default function LiveScoringPage() {
         const loadedBonuses: Record<string, string> = {};
 
         savedBonuses.forEach((row: any) => {
-          loadedBonuses[`${row.round_number}-${row.hole_number}`] =
-            row.winner_player_id;
-        });
+  loadedBonuses[`${row.round_number}-${row.hole}`] =
+    row.winner_player_name;
+});
 
         setScores(loadedScores);
         setBonusWinners(loadedBonuses);
@@ -188,13 +189,26 @@ export default function LiveScoringPage() {
     (bonus: any) => getBonusHoleNumber(bonus) === hole
   );
 
-  const allRoundPlayers = Array.from(
-    new Set(
-      currentRound.groups.flatMap((group: any) =>
-        group.players.map((player: any) => player.name)
-      )
-    )
-  );
+  const allRoundPlayers = currentRound.groups
+  .flatMap((group: any) => group.players)
+  .filter((player: any) => player?.player_id);
+
+const uniqueRoundPlayers = Array.from(
+  new Map(
+    allRoundPlayers.map((player: any) => [
+      String(player.player_id),
+      player,
+    ])
+  ).values()
+);
+
+function getPlayerNameById(playerId: string) {
+  const foundPlayer = uniqueRoundPlayers.find(
+    (player: any) => String(player.player_id) === String(playerId)
+  ) as any;
+
+  return foundPlayer?.name ?? "";
+}
 
   function scoreKey(id: string, holeNumber = hole) {
     return `${roundId}-${selectedGroupId}-${holeNumber}-${id}`;
@@ -344,20 +358,21 @@ export default function LiveScoringPage() {
         await saveHoleScores(rowsToSave);
       }
 
-      if (bonusHole && getBonusWinner()) {
-        await saveBonusWinner({
-          event_slug: EVENT_SLUG,
-          round_number: currentRound.roundNumber ?? currentRound.id,
-          hole_number: hole,
-          bonus_type: getBonusType(bonusHole),
-          winner_player_id: getBonusWinner(),
-          points: bonusHole.points ?? 0,
-        });
-      }
+if (bonusHole && getBonusWinner()) {
+  await saveBonusWinner({
+    event_slug: EVENT_SLUG,
+    round_number: currentRound.roundNumber ?? currentRound.id,
+    hole,
+    bonus_type: getBonusType(bonusHole),
+    winner_player_name: getPlayerNameById(getBonusWinner()),
+    points: bonusHole.points ?? 0,
+  });
+}
+     
 
       const bonusMessage =
         bonusHole && getBonusWinner()
-          ? ` Bonus winner: ${getBonusWinner()}.`
+          ? ` Bonus winner: ${getPlayerNameById(getBonusWinner())}.`
           : "";
 
       const formatMessage = isScramble ? "scramble scores" : "scorecards";
@@ -553,11 +568,11 @@ export default function LiveScoringPage() {
                 >
                   <option value="">Select bonus winner</option>
 
-                  {allRoundPlayers.map((playerName: any, index: number) => (
-                    <option key={`${playerName}-${index}`} value={playerName}>
-                      {playerName}
-                    </option>
-                  ))}
+                  {uniqueRoundPlayers.map((player: any) => (
+  <option key={player.player_id} value={String(player.player_id)}>
+    {player.name}
+  </option>
+))}
                 </select>
               </div>
             )}
