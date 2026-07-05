@@ -7,7 +7,7 @@ const players = [
   {
     name: "Gav",
     team: "White",
-    nickname: "Mr Stableford",
+    nickname: "The Competitive One",
     handicap: 20,
     trips: 4,
     
@@ -16,7 +16,7 @@ const players = [
    {
     name: "Stu",
     team: "Blue",
-    nickname: "The Guest of Honour",
+    nickname: "The One It's All About",
     handicap: 28,
     trips: 4,
   
@@ -25,7 +25,7 @@ const players = [
  {
     name: "Paul",
     team: "Green",
-    nickname: "THe Organiser",
+    nickname: "The Organiser",
     handicap: 24,
     trips: 5,
     
@@ -190,7 +190,7 @@ export default function CardenParkEventPage() {
               </p>
 
               <h1 className="text-4xl md:text-7xl font-black leading-tight">
-                Stu's Big Birthday July 2026
+                Stu's 50th July 2026
               </h1>
 
              

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getPlayers } from "@/lib/players";
 import { saveTournamentSetup } from "@/lib/tournaments";
+import { resetEventScores } from "@/lib/scores";
 
 type Player = {
   id: number;
@@ -265,6 +266,29 @@ if (supabasePlayers.length > 0) {
   function getPlayerIdByName(playerName: string) {
     return players.find((player) => player.name === playerName)?.id ?? null;
   }
+
+async function resetAllScores() {
+  const confirmed = window.confirm(
+    "This will delete all Stableford scores, scramble scores and bonus winners for both days. Are you sure?"
+  );
+
+  if (!confirmed) return;
+
+  const confirmation = window.prompt(
+    'Type RESET to delete all Stableford scores, scramble scores and bonus winners.'
+  );
+
+  if (confirmation !== "RESET") return;
+
+  try {
+    await resetEventScores("carden-park-2026");
+    alert("All scores reset.");
+  } catch (error: any) {
+    console.error(error);
+    alert(`Could not reset scores. ${error.message || "Please try again."}`);
+  }
+}
+
 
  async function saveSetup() {
     const tournamentSetup = {
@@ -1230,6 +1254,18 @@ if (!authenticated) {
               </a>
             </div>
           )}
+         <div className="mt-6 border-t border-slate-200 pt-6">
+  <p className="mb-3 text-center text-xs font-bold uppercase tracking-wide text-slate-500">
+    Admin
+  </p>
+
+  <button
+    onClick={resetAllScores}
+    className="w-full rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-lg font-black text-red-700 transition hover:bg-red-100"
+  >
+    🗑️ Reset All Scores
+  </button>
+</div>
         </section>
       </div>
     </main>

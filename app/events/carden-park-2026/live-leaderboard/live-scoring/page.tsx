@@ -8,9 +8,10 @@ import {
   getScores,
   getScrambleScores,
   getBonusWinners,
-  resetEventScores,
+ 
 } from "@/lib/scores";
 import { getTournamentSetupForUI } from "@/lib/tournaments";
+import { calculateStablefordPoints } from "@/lib/stableford";
 
 const EVENT_SLUG = "carden-park-2026";
 
@@ -29,28 +30,7 @@ function getBonusType(bonus: any) {
   return bonus.type ?? bonus.bonusType ?? bonus.bonus_type ?? "Bonus";
 }
 
-function calculateStablefordPoints(
-  grossScore: number,
-  par: number,
-  strokeIndex: number,
-  handicap: number
-) {
-  if (!grossScore || grossScore <= 0) return 0;
 
-  const baseShots = Math.floor(handicap / 18);
-  const extraShots = handicap % 18;
-  const shotsReceived = baseShots + (strokeIndex <= extraShots ? 1 : 0);
-
-  const netScore = grossScore - shotsReceived;
-  const scoreVsPar = netScore - par;
-
-  if (scoreVsPar <= -3) return 5;
-  if (scoreVsPar === -2) return 4;
-  if (scoreVsPar === -1) return 3;
-  if (scoreVsPar === 0) return 2;
-  if (scoreVsPar === 1) return 1;
-  return 0;
-}
 
 export default function LiveScoringPage() {
   const [tournamentSetup, setTournamentSetup] = useState<any>(null);
@@ -129,11 +109,29 @@ export default function LiveScoringPage() {
 
         const loadedBonuses: Record<string, string> = {};
 
-        savedBonuses.forEach((row: any) => {
-  loadedBonuses[`${row.round_number}-${row.hole}`] =
-    row.winner_player_name;
+  savedBonuses.forEach((row: any) => {
+  const round = setup.rounds.find(
+    (r: any) => Number(r.roundNumber ?? r.id) === Number(row.round_number)
+  );
+
+  if (!round) return;
+
+const winnerName = String(row.winner_player_name ?? "").trim().toLowerCase();
+
+const winnerPlayer = round.groups
+  .flatMap((group: any) => group.players)
+  .find(
+    (player: any) =>
+      String(player.name ?? "").trim().toLowerCase() === winnerName
+  );
+
+if (winnerPlayer?.player_id) {
+  loadedBonuses[`${round.id}-${row.hole}`] = String(winnerPlayer.player_id);
+}
+
 });
 
+console.log("LOADED BONUSES:", loadedBonuses);
         setScores(loadedScores);
         setBonusWinners(loadedBonuses);
       } catch (error) {
@@ -208,6 +206,10 @@ function getPlayerNameById(playerId: string) {
   ) as any;
 
   return foundPlayer?.name ?? "";
+}
+
+function validPlayerId(playerId: any) {
+  return Number.isInteger(Number(playerId)) && String(playerId) !== "undefined";
 }
 
   function scoreKey(id: string, holeNumber = hole) {
@@ -319,16 +321,19 @@ function getPlayerNameById(playerId: string) {
             const grossScore = getScore(player.name);
 
             if (!grossScore) {
-              rowsToDelete.push({
-                event_slug: EVENT_SLUG,
-                round_number: currentRound.roundNumber ?? currentRound.id,
-                player_id: player.player_id,
-                hole_number: hole,
-              });
+if (validPlayerId(player.player_id)) {
+    rowsToDelete.push({
+      event_slug: EVENT_SLUG,
+      round_number: currentRound.roundNumber ?? currentRound.id,
+      player_id: player.player_id,
+      hole_number: hole,
+    });
+  }
 
-              return null;
-            }
+  return null;
+}
 
+if (!validPlayerId(player.player_id)) return null;
             return {
               event_slug: EVENT_SLUG,
               round_number: currentRound.roundNumber ?? currentRound.id,
@@ -349,7 +354,8 @@ function getPlayerNameById(playerId: string) {
           })
           .filter(Boolean);
       }
-
+console.log("ROWS TO SAVE", rowsToSave);
+console.log("ROWS TO DELETE", rowsToDelete);
       if (rowsToDelete.length > 0) {
         await deleteHoleScores(rowsToDelete);
       }
@@ -397,37 +403,7 @@ if (bonusHole && getBonusWinner()) {
     }
   }
 
-  async function resetScores() {
-    const password = window.prompt("Enter reset password");
-
-    if (password !== "reset") {
-      alert("Incorrect password");
-      return;
-    }
-
-    const confirmed = window.confirm(
-      "This will delete all Stableford scores and scramble scores for both days. Are you sure?"
-    );
-
-    if (!confirmed) return;
-
-    try {
-      setIsSaving(true);
-      await resetEventScores(EVENT_SLUG);
-
-      setScores({});
-      setBonusWinners({});
-      setHole(1);
-      setSavedMessage("All scores reset for both days.");
-    } catch (error: any) {
-      console.error(error);
-      setSavedMessage(
-        `❌ Could not reset scores. ${error.message || "Please try again."}`
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  }
+  
 
   function holeHasScores(holeNumber: number) {
     if (isScramble) {
@@ -503,7 +479,9 @@ if (bonusHole && getBonusWinner()) {
 
         <section className="rounded-3xl border border-green-900 bg-green-950 p-3 text-white shadow-sm">
           <div className="mb-3 text-center">
-            <h2 className="text-4xl font-black leading-none">Hole {hole}</h2>
+            <h2 className="text-4xl font-black leading-none">
+  {currentRound.course.replace(" Course", "")} - Hole {hole}
+</h2>
 
             <div className="mt-2 flex flex-wrap justify-center gap-2 text-sm font-bold">
               <span className="rounded-full bg-white/10 px-3 py-1">
@@ -713,13 +691,7 @@ if (bonusHole && getBonusWinner()) {
               🏆 Leaderboard
             </a>
 
-            <button
-              onClick={resetScores}
-              disabled={isSaving}
-              className="flex items-center justify-center rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-center text-sm font-black text-red-700 shadow-sm disabled:opacity-60"
-            >
-              Reset All Scores
-            </button>
+            
           </div>
         </section>
       </div>

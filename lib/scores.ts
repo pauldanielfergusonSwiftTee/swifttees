@@ -50,10 +50,9 @@ export async function deleteHoleScores(rows: any[]) {
       .from("scores")
       .delete()
       .eq("event_slug", row.event_slug)
-  .eq("round_number", row.round_number)
-  .eq("group_number", row.group_number)
-  .eq("pair_number", row.pair_number)
-  .eq("hole_number", row.hole_number);
+      .eq("round_number", row.round_number)
+      .eq("player_id", row.player_id)
+      .eq("hole_number", row.hole_number);
 
     if (error) throw error;
   }
@@ -64,6 +63,7 @@ export async function deleteHoleScores(rows: any[]) {
       .delete()
       .eq("event_slug", row.event_slug)
       .eq("round_number", row.round_number)
+      .eq("group_number", row.group_number)
       .eq("pair_number", row.pair_number)
       .eq("hole_number", row.hole_number);
 
@@ -114,24 +114,24 @@ export async function getScrambleScores(eventSlug: string) {
 export async function resetEventScores(eventSlug: string) {
   console.log("RESETTING EVENT:", eventSlug);
 
-  const { error: scoresError, count } = await supabase
+  const { error: scoresError } = await supabase
     .from("scores")
-    .delete({ count: "exact" })
+    .delete()
     .eq("event_slug", eventSlug);
-
-  console.log("DELETE SCORES:", { count, scoresError });
 
   if (scoresError) throw scoresError;
 
-  const { error: scrambleError, count: scrambleCount } = await supabase
+  const { error: scrambleError } = await supabase
     .from("scramble_scores")
-    .delete({ count: "exact" })
+    .delete()
     .eq("event_slug", eventSlug);
 
-  console.log("DELETE SCRAMBLE:", {
-    count: scrambleCount,
-    scrambleError,
-  });
-
   if (scrambleError) throw scrambleError;
+
+  const { error: bonusError } = await supabase
+    .from("bonus_winners")
+    .delete()
+    .eq("event_slug", eventSlug);
+
+  if (bonusError) throw bonusError;
 }

@@ -364,8 +364,10 @@ bonusWinners.forEach((bonus: any) => {
           table: "scores",
         },
         () => {
-          loadLeaderboard();
-        }
+  setTimeout(() => {
+    loadLeaderboard();
+  }, 200);
+}
       )
       .on(
         "postgres_changes",
@@ -375,9 +377,24 @@ bonusWinners.forEach((bonus: any) => {
           table: "scramble_scores",
         },
         () => {
-          loadLeaderboard();
-        }
+  setTimeout(() => {
+    loadLeaderboard();
+  }, 200);
+}
       )
+      .on(
+  "postgres_changes",
+  {
+    event: "*",
+    schema: "public",
+    table: "bonus_winners",
+  },
+ () => {
+  setTimeout(() => {
+    loadLeaderboard();
+  }, 200);
+}
+)
       .subscribe((status, err) => {
         if (err) {
           console.error("Realtime subscription error:", err);
