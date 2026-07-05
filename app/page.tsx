@@ -260,7 +260,7 @@ export default function Home() {
 
           <div className="flex gap-4 overflow-x-auto pb-2">
             {[
-              "/images/mainpage/main1.jpg",
+              "/images/mainpage/main1.JPG",
               "/images/mainpage/main2.jpeg",
               "/images/mainpage/main3.jpeg",
               "/images/mainpage/main4.jpeg",
