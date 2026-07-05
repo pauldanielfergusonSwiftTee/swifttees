@@ -260,10 +260,10 @@ export default function Home() {
 
           <div className="flex gap-4 overflow-x-auto pb-2">
             {[
-              "/carden-park.jpg",
-              "/carden-park.jpg",
-              "/carden-park.jpg",
-              "/carden-park.jpg",
+              "/images/mainpage/main1.jpg",
+              "/images/mainpage/main2.jpeg",
+              "/images/mainpage/main3.jpeg",
+              "/images/mainpage/main4.jpeg",
             ].map((src, index) => (
               <div
                 key={`${src}-${index}`}
