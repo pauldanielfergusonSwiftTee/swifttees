@@ -22,7 +22,12 @@ const moreLinks = [
     href: "/hall-of-fame",
     icon: "🏅",
   },
- 
+ {
+  title: "Live Centre (Beta)",
+  description: "Preview the next generation live tournament experience.",
+  href: "/live-centre",
+  icon: "🧪",
+},
   {
     title: "Tournament Setup",
     description: "Admin setup for groups, rounds and scoring.",

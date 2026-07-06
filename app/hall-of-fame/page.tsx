@@ -10,9 +10,9 @@ const awards = [
   },
   {
     icon: "🎯",
-    title: "Nearest Pin King",
+    title: "Closest to the Pin",
     winner: "TBC",
-    description: "Precision under pressure. Awarded to the player with the most Nearest the Pin victories.",
+    description: "Precision under pressure. Awarded to the player with the most Closest to the Pin victories.",
   },
   {
     icon: "🚀",
@@ -27,13 +27,7 @@ const awards = [
   description:
     "Awarded to the player with the longest run of scoring holes during the season. When the momentum builds, everybody else is chasing.",
 },
-{
-  icon: "📈",
-  title: "Biggest Climber",
-  winner: "TBC",
-  description:
-    "Awarded to the player who gained the most places on the leaderboard during a single event. Never out of the fight.",
-},
+
   {
     icon: "🍺",
     title: "Social Secretary",
