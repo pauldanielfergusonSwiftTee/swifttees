@@ -725,9 +725,7 @@ export default function LiveCentrePage() {
                 {team.points}
               </div>
 
-              <div className="mt-1 text-[10px] font-black text-green-700">
-                {team.gapText}
-              </div>
+              
 
               <div className="mt-0.5 text-[10px] font-semibold text-slate-500">
                 {progressText(team.courseLabel, team.through)}
@@ -741,12 +739,10 @@ export default function LiveCentrePage() {
         <div className="mb-3 flex items-center justify-between">
           <div>
             <h2 className="text-xl font-black text-green-950">
-              🎙️ Moments Feed
+              🎙️ Live Updates 
             </h2>
 
-            <p className="text-xs font-semibold text-slate-400">
-              Rare moments only — ready to paste into WhatsApp
-            </p>
+            
           </div>
         </div>
 
@@ -838,14 +834,8 @@ export default function LiveCentrePage() {
 
                     <p className="text-xs font-semibold text-slate-500">
                       {player.pos === 1
-                        ? `🔥 Leader • ${progressText(
-                            player.courseLabel,
-                            player.through
-                          )}`
-                        : `${gapToLeader ? `-${gapToLeader} from lead • ` : ""}${progressText(
-                            player.courseLabel,
-                            player.through
-                          )}`}
+  ? `🔥 Leader • ${progressText(player.courseLabel, player.through)}`
+  : progressText(player.courseLabel, player.through)}
                     </p>
                   </div>
                 </div>
