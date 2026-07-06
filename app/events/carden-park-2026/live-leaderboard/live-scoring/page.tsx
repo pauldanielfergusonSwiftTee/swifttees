@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   saveHoleScores,
   deleteHoleScores,
@@ -8,10 +8,10 @@ import {
   getScores,
   getScrambleScores,
   getBonusWinners,
- 
 } from "@/lib/scores";
 import { getTournamentSetupForUI } from "@/lib/tournaments";
 import { calculateStablefordPoints } from "@/lib/stableford";
+import { supabase } from "@/lib/supabase";
 
 const EVENT_SLUG = "carden-park-2026";
 
@@ -30,8 +30,6 @@ function getBonusType(bonus: any) {
   return bonus.type ?? bonus.bonusType ?? bonus.bonus_type ?? "Bonus";
 }
 
-
-
 export default function LiveScoringPage() {
   const [tournamentSetup, setTournamentSetup] = useState<any>(null);
   const [roundId, setRoundId] = useState<number | null>(null);
@@ -42,105 +40,132 @@ export default function LiveScoringPage() {
   const [savedMessage, setSavedMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    async function loadTournamentSetup() {
-      try {
-        const setup = await getTournamentSetupForUI();
-        setTournamentSetup(setup);
+  const loadScoringPageData = useCallback(async () => {
+    try {
+      const setup = await getTournamentSetupForUI();
+      setTournamentSetup(setup);
 
-        const firstRound = setup.rounds?.[0];
+      const firstRound = setup.rounds?.[0];
 
-        if (firstRound) {
-          setRoundId(firstRound.id);
-          setSelectedGroupId(firstRound.groups?.[0]?.id ?? null);
-        }
-
-        const savedScores = await getScores(EVENT_SLUG);
-        const savedScrambleScores = await getScrambleScores(EVENT_SLUG);
-        const savedBonuses = await getBonusWinners(EVENT_SLUG);
-
-        const loadedScores: Record<string, number> = {};
-
-        savedScores.forEach((row: any) => {
-          const round = setup.rounds.find(
-            (r: any) => Number(r.roundNumber ?? r.id) === Number(row.round_number)
-          );
-
-          if (!round) return;
-
-          const group = round.groups.find(
-            (g: any) => Number(g.groupNumber ?? g.id) === Number(row.group_number)
-          );
-
-          if (!group) return;
-
-          const player = group.players?.find(
-            (p: any) => Number(p.player_id) === Number(row.player_id)
-          );
-
-          if (!player) return;
-
-          loadedScores[`${round.id}-${group.id}-${row.hole_number}-${player.name}`] =
-            row.gross_score;
-        });
-
-        savedScrambleScores.forEach((row: any) => {
-          const round = setup.rounds.find(
-            (r: any) => Number(r.roundNumber ?? r.id) === Number(row.round_number)
-          );
-
-          if (!round) return;
-
-          const group = round.groups.find(
-            (g: any) => Number(g.groupNumber ?? g.id) === Number(row.group_number)
-          );
-
-          if (!group) return;
-
-          const pair = group.pairs?.find(
-            (p: any) => Number(p.pairNumber) === Number(row.pair_number)
-          );
-
-          if (!pair) return;
-
-          loadedScores[`${round.id}-${group.id}-${row.hole_number}-${pair.id}`] =
-            row.gross_score;
-        });
-
-        const loadedBonuses: Record<string, string> = {};
-
-  savedBonuses.forEach((row: any) => {
-  const round = setup.rounds.find(
-    (r: any) => Number(r.roundNumber ?? r.id) === Number(row.round_number)
-  );
-
-  if (!round) return;
-
-const winnerName = String(row.winner_player_name ?? "").trim().toLowerCase();
-
-const winnerPlayer = round.groups
-  .flatMap((group: any) => group.players)
-  .find(
-    (player: any) =>
-      String(player.name ?? "").trim().toLowerCase() === winnerName
-  );
-
-if (winnerPlayer?.player_id) {
-  loadedBonuses[`${round.id}-${row.hole}`] = String(winnerPlayer.player_id);
-}
-
-});
-
-console.log("LOADED BONUSES:", loadedBonuses);
-        setScores(loadedScores);
-        setBonusWinners(loadedBonuses);
-      } catch (error) {
-        console.error("Could not load scoring page data:", error);
+      if (firstRound && !roundId) {
+        setRoundId(firstRound.id);
+        setSelectedGroupId(firstRound.groups?.[0]?.id ?? null);
       }
-    }
 
-    loadTournamentSetup();
-  }, []);
+      const savedScores = await getScores(EVENT_SLUG);
+      const savedScrambleScores = await getScrambleScores(EVENT_SLUG);
+      const savedBonuses = await getBonusWinners(EVENT_SLUG);
+
+      const loadedScores: Record<string, number> = {};
+
+      savedScores.forEach((row: any) => {
+        const round = setup.rounds.find(
+          (r: any) => Number(r.roundNumber ?? r.id) === Number(row.round_number)
+        );
+
+        if (!round) return;
+
+        const group = round.groups.find(
+          (g: any) => Number(g.groupNumber ?? g.id) === Number(row.group_number)
+        );
+
+        if (!group) return;
+
+        const player = group.players?.find(
+          (p: any) => Number(p.player_id) === Number(row.player_id)
+        );
+
+        if (!player) return;
+
+        loadedScores[`${round.id}-${group.id}-${row.hole_number}-${player.name}`] =
+          row.gross_score;
+      });
+
+      savedScrambleScores.forEach((row: any) => {
+        const round = setup.rounds.find(
+          (r: any) => Number(r.roundNumber ?? r.id) === Number(row.round_number)
+        );
+
+        if (!round) return;
+
+        const group = round.groups.find(
+          (g: any) => Number(g.groupNumber ?? g.id) === Number(row.group_number)
+        );
+
+        if (!group) return;
+
+        const pair = group.pairs?.find(
+          (p: any) => Number(p.pairNumber) === Number(row.pair_number)
+        );
+
+        if (!pair) return;
+
+        loadedScores[`${round.id}-${group.id}-${row.hole_number}-${pair.id}`] =
+          row.gross_score;
+      });
+
+      const loadedBonuses: Record<string, string> = {};
+
+      savedBonuses.forEach((row: any) => {
+        const round = setup.rounds.find(
+          (r: any) => Number(r.roundNumber ?? r.id) === Number(row.round_number)
+        );
+
+        if (!round) return;
+
+        const winnerName = String(row.winner_player_name ?? "")
+          .trim()
+          .toLowerCase();
+
+        const winnerPlayer = round.groups
+          .flatMap((group: any) => group.players)
+          .find(
+            (player: any) =>
+              String(player.name ?? "").trim().toLowerCase() === winnerName
+          );
+
+        if (winnerPlayer?.player_id) {
+          loadedBonuses[`${round.id}-${row.hole}`] = String(
+            winnerPlayer.player_id
+          );
+        }
+      });
+
+      setScores(loadedScores);
+      setBonusWinners(loadedBonuses);
+    } catch (error) {
+      console.error("Could not load scoring page data:", error);
+    }
+  }, [roundId]);
+
+  useEffect(() => {
+    loadScoringPageData();
+  }, [loadScoringPageData]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("live-scoring-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "scores" },
+        () => setTimeout(loadScoringPageData, 200)
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "scramble_scores" },
+        () => setTimeout(loadScoringPageData, 200)
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "bonus_winners" },
+        () => setTimeout(loadScoringPageData, 200)
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [loadScoringPageData]);
 
   if (!tournamentSetup || !roundId || !selectedGroupId) {
     return (
@@ -188,29 +213,26 @@ console.log("LOADED BONUSES:", loadedBonuses);
   );
 
   const allRoundPlayers = currentRound.groups
-  .flatMap((group: any) => group.players)
-  .filter((player: any) => player?.player_id);
+    .flatMap((group: any) => group.players)
+    .filter((player: any) => player?.player_id);
 
-const uniqueRoundPlayers = Array.from(
-  new Map(
-    allRoundPlayers.map((player: any) => [
-      String(player.player_id),
-      player,
-    ])
-  ).values()
-);
+  const uniqueRoundPlayers = Array.from(
+    new Map(
+      allRoundPlayers.map((player: any) => [String(player.player_id), player])
+    ).values()
+  );
 
-function getPlayerNameById(playerId: string) {
-  const foundPlayer = uniqueRoundPlayers.find(
-    (player: any) => String(player.player_id) === String(playerId)
-  ) as any;
+  function getPlayerNameById(playerId: string) {
+    const foundPlayer = uniqueRoundPlayers.find(
+      (player: any) => String(player.player_id) === String(playerId)
+    ) as any;
 
-  return foundPlayer?.name ?? "";
-}
+    return foundPlayer?.name ?? "";
+  }
 
-function validPlayerId(playerId: any) {
-  return Number.isInteger(Number(playerId)) && String(playerId) !== "undefined";
-}
+  function validPlayerId(playerId: any) {
+    return Number.isInteger(Number(playerId)) && String(playerId) !== "undefined";
+  }
 
   function scoreKey(id: string, holeNumber = hole) {
     return `${roundId}-${selectedGroupId}-${holeNumber}-${id}`;
@@ -259,10 +281,10 @@ function validPlayerId(playerId: any) {
     });
   }
 
-  function setBonusWinner(playerName: string) {
+  function setBonusWinner(playerId: string) {
     setBonusWinners((current) => ({
       ...current,
-      [bonusKey()]: playerName,
+      [bonusKey()]: playerId,
     }));
   }
 
@@ -321,19 +343,20 @@ function validPlayerId(playerId: any) {
             const grossScore = getScore(player.name);
 
             if (!grossScore) {
-if (validPlayerId(player.player_id)) {
-    rowsToDelete.push({
-      event_slug: EVENT_SLUG,
-      round_number: currentRound.roundNumber ?? currentRound.id,
-      player_id: player.player_id,
-      hole_number: hole,
-    });
-  }
+              if (validPlayerId(player.player_id)) {
+                rowsToDelete.push({
+                  event_slug: EVENT_SLUG,
+                  round_number: currentRound.roundNumber ?? currentRound.id,
+                  player_id: player.player_id,
+                  hole_number: hole,
+                });
+              }
 
-  return null;
-}
+              return null;
+            }
 
-if (!validPlayerId(player.player_id)) return null;
+            if (!validPlayerId(player.player_id)) return null;
+
             return {
               event_slug: EVENT_SLUG,
               round_number: currentRound.roundNumber ?? currentRound.id,
@@ -354,8 +377,7 @@ if (!validPlayerId(player.player_id)) return null;
           })
           .filter(Boolean);
       }
-console.log("ROWS TO SAVE", rowsToSave);
-console.log("ROWS TO DELETE", rowsToDelete);
+
       if (rowsToDelete.length > 0) {
         await deleteHoleScores(rowsToDelete);
       }
@@ -364,17 +386,16 @@ console.log("ROWS TO DELETE", rowsToDelete);
         await saveHoleScores(rowsToSave);
       }
 
-if (bonusHole && getBonusWinner()) {
-  await saveBonusWinner({
-    event_slug: EVENT_SLUG,
-    round_number: currentRound.roundNumber ?? currentRound.id,
-    hole,
-    bonus_type: getBonusType(bonusHole),
-    winner_player_name: getPlayerNameById(getBonusWinner()),
-    points: bonusHole.points ?? 0,
-  });
-}
-     
+      if (bonusHole && getBonusWinner()) {
+        await saveBonusWinner({
+          event_slug: EVENT_SLUG,
+          round_number: currentRound.roundNumber ?? currentRound.id,
+          hole,
+          bonus_type: getBonusType(bonusHole),
+          winner_player_name: getPlayerNameById(getBonusWinner()),
+          points: bonusHole.points ?? 0,
+        });
+      }
 
       const bonusMessage =
         bonusHole && getBonusWinner()
@@ -402,8 +423,6 @@ if (bonusHole && getBonusWinner()) {
       setIsSaving(false);
     }
   }
-
-  
 
   function holeHasScores(holeNumber: number) {
     if (isScramble) {
@@ -480,8 +499,8 @@ if (bonusHole && getBonusWinner()) {
         <section className="rounded-3xl border border-green-900 bg-green-950 p-3 text-white shadow-sm">
           <div className="mb-3 text-center">
             <h2 className="text-4xl font-black leading-none">
-  {currentRound.course.replace(" Course", "")} - Hole {hole}
-</h2>
+              {currentRound.course.replace(" Course", "")} - Hole {hole}
+            </h2>
 
             <div className="mt-2 flex flex-wrap justify-center gap-2 text-sm font-bold">
               <span className="rounded-full bg-white/10 px-3 py-1">
@@ -547,10 +566,10 @@ if (bonusHole && getBonusWinner()) {
                   <option value="">Select bonus winner</option>
 
                   {uniqueRoundPlayers.map((player: any) => (
-  <option key={player.player_id} value={String(player.player_id)}>
-    {player.name}
-  </option>
-))}
+                    <option key={player.player_id} value={String(player.player_id)}>
+                      {player.name}
+                    </option>
+                  ))}
                 </select>
               </div>
             )}
@@ -690,8 +709,6 @@ if (bonusHole && getBonusWinner()) {
             >
               🏆 Leaderboard
             </a>
-
-            
           </div>
         </section>
       </div>

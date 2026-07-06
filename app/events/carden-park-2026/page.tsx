@@ -150,14 +150,14 @@ const predictions = [
     icon: "🔵",
     rating: "⭐⭐⭐⭐⭐",
     score: "9/10",
-    text: "On paper, this looks like the most balanced team in the field. Dan is always a genuine contender when he's anywhere near his best, Liam quietly strings together solid rounds while pretending he hardly plays, Stu is capable of moments of brilliance but can be more interested in everyone having a great weekend, and Phil brings the social aspect and hydration to keep morale high. There isn't an obvious weakness here, making Blue a strong favourite if everyone performs to their handicap.",
+    text: "On paper, this looks like the most balanced team in the field. Dan is always a genuine contender when he's anywhere near his best, Liam quietly strings together solid rounds while pretending he hardly plays, Stu is capable of moments of brilliance and the pressurewon't get to him, and Phil brings the social aspect and plenty of liquids to keep morale high. There isn't an obvious weakness here, making Blue a strong favourite if everyone performs to their handicap.",
   },
   {
     team: "Green Team",
     icon: "🟢",
     rating: "⭐⭐⭐⭐☆",
     score: "8/10",
-    text: "The Green Team may not make the biggest noise before the weekend, but don't be fooled. Painy remains one of the society's steadiest golfers, Paul has quietly improved in the last couple of years, and ca nput a score together while Ian offers calm consistency and rarely lets the occasion get to him. Taz rounds things off with some beginners innocence, endless optimism and the belief that one good swing might just unlock his golf forever. This team feels like the dark horse—less drama, plenty of encouragement, and every chance of quietly climbing the leaderboard while everyone else is watching the favourites.",
+    text: "The Green Team may not make the biggest noise before the weekend, but don't be fooled. Painy remains one of the society's steadiest golfers, Paul has quietly improved in the last couple of years, and can put a decent score together while Ian offers calm consistency and rarely lets the occasion get to him. Taz rounds things off with some beginners innocence, endless optimism and the belief that one good swing thought might just unlock his golf forever. This team feels like the dark horse —less drama, plenty of encouragement, and every chance of quietly climbing the leaderboard while everyone else is watching the favourites.",
   },
 ];
 
