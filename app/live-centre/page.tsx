@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
 import { getPlayers } from "@/lib/players";
@@ -13,8 +13,7 @@ import { getTournamentSetupForUI } from "@/lib/tournaments";
 import { supabase } from "@/lib/supabase";
 
 const EVENT_SLUG = "carden-park-2026";
-
-
+const POSITION_STORAGE_KEY = `swift-tees-${EVENT_SLUG}-live-centre-positions`;
 
 type Movement = {
   icon: string;
@@ -29,7 +28,6 @@ type LeaderboardRow = {
   points: number;
   through: number;
   movement: Movement;
-  recentPoints: number;
   bonusIcons: string[];
   liveIcon: string;
 };
@@ -46,13 +44,6 @@ type Moment = {
   title: string;
   text: string;
   rarity: "common" | "rare" | "major";
-};
-
-type BattleCard = {
-  icon: string;
-  label: string;
-  title: string;
-  text: string;
 };
 
 function movementStyle(icon: string) {
@@ -89,12 +80,10 @@ function getCurrentRoundInfo(
   const allRows = [
     ...scores.map((score: any) => ({
       round_number: score.round_number,
-      hole_number: score.hole_number,
       updated_at: score.updated_at,
     })),
     ...scrambleScores.map((score: any) => ({
       round_number: score.round_number,
-      hole_number: score.hole_number,
       updated_at: score.updated_at,
     })),
   ];
@@ -120,21 +109,24 @@ function getCurrentRoundInfo(
   };
 }
 
-function getClosestBattle(leaderboard: LeaderboardRow[]) {
-  let bestBattle: { a: LeaderboardRow; b: LeaderboardRow; gap: number } | null =
-    null;
+function getHolePar(round: any, holeNumber: number) {
+  const hole = round?.holes?.find(
+    (hole: any) =>
+      Number(hole.hole ?? hole.number ?? hole.hole_number) === holeNumber
+  );
 
-  for (let i = 0; i < leaderboard.length - 1; i++) {
-    const a = leaderboard[i];
-    const b = leaderboard[i + 1];
-    const gap = Math.abs(a.points - b.points);
+  return Number(hole?.par ?? 0);
+}
 
-    if (!bestBattle || gap < bestBattle.gap) {
-      bestBattle = { a, b, gap };
-    }
-  }
+function getScoreIconFromGross(gross: number, par: number) {
+  if (!par || !gross) return "";
 
-  return bestBattle;
+  const scoreToPar = gross - par;
+
+  if (scoreToPar <= -2) return "🦅";
+  if (scoreToPar === -1) return "🐦";
+
+  return "";
 }
 
 function normaliseBonusType(type: string) {
@@ -157,41 +149,57 @@ function bonusIconForType(type: string) {
   return "";
 }
 
-function getHolePar(round: any, holeNumber: number) {
-  const hole = round?.holes?.find(
-    (hole: any) => Number(hole.hole ?? hole.number ?? hole.hole_number) === holeNumber
-  );
+function getStoredPositions() {
+  if (typeof window === "undefined") return {};
 
-  return Number(hole?.par ?? 0);
+  try {
+    return JSON.parse(localStorage.getItem(POSITION_STORAGE_KEY) ?? "{}");
+  } catch {
+    return {};
+  }
 }
 
-function getScoreIconForLatestHole(
-  playerScores: any[],
-  currentRound: any,
-  currentRoundNumber: number
-) {
-  const latestScore = playerScores
-    .filter((score: any) => Number(score.round_number) === currentRoundNumber)
-    .sort((a: any, b: any) => Number(b.hole_number) - Number(a.hole_number))[0];
+function saveStoredPositions(rows: LeaderboardRow[]) {
+  if (typeof window === "undefined") return;
 
-  if (!latestScore) return "";
+  const positions = Object.fromEntries(rows.map((player) => [player.id, player.pos]));
+  localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(positions));
+}
 
-  const par = getHolePar(currentRound, Number(latestScore.hole_number));
-  const gross = Number(latestScore.gross_score ?? 0);
+function getLatestStablefordScore(scores: any[]) {
+  return scores
+    .filter((score: any) => score.score_type === "stableford" && score.player_id)
+    .sort(
+      (a: any, b: any) =>
+        new Date(b.updated_at ?? 0).getTime() -
+        new Date(a.updated_at ?? 0).getTime()
+    )[0];
+}
 
-  if (!par || !gross) return "";
+function getLatestScrambleScore(scrambleScores: any[]) {
+  return scrambleScores
+    .slice()
+    .sort(
+      (a: any, b: any) =>
+        new Date(b.updated_at ?? 0).getTime() -
+        new Date(a.updated_at ?? 0).getTime()
+    )[0];
+}
 
-  const scoreToPar = gross - par;
-
-  if (scoreToPar <= -2) return "🦅";
-  if (scoreToPar === -1) return "🐦";
-
-  return "";
+function getLatestBonusWinner(bonusWinners: any[]) {
+  return bonusWinners
+    .slice()
+    .sort(
+      (a: any, b: any) =>
+        new Date(b.updated_at ?? b.created_at ?? 0).getTime() -
+        new Date(a.updated_at ?? a.created_at ?? 0).getTime()
+    )[0];
 }
 
 function buildLiveStory(
   leaderboard: LeaderboardRow[],
-  teamStandings: TeamStanding[]
+  teamStandings: TeamStanding[],
+  latestStablefordScore: any
 ) {
   const leader = leaderboard[0];
   const second = leaderboard[1];
@@ -203,16 +211,25 @@ function buildLiveStory(
   const playerGap = second ? leader.points - second.points : 0;
   const teamGap = secondTeam ? teamLeader.points - secondTeam.points : 0;
 
-  if (second && playerGap <= 1) {
-    return `⚔️ ${leader.name} leads ${second.name} by just ${
-      playerGap || 0
-    } point. This is properly tight.`;
-  }
-
   const hotPlayer = leaderboard.find((player) => player.liveIcon === "🔥");
+const birdiePlayer = leaderboard.find((player) => player.liveIcon === "🐦");
+const eaglePlayer = leaderboard.find((player) => player.liveIcon === "🦅");
 
-  if (hotPlayer) {
-    return `🔥 ${hotPlayer.name} is the one to watch right now after climbing the leaderboard.`;
+const latestHole = latestStablefordScore
+  ? Number(latestStablefordScore.hole_number)
+  : null;
+
+  if (eaglePlayer && latestHole) {
+  return `🦅 ${eaglePlayer.name} has just made eagle on hole ${latestHole}. Massive moment.`;
+}
+
+if (birdiePlayer && latestHole) {
+  return `🐦 ${birdiePlayer.name} has just birdied hole ${latestHole}.`;
+}
+  if (hotPlayer) return `🔥 ${hotPlayer.name} is the one moving right now.`;
+
+  if (second && playerGap <= 1) {
+    return `⚔️ ${leader.name} leads ${second.name} by just ${playerGap || 0} point.`;
   }
 
   if (secondTeam && teamGap <= 2) {
@@ -224,67 +241,109 @@ function buildLiveStory(
   } are currently top of the team race.`;
 }
 
-function buildBattleCards(leaderboard: LeaderboardRow[]): BattleCard[] {
-  const cards: BattleCard[] = [];
-  const leader = leaderboard[0];
-  const second = leaderboard[1];
-  const closestBattle = getClosestBattle(leaderboard);
+function buildLatestScoreMoment(
+  latestStablefordScore: any,
+  players: any[],
+  currentRound: any,
+  leaderboard: LeaderboardRow[]
+): Moment | null {
+  if (!latestStablefordScore) return null;
 
-  if (closestBattle) {
-    cards.push({
-      icon: "⚔️",
-      label: "Battle of the Day",
-      title: `${closestBattle.a.name} vs ${closestBattle.b.name}`,
-      text:
-        closestBattle.gap === 0
-          ? "Level on points. Nothing between them."
-          : `Just ${closestBattle.gap} point${
-              closestBattle.gap === 1 ? "" : "s"
-            } separates them.`,
-    });
+  const player = players.find(
+    (item: any) => Number(item.id) === Number(latestStablefordScore.player_id)
+  );
+
+  if (!player) return null;
+
+  const holeNumber = Number(latestStablefordScore.hole_number);
+  const gross = Number(latestStablefordScore.gross_score ?? 0);
+  const points = Number(latestStablefordScore.points ?? 0);
+  const par = getHolePar(currentRound, holeNumber);
+  const leaderboardRow = leaderboard.find((row) => Number(row.id) === Number(player.id));
+  const scoreToPar = par && gross ? gross - par : null;
+
+  if (scoreToPar !== null && scoreToPar <= -2) {
+    return {
+      icon: "🦅",
+      title: "Eagle Alert",
+      text: `${player.name} makes eagle on hole ${holeNumber}. Big move.`,
+      rarity: "major",
+    };
   }
 
-  if (leader) {
-    cards.push({
-      icon: "👑",
-      label: "Current Leader",
-      title: leader.name,
-      text: `${leader.name} leads on ${leader.points} points.`,
-    });
+  if (scoreToPar === -1) {
+    return {
+      icon: "🐦",
+      title: "Birdie Alert",
+      text: `${player.name} birdies hole ${holeNumber}${
+        leaderboardRow ? ` and moves to ${leaderboardRow.points} points` : ""
+      }.`,
+      rarity: "rare",
+    };
   }
 
-  const hotPlayer = leaderboard.find((player) => player.liveIcon === "🔥");
+  return {
+    icon: "⛳",
+    title: "Latest Score",
+    text: `${player.name} scores ${gross || "saved"} on hole ${holeNumber}${
+      points ? ` for ${points} point${points === 1 ? "" : "s"}` : ""
+    }.`,
+    rarity: "common",
+  };
+}
 
-  if (hotPlayer) {
-    cards.push({
-      icon: "🔥",
-      label: "Hot Right Now",
-      title: hotPlayer.name,
-      text: `${hotPlayer.name} is the current big mover.`,
-    });
-  }
+function buildLatestScrambleMoment(
+  latestScrambleScore: any,
+  tournamentSetup: any,
+  leaderboard: LeaderboardRow[]
+): Moment | null {
+  if (!latestScrambleScore) return null;
 
-  if (leader && second) {
-    const gap = leader.points - second.points;
+  const roundNumber = Number(latestScrambleScore.round_number);
+  const groupNumber = Number(latestScrambleScore.group_number);
+  const pairNumber = Number(latestScrambleScore.pair_number);
+  const holeNumber = Number(latestScrambleScore.hole_number);
+  const points = Number(latestScrambleScore.points ?? 0);
 
-    cards.push({
-      icon: "👀",
-      label: "One to Watch",
-      title: second.name,
-      text:
-        gap === 0
-          ? `${second.name} is tied with ${leader.name}.`
-          : `${second.name} is ${gap} behind ${leader.name}.`,
-    });
-  }
+  const round = tournamentSetup.rounds?.find(
+    (round: any) => getRoundNumber(round) === roundNumber
+  );
 
-  return cards.slice(0, 4);
+  const group = round?.groups?.find(
+    (group: any) => getGroupNumber(group) === groupNumber
+  );
+
+  const pair = group?.pairs?.find(
+    (pair: any) => Number(pair.pairNumber) === pairNumber
+  );
+
+  const playerIds = [pair?.player1_id, pair?.player2_id].filter(Boolean);
+  const pairNames = playerIds
+    .map((id: any) => leaderboard.find((player) => Number(player.id) === Number(id))?.name)
+    .filter(Boolean)
+    .join(" & ");
+
+  if (!pairNames) return null;
+
+  return {
+    icon: "🤝",
+    title: "Scramble Update",
+    text: `${pairNames} score ${points} point${
+  points === 1 ? "" : "s"
+} on hole ${holeNumber}.`,
+    rarity: points >= 4 ? "rare" : "common",
+  };
 }
 
 function buildMoments(
   leaderboard: LeaderboardRow[],
   teamStandings: TeamStanding[],
-  bonusWinners: any[]
+  bonusWinners: any[],
+  latestStablefordScore: any,
+  latestScrambleScore: any,
+  players: any[],
+  tournamentSetup: any,
+  currentRound: any
 ): Moment[] {
   const moments: Moment[] = [];
   const leader = leaderboard[0];
@@ -292,45 +351,67 @@ function buildMoments(
   const topTeam = teamStandings[0];
   const secondTeam = teamStandings[1];
 
-  if (leader && second && leader.points - second.points <= 1) {
+  const latestBonus = getLatestBonusWinner(bonusWinners);
+  const latestScoreMoment = buildLatestScoreMoment(
+    latestStablefordScore,
+    players,
+    currentRound,
+    leaderboard
+  );
+  const latestScrambleMoment = buildLatestScrambleMoment(
+    latestScrambleScore,
+    tournamentSetup,
+    leaderboard
+  );
+
+  if (latestBonus?.winner_player_name) {
+    const bonusType = normaliseBonusType(latestBonus.bonus_type);
+    const icon = bonusIconForType(latestBonus.bonus_type) || "🎯";
+
     moments.push({
-      icon: "⚔️",
-      title: "Battle Alert",
-      text: `${leader.name} and ${second.name} are separated by just ${
-        leader.points - second.points
-      } point.`,
+      icon,
+      title: bonusType,
+      text: `${latestBonus.winner_player_name} wins ${bonusType}${
+        latestBonus.hole ? ` on hole ${latestBonus.hole}` : ""
+      }.`,
       rarity: "rare",
     });
   }
 
+  if (latestScoreMoment) moments.push(latestScoreMoment);
+  if (latestScrambleMoment) moments.push(latestScrambleMoment);
+
   const hotPlayer = leaderboard.find((player) => player.liveIcon === "🔥");
+  const fallingPlayer = leaderboard.find((player) => player.liveIcon === "📉");
 
   if (hotPlayer) {
     moments.push({
       icon: "🔥",
-      title: "Hot Player",
-      text: `${hotPlayer.name} is the biggest mover right now.`,
+      title: "Big Mover",
+      text: `${hotPlayer.name} is moving up the leaderboard.`,
       rarity: "rare",
     });
   }
 
-  const birdiePlayer = leaderboard.find((player) => player.liveIcon === "🐦");
-  const eaglePlayer = leaderboard.find((player) => player.liveIcon === "🦅");
-
-  if (eaglePlayer) {
+  if (fallingPlayer) {
     moments.push({
-      icon: "🦅",
-      title: "Eagle Alert",
-      text: `${eaglePlayer.name} has just landed an eagle.`,
-      rarity: "major",
+      icon: "📉",
+      title: "Losing Ground",
+      text: `${fallingPlayer.name} has slipped down the leaderboard.`,
+      rarity: "rare",
     });
   }
 
-  if (birdiePlayer) {
+  if (leader && second && leader.points - second.points <= 1) {
     moments.push({
-      icon: "🐦",
-      title: "Birdie Alert",
-      text: `${birdiePlayer.name} has just made birdie.`,
+      icon: "⚔️",
+      title: "Battle Alert",
+      text:
+  leader.points === second.points
+    ? `${leader.name} and ${second.name} are level on points.`
+    : `${leader.name} and ${second.name} are separated by just ${
+        leader.points - second.points
+      } point.`,
       rarity: "rare",
     });
   }
@@ -350,30 +431,6 @@ function buildMoments(
     }
   }
 
-  bonusWinners
-    .slice()
-    .sort(
-      (a: any, b: any) =>
-        new Date(b.updated_at ?? b.created_at ?? 0).getTime() -
-        new Date(a.updated_at ?? a.created_at ?? 0).getTime()
-    )
-    .slice(0, 8)
-    .forEach((bonus: any) => {
-      if (!bonus.winner_player_name) return;
-
-      const bonusType = normaliseBonusType(bonus.bonus_type);
-      const icon = bonusIconForType(bonus.bonus_type) || "🎯";
-
-      moments.push({
-        icon,
-        title: bonusType,
-        text: `${bonus.winner_player_name} wins ${bonusType}${
-          bonus.hole ? ` on hole ${bonus.hole}` : ""
-        }.`,
-        rarity: "rare",
-      });
-    });
-
   const finishedPlayers = leaderboard.filter((player) => player.through >= 18);
 
   finishedPlayers.slice(0, 2).forEach((player, index) => {
@@ -389,7 +446,7 @@ function buildMoments(
     moments.push({
       icon: "⛳",
       title: "Live Centre Active",
-      text: `${leader.name} currently leads on ${leader.points} points. More moments will appear as the round develops.`,
+      text: `${leader.name} currently leads on ${leader.points} points.`,
       rarity: "common",
     });
   }
@@ -413,16 +470,41 @@ ${text}
 #SwiftTees`;
 }
 
+function formatLeaderboardCopy(
+  leaderboard: LeaderboardRow[],
+  teamStandings: TeamStanding[]
+) {
+  const playerLines = leaderboard
+    .map(
+      (player) =>
+        `${player.pos}. ${player.name} — ${player.points} pts (${progressText(
+          player.through
+        )})`
+    )
+    .join("\n");
+
+  const teamLines = teamStandings
+    .map((team) => `${team.icon} ${team.team} — ${team.points} pts`)
+    .join("\n");
+
+  return `🏆 Swift Tees Leaderboard
+
+${playerLines}
+
+🥊 Team Race
+${teamLines}
+
+#SwiftTees`;
+}
+
 export default function LiveCentrePage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [teamStandings, setTeamStandings] = useState<TeamStanding[]>([]);
-  const [battleCards, setBattleCards] = useState<BattleCard[]>([]);
   const [moments, setMoments] = useState<Moment[]>([]);
   const [liveStory, setLiveStory] = useState("Waiting for live scores...");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState("");
 
-  const previousPositionsRef = useRef<Record<number, number>>({});
-const [lastUpdatedAt, setLastUpdatedAt] = useState("");
   async function copyText(text: string, key: string) {
     try {
       await navigator.clipboard.writeText(text);
@@ -456,9 +538,11 @@ const [lastUpdatedAt, setLastUpdatedAt] = useState("");
       (score: any) => score.score_type === "stableford" && score.player_id
     );
 
+    const latestStablefordScore = getLatestStablefordScore(stablefordScores);
+    const latestScrambleScore = getLatestScrambleScore(scrambleScores);
+
     const scramblePointsByPlayerId: Record<number, number> = {};
     const scrambleThroughByPlayerId: Record<number, number> = {};
-    const recentScramblePointsByPlayerId: Record<number, number> = {};
     const bonusPointsByPlayerName: Record<string, number> = {};
     const bonusIconsByPlayerName: Record<string, string[]> = {};
 
@@ -512,40 +596,6 @@ const [lastUpdatedAt, setLastUpdatedAt] = useState("");
       });
     });
 
-    scrambleScores.forEach((scrambleScore: any) => {
-      const roundNumber = Number(scrambleScore.round_number);
-      const groupNumber = Number(scrambleScore.group_number);
-      const pairNumber = Number(scrambleScore.pair_number);
-      const holeNumber = Number(scrambleScore.hole_number);
-      const scramblePoints = Number(scrambleScore.points ?? 0);
-
-      if (roundNumber !== currentRoundInfo.roundNumber) return;
-
-      const round = tournamentSetup.rounds?.find(
-        (round: any) => getRoundNumber(round) === roundNumber
-      );
-
-      const group = round?.groups?.find(
-        (group: any) => getGroupNumber(group) === groupNumber
-      );
-
-      const pair = group?.pairs?.find(
-        (pair: any) => Number(pair.pairNumber) === pairNumber
-      );
-
-      const playerIds = [pair?.player1_id, pair?.player2_id].filter(Boolean);
-
-      playerIds.forEach((playerId: any) => {
-        const currentThrough = scrambleThroughByPlayerId[Number(playerId)] ?? 0;
-
-        if (holeNumber >= Math.max(1, currentThrough - 4)) {
-          recentScramblePointsByPlayerId[Number(playerId)] =
-            (recentScramblePointsByPlayerId[Number(playerId)] ?? 0) +
-            scramblePoints;
-        }
-      });
-    });
-
     const rows = players.map((player: any) => {
       const playerScores = stablefordScores.filter(
         (score: any) => Number(score.player_id) === Number(player.id)
@@ -570,21 +620,9 @@ const [lastUpdatedAt, setLastUpdatedAt] = useState("");
             )
           : 0;
 
-      const recentStablefordPoints = currentRoundPlayerScores
-        .filter(
-          (score: any) =>
-            Number(score.hole_number) >= Math.max(1, stablefordThrough - 4)
-        )
-        .reduce(
-          (total: number, score: any) => total + Number(score.points ?? 0),
-          0
-        );
-
       const scramblePoints = scramblePointsByPlayerId[Number(player.id)] ?? 0;
       const bonusPoints = bonusPointsByPlayerName[player.name] ?? 0;
       const scrambleThrough = scrambleThroughByPlayerId[Number(player.id)] ?? 0;
-      const recentScramblePoints =
-        recentScramblePointsByPlayerId[Number(player.id)] ?? 0;
 
       return {
         id: player.id,
@@ -596,19 +634,14 @@ const [lastUpdatedAt, setLastUpdatedAt] = useState("");
           icon: "➖",
           text: "No movement",
         },
-        recentPoints: recentStablefordPoints + recentScramblePoints,
         bonusIcons: bonusIconsByPlayerName[player.name] ?? [],
-        liveIcon: getScoreIconForLatestHole(
-          playerScores,
-          currentRoundInfo.round,
-          currentRoundInfo.roundNumber
-        ),
+        liveIcon: "",
       };
     });
 
     rows.sort((a, b) => b.points - a.points || b.through - a.through);
 
-    const previousPositions = previousPositionsRef.current;
+    const previousPositions = getStoredPositions();
 
     const rowsWithPositions = rows.map((player, index) => {
       const newPosition = index + 1;
@@ -620,7 +653,7 @@ const [lastUpdatedAt, setLastUpdatedAt] = useState("");
       };
 
       if (oldPosition) {
-        const placesMoved = oldPosition - newPosition;
+        const placesMoved = Number(oldPosition) - newPosition;
 
         if (placesMoved > 0) {
           movement = {
@@ -658,15 +691,32 @@ const [lastUpdatedAt, setLastUpdatedAt] = useState("");
         return bMoved - aMoved;
       })[0];
 
-    const rowsWithLimitedLiveIcons = rowsWithPositions.map((player) => {
+    const latestScorePlayerId = latestStablefordScore
+      ? Number(latestStablefordScore.player_id)
+      : null;
+
+    const latestScoreIcon = latestStablefordScore
+      ? (() => {
+          const par = getHolePar(
+            currentRoundInfo.round,
+            Number(latestStablefordScore.hole_number)
+          );
+          const gross = Number(latestStablefordScore.gross_score ?? 0);
+          const latestScoreIcon = getScoreIconFromGross(gross, par);
+
+          return "";
+        })()
+      : "";
+
+    const rowsWithLiveIcons = rowsWithPositions.map((player) => {
       let liveIcon = "";
 
-      if (biggestClimber && player.id === biggestClimber.id) {
+      if (latestScorePlayerId && Number(player.id) === latestScorePlayerId && latestScoreIcon) {
+        liveIcon = latestScoreIcon;
+      } else if (biggestClimber && player.id === biggestClimber.id) {
         liveIcon = "🔥";
       } else if (biggestDrop && player.id === biggestDrop.id) {
         liveIcon = "📉";
-      } else if (player.liveIcon === "🦅" || player.liveIcon === "🐦") {
-        liveIcon = player.liveIcon;
       }
 
       return {
@@ -675,39 +725,31 @@ const [lastUpdatedAt, setLastUpdatedAt] = useState("");
       };
     });
 
-    const featuredLivePlayers = rowsWithLimitedLiveIcons
+    const featuredLivePlayers = rowsWithLiveIcons
       .filter((player) => player.liveIcon)
       .slice(0, 3)
       .map((player) => player.id);
 
-    const finalRows = rowsWithLimitedLiveIcons.map((player) => ({
+    const finalRows = rowsWithLiveIcons.map((player) => ({
       ...player,
       liveIcon: featuredLivePlayers.includes(player.id) ? player.liveIcon : "",
     }));
 
-    previousPositionsRef.current = Object.fromEntries(
-      finalRows.map((player) => [player.id, player.pos])
-    );
+    const teams = finalRows.reduce<Record<string, TeamStanding>>((acc, player) => {
+      const teamName = player.team || "No Team";
 
-    const teams = finalRows.reduce<Record<string, TeamStanding>>(
-      (acc, player) => {
-        const teamName = player.team || "No Team";
+      if (!acc[teamName]) {
+        acc[teamName] = {
+          team: teamName,
+          points: 0,
+          through: 0,
+          icon: "",
+        };
+      }
 
-        if (!acc[teamName]) {
-          acc[teamName] = {
-            team: teamName,
-            points: 0,
-            through: 0,
-            icon: "",
-          };
-        }
-
-        acc[teamName].points += player.points;
-
-        return acc;
-      },
-      {}
-    );
+      acc[teamName].points += player.points;
+      return acc;
+    }, {});
 
     Object.values(teams).forEach((team) => {
       const teamPlayers = finalRows.filter(
@@ -727,17 +769,31 @@ const [lastUpdatedAt, setLastUpdatedAt] = useState("");
         icon: index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉",
       }));
 
+    const nextMoments = buildMoments(
+      finalRows,
+      sortedTeams,
+      bonusWinners,
+      latestStablefordScore,
+      latestScrambleScore,
+      players,
+      tournamentSetup,
+      currentRoundInfo.round
+    );
+
     setLeaderboard(finalRows);
     setTeamStandings(sortedTeams);
-    setBattleCards(buildBattleCards(finalRows));
-    setMoments(buildMoments(finalRows, sortedTeams, bonusWinners));
-    setLiveStory(buildLiveStory(finalRows, sortedTeams));
-    setLastUpdatedAt(
-  new Date().toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-  })
+    setMoments(nextMoments);
+    setLiveStory(
+  buildLiveStory(finalRows, sortedTeams, latestStablefordScore)
 );
+    setLastUpdatedAt(
+      new Date().toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    );
+
+    saveStoredPositions(finalRows);
   }
 
   useEffect(() => {
@@ -746,21 +802,21 @@ const [lastUpdatedAt, setLastUpdatedAt] = useState("");
 
   useEffect(() => {
     const channel = supabase
-      .channel("live-centre-icons-realtime")
+      .channel("live-centre-fixed-moments-realtime")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "scores" },
-        () => setTimeout(loadLeaderboard, 200)
+        () => setTimeout(loadLeaderboard, 250)
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "scramble_scores" },
-        () => setTimeout(loadLeaderboard, 200)
+        () => setTimeout(loadLeaderboard, 250)
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "bonus_winners" },
-        () => setTimeout(loadLeaderboard, 200)
+        () => setTimeout(loadLeaderboard, 250)
       )
       .subscribe((status, err) => {
         if (err) console.error("Realtime subscription error:", err);
@@ -782,14 +838,13 @@ const [lastUpdatedAt, setLastUpdatedAt] = useState("");
         <h1 className="mt-2 text-3xl font-black tracking-tight">
           Live Centre Beta
         </h1>
-        {lastUpdatedAt && (
-  <p className="mt-2 text-xs font-semibold text-green-200">
-    Last updated: {lastUpdatedAt}
-  </p>
-)}
-      </section>
 
-     
+        {lastUpdatedAt && (
+          <p className="mt-2 text-xs font-semibold text-green-200">
+            Last updated: {lastUpdatedAt}
+          </p>
+        )}
+      </section>
 
       <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="grid grid-cols-3 gap-2">
@@ -822,9 +877,18 @@ const [lastUpdatedAt, setLastUpdatedAt] = useState("");
             🏆 Live Leaderboard
           </h2>
 
-          <span className="animate-pulse rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-600">
-            ● LIVE
-          </span>
+          <button
+            type="button"
+            onClick={() =>
+              copyText(
+                formatLeaderboardCopy(leaderboard, teamStandings),
+                "leaderboard"
+              )
+            }
+            className="rounded-full bg-green-950 px-2.5 py-1 text-[10px] font-black text-white"
+          >
+            {copiedKey === "leaderboard" ? "Copied" : "Copy"}
+          </button>
         </div>
 
         <div className="space-y-2">
@@ -894,8 +958,6 @@ const [lastUpdatedAt, setLastUpdatedAt] = useState("");
         </div>
       </section>
 
-      
-
       <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="mb-3">
           <h2 className="text-xl font-black text-green-950">
@@ -906,29 +968,31 @@ const [lastUpdatedAt, setLastUpdatedAt] = useState("");
             Pick and choose updates to paste into WhatsApp
           </p>
         </div>
-<div className="mb-3 rounded-2xl border border-amber-300 bg-amber-50 p-3">
-  <div className="flex items-start justify-between gap-3">
-    <div>
-      <p className="text-[10px] font-black uppercase tracking-wide text-green-700">
-        🚨 Live Story
-      </p>
 
-      <p className="mt-1 text-sm font-black leading-snug text-green-950">
-        {liveStory}
-      </p>
-    </div>
+        <div className="mb-3 rounded-2xl border border-amber-300 bg-amber-50 p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-wide text-green-700">
+                🚨 Live Story
+              </p>
 
-    <button
-      type="button"
-      onClick={() =>
-        copyText(formatCopyText("Swift Tees Update", liveStory), "story")
-      }
-      className="shrink-0 rounded-full bg-green-950 px-2.5 py-1 text-[10px] font-black text-white"
-    >
-      {copiedKey === "story" ? "Copied" : "Copy"}
-    </button>
-  </div>
-</div>
+              <p className="mt-1 text-sm font-black leading-snug text-green-950">
+                {liveStory}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                copyText(formatCopyText("Swift Tees Update", liveStory), "story")
+              }
+              className="shrink-0 rounded-full bg-green-950 px-2.5 py-1 text-[10px] font-black text-white"
+            >
+              {copiedKey === "story" ? "Copied" : "Copy"}
+            </button>
+          </div>
+        </div>
+
         <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
           {moments.map((moment, index) => (
             <div
