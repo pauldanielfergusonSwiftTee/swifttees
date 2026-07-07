@@ -26,16 +26,16 @@ type LeaderboardRow = {
   team: string;
   points: number;
   through: number;
-  courseLabel: string;
   movement: Movement;
-  highlight: string;
+  recentPoints: number;
+  bonusIcons: string[];
+  liveIcon: string;
 };
 
 type TeamStanding = {
   team: string;
   points: number;
   through: number;
-  courseLabel: string;
   icon: string;
 };
 
@@ -54,9 +54,8 @@ type BattleCard = {
 };
 
 function movementStyle(icon: string) {
-  if (icon === "▲" || icon === "🚀") return "text-green-700";
-  if (icon === "▼" || icon === "📉") return "text-red-600";
-  if (icon === "👑") return "text-yellow-600";
+  if (icon === "▲") return "text-green-700";
+  if (icon === "▼") return "text-red-600";
   return "text-slate-400";
 }
 
@@ -67,13 +66,9 @@ function teamDot(team: string) {
   return "bg-slate-300";
 }
 
-function courseShortName(course: string) {
-  return course?.replace(" Course", "") || "Live";
-}
-
-function progressText(courseLabel: string, through: number) {
-  if (through >= 18) return `${courseLabel} • Finished ✅`;
-  return `${courseLabel} • Thru ${through}`;
+function progressText(through: number) {
+  if (through >= 18) return "✅ Complete";
+  return `Thru ${through}`;
 }
 
 function getRoundNumber(round: any) {
@@ -118,8 +113,8 @@ function getCurrentRoundInfo(
     ) ?? fallbackRound;
 
   return {
+    round: currentRound,
     roundNumber: getRoundNumber(currentRound),
-    courseLabel: courseShortName(currentRound?.course),
   };
 }
 
@@ -140,6 +135,58 @@ function getClosestBattle(leaderboard: LeaderboardRow[]) {
   return bestBattle;
 }
 
+function normaliseBonusType(type: string) {
+  const value = String(type ?? "").toLowerCase();
+
+  if (value.includes("longest")) return "Longest Drive";
+  if (value.includes("nearest") || value.includes("closest")) {
+    return "Nearest Pin";
+  }
+
+  return type || "Bonus";
+}
+
+function bonusIconForType(type: string) {
+  const value = String(type ?? "").toLowerCase();
+
+  if (value.includes("longest")) return "🚀";
+  if (value.includes("nearest") || value.includes("closest")) return "🎯";
+
+  return "";
+}
+
+function getHolePar(round: any, holeNumber: number) {
+  const hole = round?.holes?.find(
+    (hole: any) => Number(hole.hole ?? hole.number ?? hole.hole_number) === holeNumber
+  );
+
+  return Number(hole?.par ?? 0);
+}
+
+function getScoreIconForLatestHole(
+  playerScores: any[],
+  currentRound: any,
+  currentRoundNumber: number
+) {
+  const latestScore = playerScores
+    .filter((score: any) => Number(score.round_number) === currentRoundNumber)
+    .sort((a: any, b: any) => Number(b.hole_number) - Number(a.hole_number))[0];
+
+  if (!latestScore) return "";
+
+  const par = getHolePar(currentRound, Number(latestScore.hole_number));
+  const gross = Number(latestScore.gross_score ?? 0);
+
+  if (!par || !gross) return "";
+
+  const scoreToPar = gross - par;
+
+  if (scoreToPar <= -2) return "🦅";
+  if (scoreToPar === -1) return "🐦";
+
+  return "";
+}
+
 function buildLiveStory(
   leaderboard: LeaderboardRow[],
   teamStandings: TeamStanding[]
@@ -154,26 +201,20 @@ function buildLiveStory(
   const playerGap = second ? leader.points - second.points : 0;
   const teamGap = secondTeam ? teamLeader.points - secondTeam.points : 0;
 
-  const biggestMover = leaderboard.find(
-    (player) => player.movement.icon === "🚀" || player.movement.icon === "👑"
-  );
-
-  if (leader.movement.icon === "👑") {
-    return `👑 ${leader.name} has taken the lead on ${leader.points} points.`;
-  }
-
   if (second && playerGap <= 1) {
     return `⚔️ ${leader.name} leads ${second.name} by just ${
       playerGap || 0
     } point. This is properly tight.`;
   }
 
-  if (secondTeam && teamGap <= 2) {
-    return `🥊 ${teamLeader.team} lead ${secondTeam.team} by ${teamGap} points in the team race.`;
+  const hotPlayer = leaderboard.find((player) => player.liveIcon === "🔥");
+
+  if (hotPlayer) {
+    return `🔥 ${hotPlayer.name} is the one to watch right now after climbing the leaderboard.`;
   }
 
-  if (biggestMover) {
-    return `${biggestMover.movement.icon} ${biggestMover.name}: ${biggestMover.movement.text}. The leaderboard is moving.`;
+  if (secondTeam && teamGap <= 2) {
+    return `🥊 ${teamLeader.team} lead ${secondTeam.team} by ${teamGap} points in the team race.`;
   }
 
   return `👑 ${leader.name} leads on ${leader.points} points. ${
@@ -181,9 +222,7 @@ function buildLiveStory(
   } are currently top of the team race.`;
 }
 
-function buildBattleCards(
-  leaderboard: LeaderboardRow[]
-): BattleCard[] {
+function buildBattleCards(leaderboard: LeaderboardRow[]): BattleCard[] {
   const cards: BattleCard[] = [];
   const leader = leaderboard[0];
   const second = leaderboard[1];
@@ -212,16 +251,14 @@ function buildBattleCards(
     });
   }
 
-  const biggestClimber = leaderboard.find(
-    (player) => player.movement.icon === "🚀" || player.movement.icon === "▲"
-  );
+  const hotPlayer = leaderboard.find((player) => player.liveIcon === "🔥");
 
-  if (biggestClimber) {
+  if (hotPlayer) {
     cards.push({
-      icon: biggestClimber.movement.icon,
-      label: "Biggest Climber",
-      title: biggestClimber.name,
-      text: biggestClimber.movement.text,
+      icon: "🔥",
+      label: "Hot Right Now",
+      title: hotPlayer.name,
+      text: `${hotPlayer.name} is the current big mover.`,
     });
   }
 
@@ -242,17 +279,6 @@ function buildBattleCards(
   return cards.slice(0, 4);
 }
 
-function normaliseBonusType(type: string) {
-  const value = String(type ?? "").toLowerCase();
-
-  if (value.includes("longest")) return "Longest Drive";
-  if (value.includes("nearest") || value.includes("closest")) {
-    return "Nearest Pin";
-  }
-
-  return type || "Bonus";
-}
-
 function buildMoments(
   leaderboard: LeaderboardRow[],
   teamStandings: TeamStanding[],
@@ -263,15 +289,6 @@ function buildMoments(
   const second = leaderboard[1];
   const topTeam = teamStandings[0];
   const secondTeam = teamStandings[1];
-
-  if (leader?.movement.icon === "👑") {
-    moments.push({
-      icon: "👑",
-      title: "Lead Change",
-      text: `${leader.name} has moved into the overall lead on ${leader.points} points.`,
-      rarity: "major",
-    });
-  }
 
   if (leader && second && leader.points - second.points <= 1) {
     moments.push({
@@ -284,17 +301,37 @@ function buildMoments(
     });
   }
 
-  leaderboard
-    .filter((player) => player.movement.icon === "🚀")
-    .slice(0, 2)
-    .forEach((player) => {
-      moments.push({
-        icon: "🚀",
-        title: "Big Climber",
-        text: `${player.name} is charging up the leaderboard. ${player.movement.text}.`,
-        rarity: "rare",
-      });
+  const hotPlayer = leaderboard.find((player) => player.liveIcon === "🔥");
+
+  if (hotPlayer) {
+    moments.push({
+      icon: "🔥",
+      title: "Hot Player",
+      text: `${hotPlayer.name} is the biggest mover right now.`,
+      rarity: "rare",
     });
+  }
+
+  const birdiePlayer = leaderboard.find((player) => player.liveIcon === "🐦");
+  const eaglePlayer = leaderboard.find((player) => player.liveIcon === "🦅");
+
+  if (eaglePlayer) {
+    moments.push({
+      icon: "🦅",
+      title: "Eagle Alert",
+      text: `${eaglePlayer.name} has just landed an eagle.`,
+      rarity: "major",
+    });
+  }
+
+  if (birdiePlayer) {
+    moments.push({
+      icon: "🐦",
+      title: "Birdie Alert",
+      text: `${birdiePlayer.name} has just made birdie.`,
+      rarity: "rare",
+    });
+  }
 
   if (topTeam && secondTeam) {
     const gap = topTeam.points - secondTeam.points;
@@ -323,9 +360,10 @@ function buildMoments(
       if (!bonus.winner_player_name) return;
 
       const bonusType = normaliseBonusType(bonus.bonus_type);
+      const icon = bonusIconForType(bonus.bonus_type) || "🎯";
 
       moments.push({
-        icon: "🎯",
+        icon,
         title: bonusType,
         text: `${bonus.winner_player_name} wins ${bonusType}${
           bonus.hole ? ` on hole ${bonus.hole}` : ""
@@ -336,23 +374,14 @@ function buildMoments(
 
   const finishedPlayers = leaderboard.filter((player) => player.through >= 18);
 
-  finishedPlayers.slice(0, 3).forEach((player, index) => {
+  finishedPlayers.slice(0, 2).forEach((player, index) => {
     moments.push({
-      icon: index === 0 ? "🏁" : "✅",
-      title: index === 0 ? "First Player Finished" : "Round Complete",
-      text: `${player.name} has finished the round on ${player.points} points.`,
+      icon: "✅",
+      title: index === 0 ? "First Complete" : "Round Complete",
+      text: `${player.name} has completed the round on ${player.points} points.`,
       rarity: index === 0 ? "major" : "rare",
     });
   });
-
-  if (leader && second && leader.points - second.points >= 5) {
-    moments.push({
-      icon: "💪",
-      title: "Leader Pulling Away",
-      text: `${leader.name} has opened up a ${leader.points - second.points} point lead at the top.`,
-      rarity: "rare",
-    });
-  }
 
   if (!moments.length && leader) {
     moments.push({
@@ -370,31 +399,38 @@ function formatWhatsAppMoment(moment: Moment) {
   return `🚨 ${moment.title.toUpperCase()}
 
 ${moment.icon} ${moment.text}
-`;
+
+#SwiftTees`;
+}
+
+function formatCopyText(title: string, text: string) {
+  return `🚨 ${title}
+
+${text}
+
+#SwiftTees`;
 }
 
 export default function LiveCentrePage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [teamStandings, setTeamStandings] = useState<TeamStanding[]>([]);
-  const [liveStory, setLiveStory] = useState("Waiting for live scores...");
   const [battleCards, setBattleCards] = useState<BattleCard[]>([]);
   const [moments, setMoments] = useState<Moment[]>([]);
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [liveStory, setLiveStory] = useState("Waiting for live scores...");
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const previousPositionsRef = useRef<Record<number, number>>({});
 
-  async function copyMoment(moment: Moment, index: number) {
-    const text = formatWhatsAppMoment(moment);
-
+  async function copyText(text: string, key: string) {
     try {
       await navigator.clipboard.writeText(text);
-      setCopiedIndex(index);
+      setCopiedKey(key);
 
       setTimeout(() => {
-        setCopiedIndex(null);
+        setCopiedKey(null);
       }, 1500);
     } catch (error) {
-      console.error("Could not copy moment:", error);
+      console.error("Could not copy:", error);
     }
   }
 
@@ -420,7 +456,9 @@ export default function LiveCentrePage() {
 
     const scramblePointsByPlayerId: Record<number, number> = {};
     const scrambleThroughByPlayerId: Record<number, number> = {};
+    const recentScramblePointsByPlayerId: Record<number, number> = {};
     const bonusPointsByPlayerName: Record<string, number> = {};
+    const bonusIconsByPlayerName: Record<string, string[]> = {};
 
     bonusWinners.forEach((bonus: any) => {
       if (!bonus.winner_player_name) return;
@@ -428,6 +466,14 @@ export default function LiveCentrePage() {
       bonusPointsByPlayerName[bonus.winner_player_name] =
         (bonusPointsByPlayerName[bonus.winner_player_name] ?? 0) +
         Number(bonus.points ?? 0);
+
+      const icon = bonusIconForType(bonus.bonus_type);
+
+      if (icon) {
+        bonusIconsByPlayerName[bonus.winner_player_name] = Array.from(
+          new Set([...(bonusIconsByPlayerName[bonus.winner_player_name] ?? []), icon])
+        );
+      }
     });
 
     scrambleScores.forEach((scrambleScore: any) => {
@@ -464,6 +510,40 @@ export default function LiveCentrePage() {
       });
     });
 
+    scrambleScores.forEach((scrambleScore: any) => {
+      const roundNumber = Number(scrambleScore.round_number);
+      const groupNumber = Number(scrambleScore.group_number);
+      const pairNumber = Number(scrambleScore.pair_number);
+      const holeNumber = Number(scrambleScore.hole_number);
+      const scramblePoints = Number(scrambleScore.points ?? 0);
+
+      if (roundNumber !== currentRoundInfo.roundNumber) return;
+
+      const round = tournamentSetup.rounds?.find(
+        (round: any) => getRoundNumber(round) === roundNumber
+      );
+
+      const group = round?.groups?.find(
+        (group: any) => getGroupNumber(group) === groupNumber
+      );
+
+      const pair = group?.pairs?.find(
+        (pair: any) => Number(pair.pairNumber) === pairNumber
+      );
+
+      const playerIds = [pair?.player1_id, pair?.player2_id].filter(Boolean);
+
+      playerIds.forEach((playerId: any) => {
+        const currentThrough = scrambleThroughByPlayerId[Number(playerId)] ?? 0;
+
+        if (holeNumber >= Math.max(1, currentThrough - 4)) {
+          recentScramblePointsByPlayerId[Number(playerId)] =
+            (recentScramblePointsByPlayerId[Number(playerId)] ?? 0) +
+            scramblePoints;
+        }
+      });
+    });
+
     const rows = players.map((player: any) => {
       const playerScores = stablefordScores.filter(
         (score: any) => Number(score.player_id) === Number(player.id)
@@ -488,9 +568,21 @@ export default function LiveCentrePage() {
             )
           : 0;
 
+      const recentStablefordPoints = currentRoundPlayerScores
+        .filter(
+          (score: any) =>
+            Number(score.hole_number) >= Math.max(1, stablefordThrough - 4)
+        )
+        .reduce(
+          (total: number, score: any) => total + Number(score.points ?? 0),
+          0
+        );
+
       const scramblePoints = scramblePointsByPlayerId[Number(player.id)] ?? 0;
       const bonusPoints = bonusPointsByPlayerName[player.name] ?? 0;
       const scrambleThrough = scrambleThroughByPlayerId[Number(player.id)] ?? 0;
+      const recentScramblePoints =
+        recentScramblePointsByPlayerId[Number(player.id)] ?? 0;
 
       return {
         id: player.id,
@@ -498,12 +590,17 @@ export default function LiveCentrePage() {
         team: player.team || "",
         points: stablefordPoints + scramblePoints + bonusPoints,
         through: Math.max(stablefordThrough, scrambleThrough),
-        courseLabel: currentRoundInfo.courseLabel,
         movement: {
-          icon: "—",
+          icon: "➖",
           text: "No movement",
         },
-        highlight: "",
+        recentPoints: recentStablefordPoints + recentScramblePoints,
+        bonusIcons: bonusIconsByPlayerName[player.name] ?? [],
+        liveIcon: getScoreIconForLatestHole(
+          playerScores,
+          currentRoundInfo.round,
+          currentRoundInfo.roundNumber
+        ),
       };
     });
 
@@ -516,32 +613,17 @@ export default function LiveCentrePage() {
       const oldPosition = previousPositions[player.id];
 
       let movement = {
-        icon: "—",
+        icon: "➖",
         text: "No movement",
       };
 
       if (oldPosition) {
         const placesMoved = oldPosition - newPosition;
 
-        if (newPosition === 1 && oldPosition !== 1) {
-          movement = {
-            icon: "👑",
-            text: "Took the lead",
-          };
-        } else if (placesMoved >= 3) {
-          movement = {
-            icon: "🚀",
-            text: `Up ${placesMoved}`,
-          };
-        } else if (placesMoved > 0) {
+        if (placesMoved > 0) {
           movement = {
             icon: "▲",
             text: `Up ${placesMoved}`,
-          };
-        } else if (placesMoved <= -3) {
-          movement = {
-            icon: "📉",
-            text: `Down ${Math.abs(placesMoved)}`,
           };
         } else if (placesMoved < 0) {
           movement = {
@@ -558,11 +640,54 @@ export default function LiveCentrePage() {
       };
     });
 
+    const biggestClimber = rowsWithPositions
+      .filter((player) => player.movement.icon === "▲")
+      .sort((a, b) => {
+        const aMoved = Number(a.movement.text.replace("Up ", ""));
+        const bMoved = Number(b.movement.text.replace("Up ", ""));
+        return bMoved - aMoved;
+      })[0];
+
+    const biggestDrop = rowsWithPositions
+      .filter((player) => player.movement.icon === "▼")
+      .sort((a, b) => {
+        const aMoved = Number(a.movement.text.replace("Down ", ""));
+        const bMoved = Number(b.movement.text.replace("Down ", ""));
+        return bMoved - aMoved;
+      })[0];
+
+    const rowsWithLimitedLiveIcons = rowsWithPositions.map((player) => {
+      let liveIcon = "";
+
+      if (biggestClimber && player.id === biggestClimber.id) {
+        liveIcon = "🔥";
+      } else if (biggestDrop && player.id === biggestDrop.id) {
+        liveIcon = "📉";
+      } else if (player.liveIcon === "🦅" || player.liveIcon === "🐦") {
+        liveIcon = player.liveIcon;
+      }
+
+      return {
+        ...player,
+        liveIcon,
+      };
+    });
+
+    const featuredLivePlayers = rowsWithLimitedLiveIcons
+      .filter((player) => player.liveIcon)
+      .slice(0, 3)
+      .map((player) => player.id);
+
+    const finalRows = rowsWithLimitedLiveIcons.map((player) => ({
+      ...player,
+      liveIcon: featuredLivePlayers.includes(player.id) ? player.liveIcon : "",
+    }));
+
     previousPositionsRef.current = Object.fromEntries(
-      rowsWithPositions.map((player) => [player.id, player.pos])
+      finalRows.map((player) => [player.id, player.pos])
     );
 
-    const teams = rowsWithPositions.reduce<Record<string, TeamStanding>>(
+    const teams = finalRows.reduce<Record<string, TeamStanding>>(
       (acc, player) => {
         const teamName = player.team || "No Team";
 
@@ -571,7 +696,6 @@ export default function LiveCentrePage() {
             team: teamName,
             points: 0,
             through: 0,
-            courseLabel: player.courseLabel,
             icon: "",
           };
         }
@@ -584,7 +708,7 @@ export default function LiveCentrePage() {
     );
 
     Object.values(teams).forEach((team) => {
-      const teamPlayers = rowsWithPositions.filter(
+      const teamPlayers = finalRows.filter(
         (player) => (player.team || "No Team") === team.team
       );
 
@@ -592,8 +716,6 @@ export default function LiveCentrePage() {
         teamPlayers.length > 0
           ? Math.min(...teamPlayers.map((player) => player.through))
           : 0;
-
-      team.courseLabel = currentRoundInfo.courseLabel;
     });
 
     const sortedTeams = Object.values(teams)
@@ -603,11 +725,11 @@ export default function LiveCentrePage() {
         icon: index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉",
       }));
 
-    setLeaderboard(rowsWithPositions);
+    setLeaderboard(finalRows);
     setTeamStandings(sortedTeams);
-    setLiveStory(buildLiveStory(rowsWithPositions, sortedTeams));
-    setBattleCards(buildBattleCards(rowsWithPositions));
-    setMoments(buildMoments(rowsWithPositions, sortedTeams, bonusWinners));
+    setBattleCards(buildBattleCards(finalRows));
+    setMoments(buildMoments(finalRows, sortedTeams, bonusWinners));
+    setLiveStory(buildLiveStory(finalRows, sortedTeams));
   }
 
   useEffect(() => {
@@ -616,51 +738,24 @@ export default function LiveCentrePage() {
 
   useEffect(() => {
     const channel = supabase
-      .channel("live-centre-v2-realtime")
+      .channel("live-centre-icons-realtime")
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "scores",
-        },
-        () => {
-          setTimeout(() => {
-            loadLeaderboard();
-          }, 200);
-        }
+        { event: "*", schema: "public", table: "scores" },
+        () => setTimeout(loadLeaderboard, 200)
       )
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "scramble_scores",
-        },
-        () => {
-          setTimeout(() => {
-            loadLeaderboard();
-          }, 200);
-        }
+        { event: "*", schema: "public", table: "scramble_scores" },
+        () => setTimeout(loadLeaderboard, 200)
       )
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "bonus_winners",
-        },
-        () => {
-          setTimeout(() => {
-            loadLeaderboard();
-          }, 200);
-        }
+        { event: "*", schema: "public", table: "bonus_winners" },
+        () => setTimeout(loadLeaderboard, 200)
       )
       .subscribe((status, err) => {
-        if (err) {
-          console.error("Realtime subscription error:", err);
-        }
-
+        if (err) console.error("Realtime subscription error:", err);
         console.log("Live Centre realtime status:", status);
       });
 
@@ -679,41 +774,51 @@ export default function LiveCentrePage() {
         <h1 className="mt-2 text-3xl font-black tracking-tight">
           Live Centre Beta
         </h1>
-
-      
       </section>
 
       <section className="mt-3 rounded-3xl border border-amber-300 bg-amber-50 p-4 shadow-sm">
-        <p className="text-[10px] font-black uppercase tracking-wide text-green-700">
-          🚨 Breaking
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-wide text-green-700">
+              🚨 Live Story
+            </p>
 
-        <p className="mt-1 text-lg font-black leading-snug text-green-950">
-          {liveStory}
-        </p>
+            <p className="mt-1 text-lg font-black leading-snug text-green-950">
+              {liveStory}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              copyText(formatCopyText("Swift Tees Update", liveStory), "story")
+            }
+            className="shrink-0 rounded-full bg-green-950 px-2.5 py-1 text-[10px] font-black text-white"
+          >
+            {copiedKey === "story" ? "Copied" : "Copy"}
+          </button>
+        </div>
       </section>
 
       <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-        <h2 className="text-xl font-black text-green-950">🥊 Team Race</h2>
-
-        <div className="mt-3 grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {teamStandings.map((team) => (
             <div
               key={team.team}
               className="rounded-xl bg-slate-50 px-2 py-3 text-center"
             >
-              <div className="text-lg">{team.icon}</div>
+              <div className="text-2xl">{team.icon}</div>
 
               <div className="text-[10px] font-black uppercase text-green-950">
                 {team.team}
               </div>
 
-              <div className="mt-1 text-xl font-black leading-none text-green-950">
+              <div className="mt-1 text-2xl font-black leading-none text-green-950">
                 {team.points}
               </div>
 
               <div className="mt-0.5 text-[10px] font-semibold text-slate-500">
-                {progressText(team.courseLabel, team.through)}
+                {progressText(team.through)}
               </div>
             </div>
           ))}
@@ -741,47 +846,58 @@ export default function LiveCentrePage() {
                   : "bg-slate-50"
               }`}
             >
-              <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-green-950 text-sm font-black text-white">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-950 text-sm font-black text-white">
                   {player.pos}
                 </span>
 
-                <div>
+                <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span
-                      className={`h-3 w-3 rounded-full ${teamDot(player.team)}`}
+                      className={`h-3 w-3 shrink-0 rounded-full ${teamDot(
+                        player.team
+                      )}`}
                     />
 
-                    <p className="text-base font-black text-green-950">
+                    <p className="truncate text-base font-black text-green-950">
+                      {player.pos === 1 ? "👑 " : ""}
                       {player.name}
+                      {player.bonusIcons.length > 0 && (
+                        <span className="ml-1">
+                          {player.bonusIcons.join("")}
+                        </span>
+                      )}
                     </p>
-
-                    {player.movement.icon !== "—" && (
-                      <span
-                        title={player.movement.text}
-                        className={`text-base font-black ${movementStyle(
-                          player.movement.icon
-                        )}`}
-                      >
-                        {player.movement.icon}
-                      </span>
-                    )}
                   </div>
 
                   <p className="text-xs font-semibold text-slate-500">
                     {player.pos === 1
-                      ? `👑 Leader • ${progressText(
-                          player.courseLabel,
-                          player.through
-                        )}`
-                      : progressText(player.courseLabel, player.through)}
+                      ? `Leader • ${progressText(player.through)}`
+                      : progressText(player.through)}
                   </p>
                 </div>
               </div>
 
-              <p className="min-w-8 text-right text-lg font-black text-green-950">
-                {player.points}
-              </p>
+              <div className="ml-2 flex shrink-0 items-center justify-end gap-2">
+                {player.liveIcon && (
+                  <span className="text-base" title="Live moment">
+                    {player.liveIcon}
+                  </span>
+                )}
+
+                <span
+                  title={player.movement.text}
+                  className={`text-sm font-black ${movementStyle(
+                    player.movement.icon
+                  )}`}
+                >
+                  {player.movement.icon}
+                </span>
+
+                <p className="min-w-10 text-right text-2xl font-black leading-none text-green-950">
+                  {player.points}
+                </p>
+              </div>
             </div>
           ))}
         </div>
@@ -800,33 +916,48 @@ export default function LiveCentrePage() {
         <div className="grid grid-cols-2 gap-2">
           {battleCards.map((card, index) => (
             <div key={index} className="rounded-2xl bg-slate-50 p-3">
-              <p className="text-[10px] font-black uppercase tracking-wide text-green-700">
-                {card.icon} {card.label}
-              </p>
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-wide text-green-700">
+                    {card.icon} {card.label}
+                  </p>
 
-              <p className="mt-1 text-base font-black text-green-950">
-                {card.title}
-              </p>
+                  <p className="mt-1 text-base font-black text-green-950">
+                    {card.title}
+                  </p>
 
-              <p className="mt-1 text-xs font-bold leading-5 text-slate-600">
-                {card.text}
-              </p>
+                  <p className="mt-1 text-xs font-bold leading-5 text-slate-600">
+                    {card.text}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    copyText(
+                      formatCopyText(card.label, `${card.title}\n${card.text}`),
+                      `battle-${index}`
+                    )
+                  }
+                  className="shrink-0 rounded-full bg-green-950 px-2 py-1 text-[9px] font-black text-white"
+                >
+                  {copiedKey === `battle-${index}` ? "✓" : "Copy"}
+                </button>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
       <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-black text-green-950">
-              🎙️ Moments Feed
-            </h2>
+        <div className="mb-3">
+          <h2 className="text-xl font-black text-green-950">
+            🎙️ Moments Feed
+          </h2>
 
-            <p className="text-xs font-semibold text-slate-400">
-              Rare moments only — ready to paste into WhatsApp
-            </p>
-          </div>
+          <p className="text-xs font-semibold text-slate-400">
+            Pick and choose updates to paste into WhatsApp
+          </p>
         </div>
 
         <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
@@ -854,10 +985,12 @@ export default function LiveCentrePage() {
 
                 <button
                   type="button"
-                  onClick={() => copyMoment(moment, index)}
-                  className="shrink-0 rounded-full bg-green-950 px-3 py-1.5 text-[10px] font-black text-white"
+                  onClick={() =>
+                    copyText(formatWhatsAppMoment(moment), `moment-${index}`)
+                  }
+                  className="shrink-0 rounded-full bg-green-950 px-2.5 py-1 text-[10px] font-black text-white"
                 >
-                  {copiedIndex === index ? "Copied ✅" : "📋 WhatsApp"}
+                  {copiedKey === `moment-${index}` ? "Copied" : "Copy"}
                 </button>
               </div>
             </div>
