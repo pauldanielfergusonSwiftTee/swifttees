@@ -11,6 +11,7 @@ import {
 } from "@/lib/scores";
 import { getTournamentSetupForUI } from "@/lib/tournaments";
 import { supabase } from "@/lib/supabase";
+import { getLiveMoments, saveLiveMoment } from "@/lib/liveMoments";
 
 const EVENT_SLUG = "carden-park-2026";
 const POSITION_STORAGE_KEY = `swift-tees-${EVENT_SLUG}-live-centre-positions`;
@@ -44,6 +45,28 @@ type Moment = {
   title: string;
   text: string;
   rarity: "common" | "rare" | "major";
+};
+
+type LiveMomentRow = Moment & {
+  id?: number;
+  event_slug: string;
+  moment_key: string;
+  moment_type: string;
+  player_id?: number | null;
+  player_name?: string | null;
+  team?: string | null;
+  round_number?: number | null;
+  hole_number?: number | null;
+  created_at?: string;
+};
+
+type LatestScrambleInfo = {
+  playerIds: number[];
+  pairNames: string;
+  icon: string;
+  holeNumber: number;
+  points: number;
+  roundNumber: number;
 };
 
 function movementStyle(icon: string) {
@@ -133,9 +156,7 @@ function normaliseBonusType(type: string) {
   const value = String(type ?? "").toLowerCase();
 
   if (value.includes("longest")) return "Longest Drive";
-  if (value.includes("nearest") || value.includes("closest")) {
-    return "Nearest Pin";
-  }
+  if (value.includes("nearest") || value.includes("closest")) return "Nearest Pin";
 
   return type || "Bonus";
 }
@@ -162,7 +183,10 @@ function getStoredPositions() {
 function saveStoredPositions(rows: LeaderboardRow[]) {
   if (typeof window === "undefined") return;
 
-  const positions = Object.fromEntries(rows.map((player) => [player.id, player.pos]));
+  const positions = Object.fromEntries(
+    rows.map((player) => [player.id, player.pos])
+  );
+
   localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(positions));
 }
 
@@ -186,124 +210,22 @@ function getLatestScrambleScore(scrambleScores: any[]) {
     )[0];
 }
 
-function getLatestBonusWinner(bonusWinners: any[]) {
-  return bonusWinners
-    .slice()
-    .sort(
-      (a: any, b: any) =>
-        new Date(b.updated_at ?? b.created_at ?? 0).getTime() -
-        new Date(a.updated_at ?? a.created_at ?? 0).getTime()
-    )[0];
-}
-
-function buildLiveStory(
-  leaderboard: LeaderboardRow[],
-  teamStandings: TeamStanding[],
-  latestStablefordScore: any
-) {
-  const leader = leaderboard[0];
-  const second = leaderboard[1];
-  const teamLeader = teamStandings[0];
-  const secondTeam = teamStandings[1];
-
-  if (!leader) return "Waiting for the first scores to land.";
-
-  const playerGap = second ? leader.points - second.points : 0;
-  const teamGap = secondTeam ? teamLeader.points - secondTeam.points : 0;
-
-  const hotPlayer = leaderboard.find((player) => player.liveIcon === "🔥");
-const birdiePlayer = leaderboard.find((player) => player.liveIcon === "🐦");
-const eaglePlayer = leaderboard.find((player) => player.liveIcon === "🦅");
-
-const latestHole = latestStablefordScore
-  ? Number(latestStablefordScore.hole_number)
-  : null;
-
-  if (eaglePlayer && latestHole) {
-  return `🦅 ${eaglePlayer.name} has just made eagle on hole ${latestHole}. Massive moment.`;
-}
-
-if (birdiePlayer && latestHole) {
-  return `🐦 ${birdiePlayer.name} has just birdied hole ${latestHole}.`;
-}
-  if (hotPlayer) return `🔥 ${hotPlayer.name} is the one moving right now.`;
-
-  if (second && playerGap <= 1) {
-    return `⚔️ ${leader.name} leads ${second.name} by just ${playerGap || 0} point.`;
-  }
-
-  if (secondTeam && teamGap <= 2) {
-    return `🥊 ${teamLeader.team} lead ${secondTeam.team} by ${teamGap} points in the team race.`;
-  }
-
-  return `👑 ${leader.name} leads on ${leader.points} points. ${
-    teamLeader?.team ?? "The leading team"
-  } are currently top of the team race.`;
-}
-
-function buildLatestScoreMoment(
-  latestStablefordScore: any,
-  players: any[],
-  currentRound: any,
-  leaderboard: LeaderboardRow[]
-): Moment | null {
-  if (!latestStablefordScore) return null;
-
-  const player = players.find(
-    (item: any) => Number(item.id) === Number(latestStablefordScore.player_id)
-  );
-
-  if (!player) return null;
-
-  const holeNumber = Number(latestStablefordScore.hole_number);
-  const gross = Number(latestStablefordScore.gross_score ?? 0);
-  const points = Number(latestStablefordScore.points ?? 0);
-  const par = getHolePar(currentRound, holeNumber);
-  const leaderboardRow = leaderboard.find((row) => Number(row.id) === Number(player.id));
-  const scoreToPar = par && gross ? gross - par : null;
-
-  if (scoreToPar !== null && scoreToPar <= -2) {
-    return {
-      icon: "🦅",
-      title: "Eagle Alert",
-      text: `${player.name} makes eagle on hole ${holeNumber}. Big move.`,
-      rarity: "major",
-    };
-  }
-
-  if (scoreToPar === -1) {
-    return {
-      icon: "🐦",
-      title: "Birdie Alert",
-      text: `${player.name} birdies hole ${holeNumber}${
-        leaderboardRow ? ` and moves to ${leaderboardRow.points} points` : ""
-      }.`,
-      rarity: "rare",
-    };
-  }
-
-  return {
-    icon: "⛳",
-    title: "Latest Score",
-    text: `${player.name} scores ${gross || "saved"} on hole ${holeNumber}${
-      points ? ` for ${points} point${points === 1 ? "" : "s"}` : ""
-    }.`,
-    rarity: "common",
-  };
-}
-
-function buildLatestScrambleMoment(
-  latestScrambleScore: any,
+function getPairInfoForScrambleScore(
+  scrambleScore: any,
   tournamentSetup: any,
-  leaderboard: LeaderboardRow[]
-): Moment | null {
-  if (!latestScrambleScore) return null;
+  players: any[]
+) {
+  if (!scrambleScore) {
+    return {
+      playerIds: [],
+      pairNames: "",
+      round: null,
+    };
+  }
 
-  const roundNumber = Number(latestScrambleScore.round_number);
-  const groupNumber = Number(latestScrambleScore.group_number);
-  const pairNumber = Number(latestScrambleScore.pair_number);
-  const holeNumber = Number(latestScrambleScore.hole_number);
-  const points = Number(latestScrambleScore.points ?? 0);
+  const roundNumber = Number(scrambleScore.round_number);
+  const groupNumber = Number(scrambleScore.group_number);
+  const pairNumber = Number(scrambleScore.pair_number);
 
   const round = tournamentSetup.rounds?.find(
     (round: any) => getRoundNumber(round) === roundNumber
@@ -317,141 +239,157 @@ function buildLatestScrambleMoment(
     (pair: any) => Number(pair.pairNumber) === pairNumber
   );
 
-  const playerIds = [pair?.player1_id, pair?.player2_id].filter(Boolean);
+  const playerIds = [pair?.player1_id, pair?.player2_id]
+    .map((id: any) => Number(id))
+    .filter(Boolean);
+
   const pairNames = playerIds
-    .map((id: any) => leaderboard.find((player) => Number(player.id) === Number(id))?.name)
+    .map((id: number) => players.find((player: any) => Number(player.id) === id)?.name)
     .filter(Boolean)
     .join(" & ");
 
-  if (!pairNames) return null;
-
   return {
-    icon: "🤝",
-    title: "Scramble Update",
-    text: `${pairNames} score ${points} point${
-  points === 1 ? "" : "s"
-} on hole ${holeNumber}.`,
-    rarity: points >= 4 ? "rare" : "common",
+    playerIds,
+    pairNames,
+    round,
   };
 }
 
-function buildMoments(
-  leaderboard: LeaderboardRow[],
-  teamStandings: TeamStanding[],
-  bonusWinners: any[],
-  latestStablefordScore: any,
+function getLatestScrambleInfo(
   latestScrambleScore: any,
-  players: any[],
   tournamentSetup: any,
-  currentRound: any
-): Moment[] {
-  const moments: Moment[] = [];
-  const leader = leaderboard[0];
-  const second = leaderboard[1];
-  const topTeam = teamStandings[0];
-  const secondTeam = teamStandings[1];
+  players: any[]
+): LatestScrambleInfo | null {
+  if (!latestScrambleScore) return null;
 
-  const latestBonus = getLatestBonusWinner(bonusWinners);
-  const latestScoreMoment = buildLatestScoreMoment(
-    latestStablefordScore,
-    players,
-    currentRound,
-    leaderboard
-  );
-  const latestScrambleMoment = buildLatestScrambleMoment(
+  const holeNumber = Number(latestScrambleScore.hole_number);
+  const gross = Number(latestScrambleScore.gross_score ?? 0);
+  const points = Number(latestScrambleScore.points ?? 0);
+  const roundNumber = Number(latestScrambleScore.round_number);
+
+  const pairInfo = getPairInfoForScrambleScore(
     latestScrambleScore,
     tournamentSetup,
-    leaderboard
+    players
   );
 
-  if (latestBonus?.winner_player_name) {
-    const bonusType = normaliseBonusType(latestBonus.bonus_type);
-    const icon = bonusIconForType(latestBonus.bonus_type) || "🎯";
+  if (!pairInfo.pairNames) return null;
 
-    moments.push({
-      icon,
-      title: bonusType,
-      text: `${latestBonus.winner_player_name} wins ${bonusType}${
-        latestBonus.hole ? ` on hole ${latestBonus.hole}` : ""
-      }.`,
-      rarity: "rare",
-    });
+  const par = getHolePar(pairInfo.round, holeNumber);
+  const icon = getScoreIconFromGross(gross, par);
+
+  return {
+    playerIds: pairInfo.playerIds,
+    pairNames: pairInfo.pairNames,
+    icon,
+    holeNumber,
+    points,
+    roundNumber,
+  };
+}
+
+function formatPlaceMovement(oldPosition: number | undefined, newPosition: number) {
+  if (!oldPosition) {
+    return {
+      icon: "➖",
+      text: "No movement",
+    };
   }
 
-  if (latestScoreMoment) moments.push(latestScoreMoment);
-  if (latestScrambleMoment) moments.push(latestScrambleMoment);
+  const placesMoved = Number(oldPosition) - newPosition;
 
-  const hotPlayer = leaderboard.find((player) => player.liveIcon === "🔥");
-  const fallingPlayer = leaderboard.find((player) => player.liveIcon === "📉");
-
-  if (hotPlayer) {
-    moments.push({
-      icon: "🔥",
-      title: "Big Mover",
-      text: `${hotPlayer.name} is moving up the leaderboard.`,
-      rarity: "rare",
-    });
+  if (placesMoved > 0) {
+    return {
+      icon: "▲",
+      text: `Up ${placesMoved}`,
+    };
   }
 
-  if (fallingPlayer) {
-    moments.push({
-      icon: "📉",
-      title: "Losing Ground",
-      text: `${fallingPlayer.name} has slipped down the leaderboard.`,
-      rarity: "rare",
-    });
+  if (placesMoved < 0) {
+    return {
+      icon: "▼",
+      text: `Down ${Math.abs(placesMoved)}`,
+    };
   }
 
-  if (leader && second && leader.points - second.points <= 1) {
-    moments.push({
-      icon: "⚔️",
-      title: "Battle Alert",
-      text:
-  leader.points === second.points
-    ? `${leader.name} and ${second.name} are level on points.`
-    : `${leader.name} and ${second.name} are separated by just ${
-        leader.points - second.points
-      } point.`,
-      rarity: "rare",
-    });
-  }
+  return {
+    icon: "➖",
+    text: "No movement",
+  };
+}
 
-  if (topTeam && secondTeam) {
-    const gap = topTeam.points - secondTeam.points;
+function getMovementAmount(movement: Movement) {
+  const number = Number(movement.text.replace("Up ", "").replace("Down ", ""));
+  return Number.isFinite(number) ? number : 0;
+}
 
-    if (gap <= 2) {
-      moments.push({
-        icon: "🥊",
-        title: "Team Race Tight",
-        text: `${topTeam.team} lead ${secondTeam.team} by only ${gap} point${
-          gap === 1 ? "" : "s"
-        }.`,
-        rarity: "rare",
-      });
+function buildTeams(rows: LeaderboardRow[]) {
+  const teams = rows.reduce<Record<string, TeamStanding>>((acc, player) => {
+    const teamName = player.team || "No Team";
+
+    if (!acc[teamName]) {
+      acc[teamName] = {
+        team: teamName,
+        points: 0,
+        through: 0,
+        icon: "",
+      };
     }
-  }
 
-  const finishedPlayers = leaderboard.filter((player) => player.through >= 18);
+    acc[teamName].points += player.points;
 
-  finishedPlayers.slice(0, 2).forEach((player, index) => {
-    moments.push({
-      icon: "✅",
-      title: index === 0 ? "First Complete" : "Round Complete",
-      text: `${player.name} has completed the round on ${player.points} points.`,
-      rarity: index === 0 ? "major" : "rare",
-    });
+    return acc;
+  }, {});
+
+  Object.values(teams).forEach((team) => {
+    const teamPlayers = rows.filter(
+      (player) => (player.team || "No Team") === team.team
+    );
+
+    team.through =
+      teamPlayers.length > 0
+        ? Math.min(...teamPlayers.map((player) => player.through))
+        : 0;
   });
 
-  if (!moments.length && leader) {
-    moments.push({
-      icon: "⛳",
-      title: "Live Centre Active",
-      text: `${leader.name} currently leads on ${leader.points} points.`,
-      rarity: "common",
-    });
+  return Object.values(teams)
+    .sort((a, b) => b.points - a.points)
+    .map((team, index) => ({
+      ...team,
+      icon: index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉",
+    }));
+}
+
+function buildLiveStory(
+  leaderboard: LeaderboardRow[],
+  teamStandings: TeamStanding[],
+  savedMoments: LiveMomentRow[]
+) {
+  const latestMoment = savedMoments[0];
+  const leader = leaderboard[0];
+  const second = leaderboard[1];
+  const teamLeader = teamStandings[0];
+  const secondTeam = teamStandings[1];
+
+  if (latestMoment) return `${latestMoment.icon} ${latestMoment.text}`;
+  if (!leader) return "Waiting for the first scores to land.";
+
+  const playerGap = second ? leader.points - second.points : 0;
+  const teamGap = secondTeam ? teamLeader.points - secondTeam.points : 0;
+
+  if (second && playerGap <= 1) {
+    return playerGap === 0
+      ? `⚔️ ${leader.name} and ${second.name} are level at the top.`
+      : `⚔️ ${leader.name} leads ${second.name} by just ${playerGap} point.`;
   }
 
-  return moments.slice(0, 15);
+  if (secondTeam && teamGap <= 2) {
+    return `🥊 ${teamLeader.team} lead ${secondTeam.team} by ${teamGap} points in the team race.`;
+  }
+
+  return `👑 ${leader.name} leads on ${leader.points} points. ${
+    teamLeader?.team ?? "The leading team"
+  } are currently top of the team race.`;
 }
 
 function formatWhatsAppMoment(moment: Moment) {
@@ -497,10 +435,288 @@ ${teamLines}
 #SwiftTees`;
 }
 
+function buildLatestStablefordMoment(
+  latestStablefordScore: any,
+  players: any[],
+  currentRound: any,
+  leaderboard: LeaderboardRow[]
+): LiveMomentRow | null {
+  if (!latestStablefordScore) return null;
+
+  const player = players.find(
+    (item: any) => Number(item.id) === Number(latestStablefordScore.player_id)
+  );
+
+  if (!player) return null;
+
+  const roundNumber = Number(latestStablefordScore.round_number);
+  const holeNumber = Number(latestStablefordScore.hole_number);
+  const gross = Number(latestStablefordScore.gross_score ?? 0);
+  const points = Number(latestStablefordScore.points ?? 0);
+  const par = getHolePar(currentRound, holeNumber);
+  const scoreIcon = getScoreIconFromGross(gross, par);
+  const leaderboardRow = leaderboard.find((row) => Number(row.id) === Number(player.id));
+
+  if (scoreIcon === "🦅") {
+    return {
+      event_slug: EVENT_SLUG,
+      moment_key: `stableford-eagle-${roundNumber}-${player.id}-${holeNumber}`,
+      moment_type: "stableford_eagle",
+      player_id: Number(player.id),
+      player_name: player.name,
+      team: player.team || null,
+      round_number: roundNumber,
+      hole_number: holeNumber,
+      icon: "🦅",
+      title: "Eagle Alert",
+      text: `${player.name} makes eagle on hole ${holeNumber}. Big move.`,
+      rarity: "major",
+    };
+  }
+
+  if (scoreIcon === "🐦") {
+    return {
+      event_slug: EVENT_SLUG,
+      moment_key: `stableford-birdie-${roundNumber}-${player.id}-${holeNumber}`,
+      moment_type: "stableford_birdie",
+      player_id: Number(player.id),
+      player_name: player.name,
+      team: player.team || null,
+      round_number: roundNumber,
+      hole_number: holeNumber,
+      icon: "🐦",
+      title: "Birdie Alert",
+      text: `${player.name} birdies hole ${holeNumber}${
+        leaderboardRow ? ` and moves to ${leaderboardRow.points} points` : ""
+      }.`,
+      rarity: "rare",
+    };
+  }
+
+  return {
+    event_slug: EVENT_SLUG,
+    moment_key: `stableford-score-${roundNumber}-${player.id}-${holeNumber}`,
+    moment_type: "stableford_score",
+    player_id: Number(player.id),
+    player_name: player.name,
+    team: player.team || null,
+    round_number: roundNumber,
+    hole_number: holeNumber,
+    icon: "⛳",
+    title: "Latest Score",
+    text: `${player.name} scores ${gross || "saved"} on hole ${holeNumber}${
+      points ? ` for ${points} point${points === 1 ? "" : "s"}` : ""
+    }.`,
+    rarity: "common",
+  };
+}
+
+function buildLatestScrambleMoment(
+  latestScrambleInfo: LatestScrambleInfo | null
+): LiveMomentRow | null {
+  if (!latestScrambleInfo) return null;
+
+  if (latestScrambleInfo.icon === "🦅") {
+    return {
+      event_slug: EVENT_SLUG,
+      moment_key: `scramble-eagle-${latestScrambleInfo.roundNumber}-${latestScrambleInfo.playerIds.join("-")}-${latestScrambleInfo.holeNumber}`,
+      moment_type: "scramble_eagle",
+      player_id: null,
+      player_name: latestScrambleInfo.pairNames,
+      team: null,
+      round_number: latestScrambleInfo.roundNumber,
+      hole_number: latestScrambleInfo.holeNumber,
+      icon: "🦅",
+      title: "Scramble Eagle",
+      text: `${latestScrambleInfo.pairNames} make eagle on hole ${latestScrambleInfo.holeNumber}.`,
+      rarity: "major",
+    };
+  }
+
+  if (latestScrambleInfo.icon === "🐦") {
+    return {
+      event_slug: EVENT_SLUG,
+      moment_key: `scramble-birdie-${latestScrambleInfo.roundNumber}-${latestScrambleInfo.playerIds.join("-")}-${latestScrambleInfo.holeNumber}`,
+      moment_type: "scramble_birdie",
+      player_id: null,
+      player_name: latestScrambleInfo.pairNames,
+      team: null,
+      round_number: latestScrambleInfo.roundNumber,
+      hole_number: latestScrambleInfo.holeNumber,
+      icon: "🐦",
+      title: "Scramble Birdie",
+      text: `${latestScrambleInfo.pairNames} make birdie on hole ${latestScrambleInfo.holeNumber}.`,
+      rarity: "rare",
+    };
+  }
+
+  return {
+    event_slug: EVENT_SLUG,
+    moment_key: `scramble-score-${latestScrambleInfo.roundNumber}-${latestScrambleInfo.playerIds.join("-")}-${latestScrambleInfo.holeNumber}`,
+    moment_type: "scramble_score",
+    player_id: null,
+    player_name: latestScrambleInfo.pairNames,
+    team: null,
+    round_number: latestScrambleInfo.roundNumber,
+    hole_number: latestScrambleInfo.holeNumber,
+    icon: "🤝",
+    title: "Scramble Update",
+    text: `${latestScrambleInfo.pairNames} score ${latestScrambleInfo.points} point${
+      latestScrambleInfo.points === 1 ? "" : "s"
+    } on hole ${latestScrambleInfo.holeNumber}.`,
+    rarity: latestScrambleInfo.points >= 4 ? "rare" : "common",
+  };
+}
+
+function buildBonusMoments(bonusWinners: any[]): LiveMomentRow[] {
+  return bonusWinners
+    .filter((bonus: any) => bonus.winner_player_name)
+    .map((bonus: any) => {
+      const bonusType = normaliseBonusType(bonus.bonus_type);
+      const icon = bonusIconForType(bonus.bonus_type) || "🎯";
+      const roundNumber = Number(bonus.round_number ?? 0);
+      const holeNumber = Number(bonus.hole ?? 0);
+
+      return {
+        event_slug: EVENT_SLUG,
+        moment_key: `bonus-${roundNumber}-${bonusType}-${bonus.winner_player_name}-${holeNumber}`,
+        moment_type: "bonus_winner",
+        player_id: null,
+        player_name: bonus.winner_player_name,
+        team: null,
+        round_number: roundNumber,
+        hole_number: holeNumber,
+        icon,
+        title: bonusType,
+        text: `${bonus.winner_player_name} wins ${bonusType}${
+          holeNumber ? ` on hole ${holeNumber}` : ""
+        }.`,
+        rarity: "rare",
+      };
+    });
+}
+
+function buildMovementMoments(leaderboard: LeaderboardRow[]): LiveMomentRow[] {
+  const biggestClimber = leaderboard
+    .filter((player) => player.liveIcon === "🔥")
+    .sort((a, b) => getMovementAmount(b.movement) - getMovementAmount(a.movement))[0];
+
+  const biggestDrop = leaderboard
+    .filter((player) => player.liveIcon === "📉")
+    .sort((a, b) => getMovementAmount(b.movement) - getMovementAmount(a.movement))[0];
+
+  const moments: LiveMomentRow[] = [];
+
+  if (biggestClimber && getMovementAmount(biggestClimber.movement) >= 2) {
+    moments.push({
+      event_slug: EVENT_SLUG,
+      moment_key: `movement-up-${biggestClimber.id}-${biggestClimber.pos}`,
+      moment_type: "movement_up",
+      player_id: biggestClimber.id,
+      player_name: biggestClimber.name,
+      team: biggestClimber.team || null,
+      round_number: null,
+      hole_number: null,
+      icon: "🔥",
+      title: "Big Mover",
+      text: `${biggestClimber.name} moves up ${getMovementAmount(
+        biggestClimber.movement
+      )} places on the leaderboard.`,
+      rarity: "rare",
+    });
+  }
+
+  if (biggestDrop && getMovementAmount(biggestDrop.movement) >= 2) {
+    moments.push({
+      event_slug: EVENT_SLUG,
+      moment_key: `movement-down-${biggestDrop.id}-${biggestDrop.pos}`,
+      moment_type: "movement_down",
+      player_id: biggestDrop.id,
+      player_name: biggestDrop.name,
+      team: biggestDrop.team || null,
+      round_number: null,
+      hole_number: null,
+      icon: "📉",
+      title: "Losing Ground",
+      text: `${biggestDrop.name} drops ${getMovementAmount(
+        biggestDrop.movement
+      )} places on the leaderboard.`,
+      rarity: "rare",
+    });
+  }
+
+  return moments;
+}
+
+function buildBattleMoments(
+  leaderboard: LeaderboardRow[],
+  teamStandings: TeamStanding[]
+): LiveMomentRow[] {
+  const moments: LiveMomentRow[] = [];
+  const leader = leaderboard[0];
+  const second = leaderboard[1];
+  const topTeam = teamStandings[0];
+  const secondTeam = teamStandings[1];
+
+  if (leader && second && leader.points - second.points <= 1) {
+    const gap = leader.points - second.points;
+
+    moments.push({
+      event_slug: EVENT_SLUG,
+      moment_key: `battle-lead-${leader.id}-${second.id}-${leader.points}-${second.points}`,
+      moment_type: "battle_alert",
+      player_id: null,
+      player_name: `${leader.name} & ${second.name}`,
+      team: null,
+      round_number: null,
+      hole_number: null,
+      icon: "⚔️",
+      title: "Battle Alert",
+      text:
+        gap === 0
+          ? `${leader.name} and ${second.name} are level on points.`
+          : `${leader.name} and ${second.name} are separated by just ${gap} point.`,
+      rarity: "rare",
+    });
+  }
+
+  if (topTeam && secondTeam) {
+    const gap = topTeam.points - secondTeam.points;
+
+    if (gap <= 2) {
+      moments.push({
+        event_slug: EVENT_SLUG,
+        moment_key: `team-battle-${topTeam.team}-${secondTeam.team}-${topTeam.points}-${secondTeam.points}`,
+        moment_type: "team_battle",
+        player_id: null,
+        player_name: null,
+        team: topTeam.team,
+        round_number: null,
+        hole_number: null,
+        icon: "🥊",
+        title: "Team Race Tight",
+        text:
+          gap === 0
+            ? `${topTeam.team} and ${secondTeam.team} are level in the team race.`
+            : `${topTeam.team} lead ${secondTeam.team} by only ${gap} point${
+                gap === 1 ? "" : "s"
+              }.`,
+        rarity: "rare",
+      });
+    }
+  }
+
+  return moments;
+}
+
+async function saveGeneratedMoments(moments: LiveMomentRow[]) {
+  await Promise.all(moments.map((moment) => saveLiveMoment(moment)));
+}
+
 export default function LiveCentrePage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [teamStandings, setTeamStandings] = useState<TeamStanding[]>([]);
-  const [moments, setMoments] = useState<Moment[]>([]);
+  const [moments, setMoments] = useState<LiveMomentRow[]>([]);
   const [liveStory, setLiveStory] = useState("Waiting for live scores...");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState("");
@@ -519,14 +735,21 @@ export default function LiveCentrePage() {
   }
 
   async function loadLeaderboard() {
-    const [players, scores, scrambleScores, bonusWinners, tournamentSetup] =
-      await Promise.all([
-        getPlayers(),
-        getScores(EVENT_SLUG),
-        getScrambleScores(EVENT_SLUG),
-        getBonusWinners(EVENT_SLUG),
-        getTournamentSetupForUI(),
-      ]);
+    const [
+      players,
+      scores,
+      scrambleScores,
+      bonusWinners,
+      tournamentSetup,
+      savedMoments,
+    ] = await Promise.all([
+      getPlayers(),
+      getScores(EVENT_SLUG),
+      getScrambleScores(EVENT_SLUG),
+      getBonusWinners(EVENT_SLUG),
+      getTournamentSetupForUI(),
+      getLiveMoments(EVENT_SLUG),
+    ]);
 
     const currentRoundInfo = getCurrentRoundInfo(
       tournamentSetup,
@@ -540,6 +763,11 @@ export default function LiveCentrePage() {
 
     const latestStablefordScore = getLatestStablefordScore(stablefordScores);
     const latestScrambleScore = getLatestScrambleScore(scrambleScores);
+    const latestScrambleInfo = getLatestScrambleInfo(
+      latestScrambleScore,
+      tournamentSetup,
+      players
+    );
 
     const scramblePointsByPlayerId: Record<number, number> = {};
     const scrambleThroughByPlayerId: Record<number, number> = {};
@@ -557,39 +785,32 @@ export default function LiveCentrePage() {
 
       if (icon) {
         bonusIconsByPlayerName[bonus.winner_player_name] = Array.from(
-          new Set([...(bonusIconsByPlayerName[bonus.winner_player_name] ?? []), icon])
+          new Set([
+            ...(bonusIconsByPlayerName[bonus.winner_player_name] ?? []),
+            icon,
+          ])
         );
       }
     });
 
     scrambleScores.forEach((scrambleScore: any) => {
       const roundNumber = Number(scrambleScore.round_number);
-      const groupNumber = Number(scrambleScore.group_number);
-      const pairNumber = Number(scrambleScore.pair_number);
       const holeNumber = Number(scrambleScore.hole_number);
       const scramblePoints = Number(scrambleScore.points ?? 0);
 
-      const round = tournamentSetup.rounds?.find(
-        (round: any) => getRoundNumber(round) === roundNumber
+      const pairInfo = getPairInfoForScrambleScore(
+        scrambleScore,
+        tournamentSetup,
+        players
       );
 
-      const group = round?.groups?.find(
-        (group: any) => getGroupNumber(group) === groupNumber
-      );
-
-      const pair = group?.pairs?.find(
-        (pair: any) => Number(pair.pairNumber) === pairNumber
-      );
-
-      const playerIds = [pair?.player1_id, pair?.player2_id].filter(Boolean);
-
-      playerIds.forEach((playerId: any) => {
-        scramblePointsByPlayerId[Number(playerId)] =
-          (scramblePointsByPlayerId[Number(playerId)] ?? 0) + scramblePoints;
+      pairInfo.playerIds.forEach((playerId: number) => {
+        scramblePointsByPlayerId[playerId] =
+          (scramblePointsByPlayerId[playerId] ?? 0) + scramblePoints;
 
         if (roundNumber === currentRoundInfo.roundNumber) {
-          scrambleThroughByPlayerId[Number(playerId)] = Math.max(
-            scrambleThroughByPlayerId[Number(playerId)] ?? 0,
+          scrambleThroughByPlayerId[playerId] = Math.max(
+            scrambleThroughByPlayerId[playerId] ?? 0,
             holeNumber
           );
         }
@@ -645,74 +866,47 @@ export default function LiveCentrePage() {
 
     const rowsWithPositions = rows.map((player, index) => {
       const newPosition = index + 1;
-      const oldPosition = previousPositions[player.id];
-
-      let movement = {
-        icon: "➖",
-        text: "No movement",
-      };
-
-      if (oldPosition) {
-        const placesMoved = Number(oldPosition) - newPosition;
-
-        if (placesMoved > 0) {
-          movement = {
-            icon: "▲",
-            text: `Up ${placesMoved}`,
-          };
-        } else if (placesMoved < 0) {
-          movement = {
-            icon: "▼",
-            text: `Down ${Math.abs(placesMoved)}`,
-          };
-        }
-      }
 
       return {
         ...player,
         pos: newPosition,
-        movement,
+        movement: formatPlaceMovement(previousPositions[player.id], newPosition),
       };
     });
 
     const biggestClimber = rowsWithPositions
       .filter((player) => player.movement.icon === "▲")
-      .sort((a, b) => {
-        const aMoved = Number(a.movement.text.replace("Up ", ""));
-        const bMoved = Number(b.movement.text.replace("Up ", ""));
-        return bMoved - aMoved;
-      })[0];
+      .sort((a, b) => getMovementAmount(b.movement) - getMovementAmount(a.movement))[0];
 
     const biggestDrop = rowsWithPositions
       .filter((player) => player.movement.icon === "▼")
-      .sort((a, b) => {
-        const aMoved = Number(a.movement.text.replace("Down ", ""));
-        const bMoved = Number(b.movement.text.replace("Down ", ""));
-        return bMoved - aMoved;
-      })[0];
+      .sort((a, b) => getMovementAmount(b.movement) - getMovementAmount(a.movement))[0];
 
-    const latestScorePlayerId = latestStablefordScore
+    const latestStablefordPlayerId = latestStablefordScore
       ? Number(latestStablefordScore.player_id)
       : null;
 
-    const latestScoreIcon = latestStablefordScore
-      ? (() => {
-          const par = getHolePar(
-            currentRoundInfo.round,
-            Number(latestStablefordScore.hole_number)
-          );
-          const gross = Number(latestStablefordScore.gross_score ?? 0);
-          const latestScoreIcon = getScoreIconFromGross(gross, par);
-
-          return "";
-        })()
+    const latestStablefordIcon = latestStablefordScore
+      ? getScoreIconFromGross(
+          Number(latestStablefordScore.gross_score ?? 0),
+          getHolePar(currentRoundInfo.round, Number(latestStablefordScore.hole_number))
+        )
       : "";
 
     const rowsWithLiveIcons = rowsWithPositions.map((player) => {
       let liveIcon = "";
 
-      if (latestScorePlayerId && Number(player.id) === latestScorePlayerId && latestScoreIcon) {
-        liveIcon = latestScoreIcon;
+      if (
+        latestStablefordPlayerId &&
+        Number(player.id) === latestStablefordPlayerId &&
+        latestStablefordIcon
+      ) {
+        liveIcon = latestStablefordIcon;
+      } else if (
+        latestScrambleInfo?.playerIds.includes(Number(player.id)) &&
+        latestScrambleInfo.icon
+      ) {
+        liveIcon = latestScrambleInfo.icon;
       } else if (biggestClimber && player.id === biggestClimber.id) {
         liveIcon = "🔥";
       } else if (biggestDrop && player.id === biggestDrop.id) {
@@ -735,57 +929,31 @@ export default function LiveCentrePage() {
       liveIcon: featuredLivePlayers.includes(player.id) ? player.liveIcon : "",
     }));
 
-    const teams = finalRows.reduce<Record<string, TeamStanding>>((acc, player) => {
-      const teamName = player.team || "No Team";
+    const sortedTeams = buildTeams(finalRows);
 
-      if (!acc[teamName]) {
-        acc[teamName] = {
-          team: teamName,
-          points: 0,
-          through: 0,
-          icon: "",
-        };
-      }
+    const generatedMoments = [
+      buildLatestStablefordMoment(
+        latestStablefordScore,
+        players,
+        currentRoundInfo.round,
+        finalRows
+      ),
+      buildLatestScrambleMoment(latestScrambleInfo),
+      ...buildBonusMoments(bonusWinners),
+      ...buildMovementMoments(finalRows),
+      ...buildBattleMoments(finalRows, sortedTeams),
+    ].filter(Boolean) as LiveMomentRow[];
 
-      acc[teamName].points += player.points;
-      return acc;
-    }, {});
+    if (generatedMoments.length > 0) {
+      await saveGeneratedMoments(generatedMoments);
+    }
 
-    Object.values(teams).forEach((team) => {
-      const teamPlayers = finalRows.filter(
-        (player) => (player.team || "No Team") === team.team
-      );
-
-      team.through =
-        teamPlayers.length > 0
-          ? Math.min(...teamPlayers.map((player) => player.through))
-          : 0;
-    });
-
-    const sortedTeams = Object.values(teams)
-      .sort((a, b) => b.points - a.points)
-      .map((team, index) => ({
-        ...team,
-        icon: index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉",
-      }));
-
-    const nextMoments = buildMoments(
-      finalRows,
-      sortedTeams,
-      bonusWinners,
-      latestStablefordScore,
-      latestScrambleScore,
-      players,
-      tournamentSetup,
-      currentRoundInfo.round
-    );
+    const refreshedMoments = await getLiveMoments(EVENT_SLUG);
 
     setLeaderboard(finalRows);
     setTeamStandings(sortedTeams);
-    setMoments(nextMoments);
-    setLiveStory(
-  buildLiveStory(finalRows, sortedTeams, latestStablefordScore)
-);
+    setMoments(refreshedMoments);
+    setLiveStory(buildLiveStory(finalRows, sortedTeams, refreshedMoments));
     setLastUpdatedAt(
       new Date().toLocaleTimeString("en-GB", {
         hour: "2-digit",
@@ -802,21 +970,26 @@ export default function LiveCentrePage() {
 
   useEffect(() => {
     const channel = supabase
-      .channel("live-centre-fixed-moments-realtime")
+      .channel("live-centre-persistent-moments")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "scores" },
-        () => setTimeout(loadLeaderboard, 250)
+        () => setTimeout(loadLeaderboard, 300)
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "scramble_scores" },
-        () => setTimeout(loadLeaderboard, 250)
+        () => setTimeout(loadLeaderboard, 300)
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "bonus_winners" },
-        () => setTimeout(loadLeaderboard, 250)
+        () => setTimeout(loadLeaderboard, 300)
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "live_moments" },
+        () => setTimeout(loadLeaderboard, 300)
       )
       .subscribe((status, err) => {
         if (err) console.error("Realtime subscription error:", err);
@@ -942,7 +1115,7 @@ export default function LiveCentrePage() {
 
                 <span
                   title={player.movement.text}
-                  className={`text-sm font-black ${movementStyle(
+                  className={`text-base font-black ${movementStyle(
                     player.movement.icon
                   )}`}
                 >
@@ -996,7 +1169,7 @@ export default function LiveCentrePage() {
         <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
           {moments.map((moment, index) => (
             <div
-              key={`${moment.title}-${index}`}
+              key={moment.moment_key ?? `${moment.title}-${index}`}
               className={`rounded-2xl border border-l-4 p-3 transition-all ${
                 moment.rarity === "major"
                   ? "border-yellow-300 bg-yellow-50"
