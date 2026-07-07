@@ -34,7 +34,21 @@ const moreLinks = [
     href: "/events/carden-park-2026/live-leaderboard/setup",
     icon: "⚙️",
   },
+  {
+  title: "Tournament Setup V2",
+  description: "Build reusable tournaments with courses, players and teams.",
+  href: "/setup-v2",
+  icon: "🧪",
+},
+{
+  title: "Live Scoring V2",
+  description: "Dynamic scoring powered by the active tournament.",
+  href: "/live-scoring-v2",
+  icon: "📝",
+},
 ];
+
+
 
 export default function MorePage() {
   return (

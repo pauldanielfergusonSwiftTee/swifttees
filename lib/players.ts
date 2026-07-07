@@ -1,5 +1,6 @@
 import { supabase } from "./supabase";
 
+
 export type Player = {
   id: number;
   name: string;
