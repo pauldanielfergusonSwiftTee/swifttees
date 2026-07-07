@@ -14,6 +14,8 @@ import { supabase } from "@/lib/supabase";
 
 const EVENT_SLUG = "carden-park-2026";
 
+
+
 type Movement = {
   icon: string;
   text: string;
@@ -420,7 +422,7 @@ export default function LiveCentrePage() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const previousPositionsRef = useRef<Record<number, number>>({});
-
+const [lastUpdatedAt, setLastUpdatedAt] = useState("");
   async function copyText(text: string, key: string) {
     try {
       await navigator.clipboard.writeText(text);
@@ -730,6 +732,12 @@ export default function LiveCentrePage() {
     setBattleCards(buildBattleCards(finalRows));
     setMoments(buildMoments(finalRows, sortedTeams, bonusWinners));
     setLiveStory(buildLiveStory(finalRows, sortedTeams));
+    setLastUpdatedAt(
+  new Date().toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+  })
+);
   }
 
   useEffect(() => {
@@ -774,31 +782,14 @@ export default function LiveCentrePage() {
         <h1 className="mt-2 text-3xl font-black tracking-tight">
           Live Centre Beta
         </h1>
+        {lastUpdatedAt && (
+  <p className="mt-2 text-xs font-semibold text-green-200">
+    Last updated: {lastUpdatedAt}
+  </p>
+)}
       </section>
 
-      <section className="mt-3 rounded-3xl border border-amber-300 bg-amber-50 p-4 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-wide text-green-700">
-              🚨 Live Story
-            </p>
-
-            <p className="mt-1 text-lg font-black leading-snug text-green-950">
-              {liveStory}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() =>
-              copyText(formatCopyText("Swift Tees Update", liveStory), "story")
-            }
-            className="shrink-0 rounded-full bg-green-950 px-2.5 py-1 text-[10px] font-black text-white"
-          >
-            {copiedKey === "story" ? "Copied" : "Copy"}
-          </button>
-        </div>
-      </section>
+     
 
       <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="grid grid-cols-3 gap-2">
@@ -894,7 +885,7 @@ export default function LiveCentrePage() {
                   {player.movement.icon}
                 </span>
 
-                <p className="min-w-10 text-right text-2xl font-black leading-none text-green-950">
+                <p className="min-w-10 text-right text-xl font-black leading-none text-green-950">
                   {player.points}
                 </p>
               </div>
@@ -903,51 +894,7 @@ export default function LiveCentrePage() {
         </div>
       </section>
 
-      <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-        <div className="mb-3">
-          <h2 className="text-xl font-black text-green-950">
-            ⚔️ Current Battles
-          </h2>
-          <p className="text-xs font-semibold text-slate-400">
-            Auto-generated from live scores
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          {battleCards.map((card, index) => (
-            <div key={index} className="rounded-2xl bg-slate-50 p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-wide text-green-700">
-                    {card.icon} {card.label}
-                  </p>
-
-                  <p className="mt-1 text-base font-black text-green-950">
-                    {card.title}
-                  </p>
-
-                  <p className="mt-1 text-xs font-bold leading-5 text-slate-600">
-                    {card.text}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    copyText(
-                      formatCopyText(card.label, `${card.title}\n${card.text}`),
-                      `battle-${index}`
-                    )
-                  }
-                  className="shrink-0 rounded-full bg-green-950 px-2 py-1 text-[9px] font-black text-white"
-                >
-                  {copiedKey === `battle-${index}` ? "✓" : "Copy"}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      
 
       <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="mb-3">
@@ -959,7 +906,29 @@ export default function LiveCentrePage() {
             Pick and choose updates to paste into WhatsApp
           </p>
         </div>
+<div className="mb-3 rounded-2xl border border-amber-300 bg-amber-50 p-3">
+  <div className="flex items-start justify-between gap-3">
+    <div>
+      <p className="text-[10px] font-black uppercase tracking-wide text-green-700">
+        🚨 Live Story
+      </p>
 
+      <p className="mt-1 text-sm font-black leading-snug text-green-950">
+        {liveStory}
+      </p>
+    </div>
+
+    <button
+      type="button"
+      onClick={() =>
+        copyText(formatCopyText("Swift Tees Update", liveStory), "story")
+      }
+      className="shrink-0 rounded-full bg-green-950 px-2.5 py-1 text-[10px] font-black text-white"
+    >
+      {copiedKey === "story" ? "Copied" : "Copy"}
+    </button>
+  </div>
+</div>
         <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
           {moments.map((moment, index) => (
             <div
