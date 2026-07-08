@@ -109,7 +109,7 @@ export default function SetupV2Page() {
   const [isLoadingTournaments, setIsLoadingTournaments] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
-
+const [useGroups, setUseGroups] = useState(false);
   useEffect(() => {
     async function loadPage() {
       const data = await getPlayers();
@@ -201,85 +201,90 @@ export default function SetupV2Page() {
       rounds: rounds.map((round) => {
         const course = getCourseById(round.courseId);
 
-        const groups = Array.from({ length: round.groupCount }).map(
-          (_, groupIndex) => {
-            const stablefordPlayers = round.groups[groupIndex] ?? [];
-            const scramblePairs = round.pairs[groupIndex] ?? [];
+        const buildPlayerObject = (playerId: string | number) => {
+  const player = getPlayer(playerId);
 
-            const groupPlayers =
-              round.format === "scramble"
-                ? scramblePairs
-                    .flatMap((pair) => [pair.player1Id, pair.player2Id])
-                    .filter(Boolean)
-                : stablefordPlayers.filter(Boolean);
+  return {
+    player_id: Number(playerId),
+    name: player?.name ?? "",
+    team:
+      teamMode === "teams"
+        ? playerTeams[Number(playerId)] ?? ""
+        : "",
+    eventHandicap:
+      handicaps[Number(playerId)]?.stableford === ""
+        ? 0
+        : handicaps[Number(playerId)]?.stableford ?? 0,
+    stablefordHandicap:
+      handicaps[Number(playerId)]?.stableford === ""
+        ? 0
+        : handicaps[Number(playerId)]?.stableford ?? 0,
+    scrambleHandicap:
+      handicaps[Number(playerId)]?.scramble === ""
+        ? 0
+        : handicaps[Number(playerId)]?.scramble ?? 0,
+  };
+};
 
-            return {
-              id: groupIndex + 1,
-              groupNumber: groupIndex + 1,
-              name: `Group ${groupIndex + 1}`,
-              teeTime: round.teeTimes[groupIndex] ?? "",
-              players: groupPlayers.map((playerId) => {
-                const player = getPlayer(playerId);
+const groups = useGroups
+  ? Array.from({ length: round.groupCount }).map((_, groupIndex) => {
+      const stablefordPlayers = round.groups[groupIndex] ?? [];
+      const scramblePairs = round.pairs[groupIndex] ?? [];
+
+      const groupPlayers =
+        round.format === "scramble"
+          ? scramblePairs
+              .flatMap((pair) => [pair.player1Id, pair.player2Id])
+              .filter(Boolean)
+          : stablefordPlayers.filter(Boolean);
+
+      return {
+        id: groupIndex + 1,
+        groupNumber: groupIndex + 1,
+        name: `Group ${groupIndex + 1}`,
+        teeTime: round.teeTimes[groupIndex] ?? "",
+        players: groupPlayers.map(buildPlayerObject),
+        pairs:
+          round.format === "scramble"
+            ? scramblePairs.map((pair, pairIndex) => {
+                const player1 = getPlayer(pair.player1Id);
+                const player2 = getPlayer(pair.player2Id);
+                const calculatedHandicap = calculatePairHandicap(
+                  pair.player1Id,
+                  pair.player2Id
+                );
+
+                const finalHandicap =
+                  pair.finalHandicap !== ""
+                    ? pair.finalHandicap
+                    : calculatedHandicap !== ""
+                    ? calculatedHandicap
+                    : 0;
 
                 return {
-                  player_id: Number(playerId),
-                  name: player?.name ?? "",
-                  team:
-                    teamMode === "teams"
-                      ? playerTeams[Number(playerId)] ?? ""
-                      : "",
-                  eventHandicap:
-                    handicaps[Number(playerId)]?.stableford === ""
-                      ? 0
-                      : handicaps[Number(playerId)]?.stableford ?? 0,
-                  stablefordHandicap:
-                    handicaps[Number(playerId)]?.stableford === ""
-                      ? 0
-                      : handicaps[Number(playerId)]?.stableford ?? 0,
-                  scrambleHandicap:
-                    handicaps[Number(playerId)]?.scramble === ""
-                      ? 0
-                      : handicaps[Number(playerId)]?.scramble ?? 0,
+                  id: `${round.roundNumber}-${groupIndex + 1}-${pairIndex + 1}`,
+                  pairNumber: pairIndex + 1,
+                  player1_id: pair.player1Id ? Number(pair.player1Id) : null,
+                  player2_id: pair.player2Id ? Number(pair.player2Id) : null,
+                  player1: player1?.name ?? "",
+                  player2: player2?.name ?? "",
+                  calculatedHandicap,
+                  finalHandicap,
                 };
-              }),
-              pairs:
-                round.format === "scramble"
-                  ? scramblePairs.map((pair, pairIndex) => {
-                      const player1 = getPlayer(pair.player1Id);
-                      const player2 = getPlayer(pair.player2Id);
-                      const calculatedHandicap = calculatePairHandicap(
-                        pair.player1Id,
-                        pair.player2Id
-                      );
-
-                      const finalHandicap =
-                        pair.finalHandicap !== ""
-                          ? pair.finalHandicap
-                          : calculatedHandicap !== ""
-                          ? calculatedHandicap
-                          : 0;
-
-                      return {
-                        id: `${round.roundNumber}-${groupIndex + 1}-${
-                          pairIndex + 1
-                        }`,
-                        pairNumber: pairIndex + 1,
-                        player1_id: pair.player1Id
-                          ? Number(pair.player1Id)
-                          : null,
-                        player2_id: pair.player2Id
-                          ? Number(pair.player2Id)
-                          : null,
-                        player1: player1?.name ?? "",
-                        player2: player2?.name ?? "",
-                        calculatedHandicap,
-                        finalHandicap,
-                      };
-                    })
-                  : [],
-            };
-          }
-        );
+              })
+            : [],
+      };
+    })
+  : [
+      {
+        id: 1,
+        groupNumber: 1,
+        name: "All Players",
+        teeTime: "",
+        players: selectedPlayers.map((player) => buildPlayerObject(player.id)),
+        pairs: [],
+      },
+    ];
 
         return {
           id: round.roundNumber,
@@ -319,7 +324,8 @@ export default function SetupV2Page() {
     handicaps,
     rounds,
     players,
-  ]);
+useGroups,
+]);
 
   function togglePlayer(playerId: number) {
     setSelectedPlayerIds((current) => {
@@ -554,7 +560,12 @@ export default function SetupV2Page() {
     setEventName(tournament.name ?? "");
     setTeamMode(tournament.team_mode ?? tournament.teamMode ?? "none");
     setTeams(tournament.teams?.length ? tournament.teams : ["Team 1", "Team 2"]);
+const savedRounds = tournament.rounds ?? [];
+const hasRealGroups = savedRounds.some((round: any) =>
+  round.groups?.some((group: any) => group.name !== "All Players")
+);
 
+setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
     const loadedPlayers = tournament.players ?? [];
     setSelectedPlayerIds(loadedPlayers.map((player: any) => player.id));
 
@@ -657,42 +668,50 @@ export default function SetupV2Page() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-6 pb-24 text-white">
+  <main className="min-h-screen bg-slate-100 text-slate-900 p-4 pb-24">
       <div className="mx-auto max-w-4xl space-y-5">
         <section>
-          <p className="text-sm font-bold uppercase tracking-[0.2em] text-emerald-400">
-            Swift Tees
-          </p>
-          <h1 className="text-3xl font-black">Tournament Setup V2</h1>
-          <p className="mt-2 text-sm text-slate-300">
-            Reusable tournament builder with players, teams, handicaps, groups,
-            scramble pairs and bonus holes.
-          </p>
+    
+
+<h1 className="text-4xl font-black text-green-950">
+  Tournament Builder
+</h1>
+
+
+          
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <label className="text-sm font-bold text-slate-200">Event name</label>
-          <input
-            value={eventName}
-            onChange={(event) => {
-              setEventName(event.target.value);
-              if (!editingSlug) setSaveMessage("");
-            }}
-            placeholder="e.g. Carden Park 2026"
-            className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white outline-none"
-          />
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+  
 
-          <div className="mt-3 rounded-xl bg-slate-900 p-3">
-            <p className="text-xs uppercase tracking-wide text-slate-500">
-              Event slug
-            </p>
-            <p className="font-mono text-sm text-emerald-300">
-              {editingSlug || eventSlug || "event-slug"}
-            </p>
-          </div>
-        </section>
+  <h2 className="mt-1 text-2xl font-black text-green-950">
+    Event Name
+  </h2>
 
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+
+
+  <input
+    value={eventName}
+    onChange={(event) => {
+      setEventName(event.target.value);
+      if (!editingSlug) setSaveMessage("");
+    }}
+    placeholder="e.g. Carden Park 2026"
+    className="mt-4 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none focus:border-green-700"
+  />
+
+  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+      Event Slug
+    </p>
+
+    <p className="mt-1 font-mono text-sm text-green-700">
+      {editingSlug || eventSlug || "event-slug"}
+    </p>
+  </div>
+</section>
+
+        <section className="rounded-3xl border border-slate-200 bg-white shadow-sm p-4">
           <h2 className="text-lg font-black">How many rounds?</h2>
 
           <div className="mt-3 grid grid-cols-2 gap-3">
@@ -704,7 +723,7 @@ export default function SetupV2Page() {
                 className={`rounded-xl border px-4 py-4 text-left font-black ${
                   roundCount === count
                     ? "border-emerald-400 bg-emerald-500 text-slate-950"
-                    : "border-white/10 bg-slate-900 text-white"
+                    : "border-slate-200 bg-white text-green-950"
                 }`}
               >
                 {count} Round{count === 2 ? "s" : ""}
@@ -713,7 +732,7 @@ export default function SetupV2Page() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <section className="rounded-3xl border border-slate-200 bg-white shadow-sm p-4">
           <h2 className="text-lg font-black">Players</h2>
           <p className="mt-1 text-sm text-slate-400">
             Select exactly who is playing this event.
@@ -731,7 +750,7 @@ export default function SetupV2Page() {
                   className={`rounded-xl border p-3 text-left ${
                     selected
                       ? "border-emerald-400 bg-emerald-500 text-slate-950"
-                      : "border-white/10 bg-slate-900 text-white"
+                      : "border-slate-200 bg-white text-green-950"
                   }`}
                 >
                   <p className="font-black">{player.name}</p>
@@ -745,7 +764,7 @@ export default function SetupV2Page() {
           </p>
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <section className="rounded-3xl border border-slate-200 bg-white shadow-sm p-4">
           <h2 className="text-lg font-black">Event Type</h2>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
@@ -755,7 +774,7 @@ export default function SetupV2Page() {
               className={`rounded-xl border p-4 text-left font-black ${
                 teamMode === "none"
                   ? "border-emerald-400 bg-emerald-500 text-slate-950"
-                  : "border-white/10 bg-slate-900 text-white"
+                  : "border-slate-200 bg-white text-green-950"
               }`}
             >
               👤 Individual Event
@@ -767,7 +786,7 @@ export default function SetupV2Page() {
               className={`rounded-xl border p-4 text-left font-black ${
                 teamMode === "teams"
                   ? "border-emerald-400 bg-emerald-500 text-slate-950"
-                  : "border-white/10 bg-slate-900 text-white"
+                  : "border-slate-200 bg-white text-green-950"
               }`}
             >
               👥 Team Event
@@ -788,7 +807,7 @@ export default function SetupV2Page() {
                       )
                     );
                   }}
-                  className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 font-bold text-green-950"
                 />
               ))}
 
@@ -800,7 +819,7 @@ export default function SetupV2Page() {
                     `Team ${current.length + 1}`,
                   ])
                 }
-                className="w-full rounded-xl bg-slate-800 px-4 py-3 font-bold"
+                className="w-full rounded-xl border border-green-700 bg-green-50 px-4 py-3 font-black text-green-950"
               >
                 + Add Team
               </button>
@@ -809,7 +828,7 @@ export default function SetupV2Page() {
                 <h3 className="font-black">Assign Players to Teams</h3>
 
                 {selectedPlayers.map((player) => (
-                  <div key={player.id} className="rounded-xl bg-slate-900 p-3">
+                  <div key={player.id} className="rounded-xl bg-slate-50 border border-slate-200 p-3">
                     <p className="font-bold">{player.name}</p>
 
                     <select
@@ -820,7 +839,7 @@ export default function SetupV2Page() {
                           [player.id]: event.target.value,
                         }))
                       }
-                      className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-white"
+                      className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 font-bold text-green-950"
                     >
                       <option value="">No team selected</option>
                       {teams.map((team) => (
@@ -835,8 +854,42 @@ export default function SetupV2Page() {
             </div>
           )}
         </section>
+<section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+  <h2 className="text-xl font-black text-green-950">
+    Playing Structure
+  </h2>
 
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+  <p className="mt-1 text-sm text-slate-500">
+    Will players score together or in separate tee groups?
+  </p>
+
+  <div className="mt-4 grid grid-cols-2 gap-3">
+    <button
+      type="button"
+      onClick={() => setUseGroups(false)}
+      className={`rounded-2xl border p-4 font-black ${
+        !useGroups
+         ? "border-emerald-400 bg-emerald-500 text-slate-950"
+                  : "border-slate-200 bg-white text-green-950"
+      }`}
+    >
+      👥 Single Tee Time
+    </button>
+
+    <button
+      type="button"
+      onClick={() => setUseGroups(true)}
+      className={`rounded-2xl border p-4 font-black ${
+        useGroups
+          ? "border-emerald-400 bg-emerald-500 text-slate-950"
+                  : "border-slate-200 bg-white text-green-950"
+      }`}
+    >
+      ⛳ Multiple Tee Times
+    </button>
+  </div>
+</section>
+        <section className="rounded-3xl border border-slate-200 bg-white shadow-sm p-4">
           <h2 className="text-lg font-black">Tournament Handicaps</h2>
           <p className="mt-1 text-sm text-slate-400">
             Stableford handicap is used for individual scoring. Scramble handicap
@@ -845,7 +898,7 @@ export default function SetupV2Page() {
 
           <div className="mt-4 grid gap-3">
             {selectedPlayers.map((player) => (
-              <div key={player.id} className="rounded-xl bg-slate-900 p-3">
+              <div key={player.id} className="rounded-xl bg-slate-50 border border-slate-200 p-3">
                 <p className="font-black">{player.name}</p>
 
                 <div className="mt-3 grid grid-cols-2 gap-3">
@@ -864,7 +917,7 @@ export default function SetupV2Page() {
                           event.target.value
                         )
                       }
-                      className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 font-black text-white"
+                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-black text-slate-900"
                     />
                   </div>
 
@@ -883,7 +936,7 @@ export default function SetupV2Page() {
                           event.target.value
                         )
                       }
-                      className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 font-black text-white"
+                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-black text-slate-900"
                     />
                   </div>
                 </div>
@@ -898,13 +951,13 @@ export default function SetupV2Page() {
           return (
             <section
               key={round.roundNumber}
-              className="rounded-2xl border border-white/10 bg-white/5 p-4"
+               className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
             >
               <h2 className="text-xl font-black">Round {round.roundNumber}</h2>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="text-sm font-bold text-slate-200">
+                  <label className="text-sm font-bold text-slate-600">
                     Course
                   </label>
                   <select
@@ -912,7 +965,7 @@ export default function SetupV2Page() {
                     onChange={(event) =>
                       updateRound(round.roundNumber, "courseId", event.target.value)
                     }
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white"
+                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 font-bold text-green-950"
                   >
                     {COURSES.map((course) => (
                       <option key={course.id} value={course.id}>
@@ -923,7 +976,7 @@ export default function SetupV2Page() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-bold text-slate-200">
+                  <label className="text-sm font-bold text-slate-600">
                     Format
                   </label>
                   <select
@@ -935,7 +988,7 @@ export default function SetupV2Page() {
                         event.target.value as RoundFormat
                       )
                     }
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-white"
+                    className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 font-bold text-green-950"
                   >
                     <option value="stableford">Stableford</option>
                     <option value="scramble">Scramble Pairs</option>
@@ -944,8 +997,8 @@ export default function SetupV2Page() {
               </div>
 
               {course && (
-                <div className="mt-4 rounded-xl bg-slate-900 p-3">
-                  <p className="text-sm font-black text-emerald-400">
+                <div className="mt-4 rounded-2xl border border-green-100 bg-green-50 p-4">
+                  <p className="text-sm font-black text-green-950">
                     {course.shortName}
                   </p>
                   <p className="text-xs text-slate-400">
@@ -954,8 +1007,9 @@ export default function SetupV2Page() {
                 </div>
               )}
 
-              <div className="mt-5 rounded-xl bg-slate-900 p-3">
-                <h3 className="font-black">Groups</h3>
+              {useGroups && (
+  <div className="mt-5 rounded-2xl bg-slate-50 border border-slate-200 p-4">
+                <h3 className="font-black">No. of Tee Times </h3>
 
                 <div className="mt-3 grid grid-cols-4 gap-2">
                   {[1, 2, 3, 4].map((count) => (
@@ -968,7 +1022,7 @@ export default function SetupV2Page() {
                       className={`rounded-xl border p-3 font-black ${
                         round.groupCount === count
                           ? "border-emerald-400 bg-emerald-500 text-slate-950"
-                          : "border-white/10 bg-slate-950 text-white"
+                          : "border-slate-200 bg-slate-50 text-green-950"
                       }`}
                     >
                       {count}
@@ -981,7 +1035,7 @@ export default function SetupV2Page() {
                     (_, groupIndex) => (
                       <div
                         key={groupIndex}
-                        className="rounded-xl border border-white/10 bg-slate-950 p-3"
+                        className="rounded-xl border border-slate-200 bg-white p-3"
                       >
                         <h4 className="font-black">Group {groupIndex + 1}</h4>
 
@@ -995,7 +1049,7 @@ export default function SetupV2Page() {
                             )
                           }
                           placeholder="Tee time"
-                          className="mt-2 w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 text-white"
+                          className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900"
                         />
 
                         {round.format === "stableford" && (
@@ -1044,7 +1098,7 @@ export default function SetupV2Page() {
                               return (
                                 <div
                                   key={pairIndex}
-                                  className="rounded-xl border border-white/10 bg-slate-900 p-3"
+                                  className="rounded-xl border border-white/10 bg-slate-50 border border-slate-200 p-3"
                                 >
                                   <p className="text-sm font-black text-emerald-400">
                                     Pair {pairIndex + 1}
@@ -1062,7 +1116,7 @@ export default function SetupV2Page() {
                                           event.target.value
                                         )
                                       }
-                                      className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-white"
+                                      className="w-full rounded-xl border border-white/10 bg-white px-3 py-2 text-slate-900"
                                     >
                                       <option value="">Player 1</option>
                                       {selectedPlayers.map((player) => (
@@ -1086,7 +1140,7 @@ export default function SetupV2Page() {
                                           event.target.value
                                         )
                                       }
-                                      className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-white"
+                                      className="w-full rounded-xl border border-white/10 bg-white px-3 py-2 text-slate-900"
                                     >
                                       <option value="">Player 2</option>
                                       {selectedPlayers.map((player) => (
@@ -1100,7 +1154,7 @@ export default function SetupV2Page() {
                                     </select>
                                   </div>
 
-                                  <div className="mt-3 rounded-xl bg-slate-950 p-3">
+                                  <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
                                     <p className="text-xs font-bold text-slate-400">
                                       Calculated Scramble HCP
                                     </p>
@@ -1125,7 +1179,7 @@ export default function SetupV2Page() {
                                           event.target.value
                                         )
                                       }
-                                      className="mt-1 w-full rounded-xl border border-white/10 bg-slate-900 px-3 py-2 font-black text-white"
+                                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-black text-slate-900"
                                     />
                                   </div>
                                 </div>
@@ -1137,13 +1191,14 @@ export default function SetupV2Page() {
                     )
                   )}
                 </div>
-              </div>
-
-              <div className="mt-5 rounded-xl bg-slate-900 p-3">
+              
+  </div>
+)}
+              <div className="mt-5 rounded-xl bg-slate-50 border border-slate-200 p-3">
                 <h3 className="font-black">Bonus Holes</h3>
 
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <div>
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <div className="mb-2 flex items-center justify-between">
                       <p className="font-black">💣 Longest Drive</p>
                       <input
@@ -1156,7 +1211,7 @@ export default function SetupV2Page() {
                             Number(event.target.value)
                           )
                         }
-                        className="w-16 rounded-lg bg-slate-950 px-2 py-1 text-center font-black"
+                        className="w-16 rounded-lg border border-slate-300 bg-white px-2 py-1 text-center font-black text-slate-900"
                       />
                     </div>
 
@@ -1177,8 +1232,8 @@ export default function SetupV2Page() {
                             }
                             className={`rounded-lg border p-2 text-xs font-black ${
                               round.longestDriveHoles.includes(hole)
-                                ? "border-yellow-300 bg-yellow-300 text-slate-950"
-                                : "border-white/10 bg-slate-950 text-white"
+                                ? "border-green-500 bg-green-500 text-white"
+                                : "border-slate-200 bg-slate-50 text-green-950"
                             }`}
                           >
                             H{hole}
@@ -1188,7 +1243,7 @@ export default function SetupV2Page() {
                     </div>
                   </div>
 
-                  <div>
+                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <div className="mb-2 flex items-center justify-between">
                       <p className="font-black">🎯 Nearest Pin</p>
                       <input
@@ -1201,7 +1256,7 @@ export default function SetupV2Page() {
                             Number(event.target.value)
                           )
                         }
-                        className="w-16 rounded-lg bg-slate-950 px-2 py-1 text-center font-black"
+                        className="w-16 rounded-lg border border-slate-300 bg-white px-2 py-1 text-center font-black text-slate-900"
                       />
                     </div>
 
@@ -1222,8 +1277,8 @@ export default function SetupV2Page() {
                             }
                             className={`rounded-lg border p-2 text-xs font-black ${
                               round.nearestPinHoles.includes(hole)
-                                ? "border-yellow-300 bg-yellow-300 text-slate-950"
-                                : "border-white/10 bg-slate-950 text-white"
+                                ? "border-green-500 bg-green-500 text-white"
+                                : "border-slate-200 bg-slate-50 text-green-950"
                             }`}
                           >
                             H{hole}
@@ -1253,7 +1308,7 @@ export default function SetupV2Page() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
+        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-black">Saved Tournaments</h2>
 
@@ -1271,7 +1326,7 @@ export default function SetupV2Page() {
           ) : (
             <div className="mt-4 space-y-2">
               {savedTournaments.map((tournament) => (
-                <div key={tournament.id} className="rounded-xl bg-slate-900 p-3">
+                <div key={tournament.id} className="rounded-xl bg-slate-50 border border-slate-200 p-3">
                   <p className="font-black">{tournament.name}</p>
 
                   {tournament.is_active && (
