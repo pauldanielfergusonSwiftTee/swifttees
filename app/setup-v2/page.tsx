@@ -524,7 +524,7 @@ useGroups,
         return;
       }
 
-      await saveTournamentV2({
+     await saveTournamentV2({
   slug: tournamentPreview.slug,
   name: tournamentPreview.name,
   rounds: tournamentPreview.rounds,
@@ -533,9 +533,11 @@ useGroups,
   teams: tournamentPreview.teams,
 });
 
-      setEditingSlug(tournamentPreview.slug);
-      setSaveMessage("✅ Tournament saved.");
-      await loadSavedTournaments();
+await setActiveTournamentV2(tournamentPreview.slug);
+
+setEditingSlug(tournamentPreview.slug);
+setSaveMessage("✅ Tournament saved and set active.");
+await loadSavedTournaments();
     } catch (error: any) {
       setSaveMessage(`❌ ${error.message ?? "Could not save tournament."}`);
     } finally {
@@ -700,15 +702,7 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
     className="mt-4 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none focus:border-green-700"
   />
 
-  <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
-      Event Slug
-    </p>
-
-    <p className="mt-1 font-mono text-sm text-green-700">
-      {editingSlug || eventSlug || "event-slug"}
-    </p>
-  </div>
+  
 </section>
 
         <section className="rounded-3xl border border-slate-200 bg-white shadow-sm p-4">
@@ -1306,6 +1300,13 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
           {saveMessage && (
             <p className="mt-3 text-sm font-bold text-white">{saveMessage}</p>
           )}
+
+          <a
+  href="/live-scoring-v2"
+  className="mt-3 flex w-full items-center justify-center rounded-xl border border-green-700 bg-white px-4 py-4 font-black text-green-950"
+>
+  ⛳ Go to Live Scoring V2
+</a>
         </section>
 
         <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -1315,7 +1316,7 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
             <button
               type="button"
               onClick={loadSavedTournaments}
-              className="rounded-lg bg-slate-800 px-3 py-2 text-sm font-bold"
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-black text-green-950 hover:bg-green-50"
             >
               Refresh
             </button>
@@ -1373,14 +1374,7 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
           )}
         </section>
 
-        <section className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4">
-          <h2 className="text-lg font-black text-emerald-300">
-            Setup Preview
-          </h2>
-          <pre className="mt-3 max-h-96 overflow-auto rounded-xl bg-slate-950 p-3 text-xs text-slate-300">
-            {JSON.stringify(tournamentPreview, null, 2)}
-          </pre>
-        </section>
+       
       </div>
     </main>
   );

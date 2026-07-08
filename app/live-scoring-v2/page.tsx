@@ -476,8 +476,9 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
         </div>
 
         <div className="mb-3 space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            {tournamentSetup.rounds.map((round: any) => (
+          {tournamentSetup.rounds.length > 1 && (
+  <div className="flex flex-wrap justify-center gap-3">
+    {tournamentSetup.rounds.map((round: any) => (
               <button
                 key={round.id}
                 onClick={() => {
@@ -500,10 +501,12 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
                     : "Stableford"}
                 </span>
               </button>
-            ))}
+                       ))}
           </div>
+)}
 
-          <div className="grid grid-cols-3 gap-2">
+          {currentRound.groups.length > 1 && (
+            <div className="flex flex-wrap justify-center gap-3">
             {currentRound.groups.map((group: any) => (
               <button
                 key={group.id}
@@ -522,8 +525,9 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
                   {group.teeTime}
                 </span>
               </button>
-            ))}
+                      ))}
           </div>
+          )}
         </div>
 
         <section className="rounded-3xl border border-green-900 bg-green-950 p-3 text-white shadow-sm">
