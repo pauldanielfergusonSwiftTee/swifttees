@@ -55,11 +55,19 @@ function makeEmptyGroup() {
   return ["", "", "", ""];
 }
 
-function makeEmptyPairs() {
+function makeEmptyPairs(): PairSetup[] {
   return [
-    { player1Id: "", player2Id: "", finalHandicap: "" },
-    { player1Id: "", player2Id: "", finalHandicap: "" },
-  ];
+  {
+    player1Id: "",
+    player2Id: "",
+    finalHandicap: "" as number | "",
+  },
+  {
+    player1Id: "",
+    player2Id: "",
+    finalHandicap: "" as number | "",
+  },
+];
 }
 
 function makeRound(roundNumber: number, courseId: string): RoundSetup {
@@ -510,7 +518,14 @@ export default function SetupV2Page() {
         return;
       }
 
-      await saveTournamentV2(tournamentPreview);
+      await saveTournamentV2({
+  slug: tournamentPreview.slug,
+  name: tournamentPreview.name,
+  rounds: tournamentPreview.rounds,
+  players: tournamentPreview.players,
+  team_mode: tournamentPreview.teamMode,
+  teams: tournamentPreview.teams,
+});
 
       setEditingSlug(tournamentPreview.slug);
       setSaveMessage("✅ Tournament saved.");
@@ -537,7 +552,7 @@ export default function SetupV2Page() {
   function loadTournamentIntoEditor(tournament: any) {
     setEditingSlug(tournament.slug ?? "");
     setEventName(tournament.name ?? "");
-    setTeamMode(tournament.teamMode ?? "none");
+    setTeamMode(tournament.team_mode ?? tournament.teamMode ?? "none");
     setTeams(tournament.teams?.length ? tournament.teams : ["Team 1", "Team 2"]);
 
     const loadedPlayers = tournament.players ?? [];
@@ -595,7 +610,10 @@ export default function SetupV2Page() {
               return group.pairs.map((pair: any) => ({
                 player1Id: pair.player1_id ? String(pair.player1_id) : "",
                 player2Id: pair.player2_id ? String(pair.player2_id) : "",
-                finalHandicap: pair.finalHandicap ?? "",
+                finalHandicap:
+  pair.finalHandicap === "" || pair.finalHandicap == null
+    ? ""
+    : Number(pair.finalHandicap),
               }));
             }) ?? [makeEmptyPairs()],
           longestDrivePoints:
@@ -619,11 +637,12 @@ export default function SetupV2Page() {
     setSaveMessage(`Loaded ${tournament.name} for editing.`);
   }
 
-  async function handleSetActive(slug: string) {
-    await setActiveTournamentV2(slug);
-    setSaveMessage("✅ Active tournament updated.");
-    await loadSavedTournaments();
-  }
+  async function handleSetActive(tournament: any) {
+  await setActiveTournamentV2(tournament.slug);
+  loadTournamentIntoEditor(tournament);
+  setSaveMessage("✅ Active tournament updated and loaded.");
+  await loadSavedTournaments();
+}
 
   async function handleDeleteTournament(slug: string) {
     const confirmed = window.confirm(
@@ -1279,7 +1298,7 @@ export default function SetupV2Page() {
 
                     <button
                       type="button"
-                      onClick={() => handleSetActive(tournament.slug)}
+                      onClick={() => handleSetActive(tournament)}
                       className="rounded-lg bg-yellow-400 px-3 py-2 text-sm font-black text-slate-950"
                     >
                       Set Active
