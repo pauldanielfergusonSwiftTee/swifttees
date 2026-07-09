@@ -16,12 +16,12 @@ const navItems = [
 },
   {
     label: "Leaderboard",
-    href: "/match-centre",
+    href: "/live-centre",
     icon: "🏆",
   },
   {
   label: "Scorecards",
-  href: "/events/carden-park-2026/live-leaderboard/live-scoring",
+  href: "/live-scoring-v2",
   icon: "📝",
 },
   {

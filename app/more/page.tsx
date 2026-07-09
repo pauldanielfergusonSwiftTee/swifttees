@@ -23,29 +23,24 @@ const moreLinks = [
     icon: "🏅",
   },
  {
-  title: "Live Centre (Beta)",
-  description: "Preview the next generation live tournament experience.",
+  title: "Live Centre",
+  description: "Live leaderboard, moments feed and tournament updates.",
   href: "/live-centre",
-  icon: "🧪",
-},
-  {
-    title: "Tournament Setup",
-    description: "Admin setup for groups, rounds and scoring.",
-    href: "/events/carden-park-2026/live-leaderboard/setup",
-    icon: "⚙️",
-  },
-  {
-  title: "Tournament Setup V2",
-  description: "Build reusable tournaments with courses, players and teams.",
-  href: "/setup-v2",
-  icon: "🧪",
+  icon: "🔥",
 },
 {
-  title: "Live Scoring V2",
-  description: "Dynamic scoring powered by the active tournament.",
+  title: "Tournament Setup",
+  description: "Create tournaments, select players, teams, rounds and handicaps.",
+  href: "/setup-v2",
+  icon: "⚙️",
+},
+{
+  title: "Live Scoring",
+  description: "Enter hole-by-hole scores for the active tournament.",
   href: "/live-scoring-v2",
   icon: "📝",
 },
+ 
 ];
 
 

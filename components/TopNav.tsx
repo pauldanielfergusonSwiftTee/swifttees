@@ -6,10 +6,10 @@ import { usePathname } from "next/navigation";
 const navItems = [
   { label: "Home", href: "/" },
   { label: "Stu's B'day", href: "/events/carden-park-2026" },
-  { label: "Leaderboard", href: "/match-centre" },
+  { label: "Leaderboard", href: "/live-centre" },
   {
     label: "Scorecard",
-    href: "/events/carden-park-2026/live-leaderboard/live-scoring",
+    href: "/live-scoring-v2",
   },
   { label: "More", href: "/more" },
 ];

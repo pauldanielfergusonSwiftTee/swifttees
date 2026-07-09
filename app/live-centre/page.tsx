@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
 import { getPlayers } from "@/lib/players";
@@ -747,7 +747,7 @@ EVENT_SLUG = tournament?.slug ?? "";
     }
   }
 
-  async function loadLeaderboard() {
+  const loadLeaderboard = useCallback(async () => {
     if (!tournament) return;
   const eventSlug = tournament.slug;
 const tournamentSetup = {
@@ -883,10 +883,7 @@ getLiveMoments(eventSlug),
 
     rows.sort((a, b) => b.points - a.points || b.through - a.through);
 
-    const previousPositions =
-  EVENT_SLUG
-    ? getStoredPositions(eventSlug)
-    : {};
+   const previousPositions = eventSlug ? getStoredPositions(eventSlug) : {};
 
     const rowsWithPositions = rows.map((player, index) => {
       const newPosition = index + 1;
@@ -976,7 +973,7 @@ const sortedTeams = hasTeams ? buildTeams(finalRows) : [];
       await saveGeneratedMoments(generatedMoments);
     }
 
-    const refreshedMoments = await getLiveMoments(EVENT_SLUG);
+    const refreshedMoments = await getLiveMoments(eventSlug);
 
     setLeaderboard(finalRows);
     setTeamStandings(sortedTeams);
@@ -989,10 +986,10 @@ const sortedTeams = hasTeams ? buildTeams(finalRows) : [];
       })
     );
 
-    if (EVENT_SLUG) {
+   if (eventSlug) {
   saveStoredPositions(finalRows, eventSlug);
 }
-  }
+  }, [tournament]);
 
   useEffect(() => {
   if (!loading && tournament) {
@@ -1039,7 +1036,18 @@ const sortedTeams = hasTeams ? buildTeams(finalRows) : [];
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [tournament?.slug]);
+  }, [tournament?.slug, loadLeaderboard]);
+
+useEffect(() => {
+  if (!tournament?.slug) return;
+
+  const interval = setInterval(() => {
+    loadLeaderboard();
+  }, 3000);
+
+  return () => clearInterval(interval);
+}, [tournament?.slug, loadLeaderboard]);
+
 
   return (
     <PageContainer className="bg-slate-100 text-slate-900">
@@ -1059,9 +1067,10 @@ const sortedTeams = hasTeams ? buildTeams(finalRows) : [];
         )}
       </section>
 
-      <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-        <div className="grid grid-cols-3 gap-2">
-          {teamStandings.map((team) => (
+      {teamStandings.length > 0 && (
+  <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+    <div className="grid grid-cols-3 gap-2">
+      {teamStandings.map((team) => (
             <div
               key={team.team}
               className="rounded-xl bg-slate-50 px-2 py-3 text-center"
@@ -1080,9 +1089,10 @@ const sortedTeams = hasTeams ? buildTeams(finalRows) : [];
                 {progressText(team.through)}
               </div>
             </div>
-          ))}
-        </div>
-      </section>
+               ))}
+    </div>
+  </section>
+)}
 
       <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between gap-3">
