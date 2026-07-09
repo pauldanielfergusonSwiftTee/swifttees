@@ -4,18 +4,20 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
 import { getPlayers } from "@/lib/players";
+import { useActiveTournament } from "../hooks/useActiveTournament";
 import {
   getScores,
   getScrambleScores,
   getBonusWinners,
 } from "@/lib/scores";
-import { getTournamentSetupForUI } from "@/lib/tournaments";
+
 import { supabase } from "@/lib/supabase";
 import { getLiveMoments, saveLiveMoment } from "@/lib/liveMoments";
 
-const EVENT_SLUG = "carden-park-2026";
-const POSITION_STORAGE_KEY = `swift-tees-${EVENT_SLUG}-live-centre-positions`;
-
+function getPositionStorageKey(eventSlug: string) {
+  return `swift-tees-${eventSlug}-live-centre-positions`;
+}
+let EVENT_SLUG = "";
 type Movement = {
   icon: string;
   text: string;
@@ -111,6 +113,9 @@ function getCurrentRoundInfo(
     })),
   ];
 
+
+
+
   const latestRow = allRows
     .filter((row: any) => row.round_number)
     .sort(
@@ -170,24 +175,30 @@ function bonusIconForType(type: string) {
   return "";
 }
 
-function getStoredPositions() {
+function getStoredPositions(eventSlug: string) {
   if (typeof window === "undefined") return {};
 
   try {
-    return JSON.parse(localStorage.getItem(POSITION_STORAGE_KEY) ?? "{}");
+    return JSON.parse(localStorage.getItem(getPositionStorageKey(eventSlug)) ?? "{}");
   } catch {
     return {};
   }
 }
 
-function saveStoredPositions(rows: LeaderboardRow[]) {
+function saveStoredPositions(
+  rows: LeaderboardRow[],
+  eventSlug: string
+) {
   if (typeof window === "undefined") return;
 
   const positions = Object.fromEntries(
     rows.map((player) => [player.id, player.pos])
   );
 
-  localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify(positions));
+  localStorage.setItem(
+  getPositionStorageKey(eventSlug),
+  JSON.stringify(positions)
+);
 }
 
 function getLatestStablefordScore(scores: any[]) {
@@ -714,6 +725,8 @@ async function saveGeneratedMoments(moments: LiveMomentRow[]) {
 }
 
 export default function LiveCentrePage() {
+  const { tournament, loading } = useActiveTournament();
+EVENT_SLUG = tournament?.slug ?? "";
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [teamStandings, setTeamStandings] = useState<TeamStanding[]>([]);
   const [moments, setMoments] = useState<LiveMomentRow[]>([]);
@@ -735,27 +748,33 @@ export default function LiveCentrePage() {
   }
 
   async function loadLeaderboard() {
-    const [
-      players,
-      scores,
-      scrambleScores,
-      bonusWinners,
-      tournamentSetup,
-      savedMoments,
-    ] = await Promise.all([
-      getPlayers(),
-      getScores(EVENT_SLUG),
-      getScrambleScores(EVENT_SLUG),
-      getBonusWinners(EVENT_SLUG),
-      getTournamentSetupForUI(),
-      getLiveMoments(EVENT_SLUG),
-    ]);
+    if (!tournament) return;
+  const eventSlug = tournament.slug;
+const tournamentSetup = {
+  rounds: tournament?.rounds ?? [],
+};
+const tournamentPlayerIds = new Set(
+  tournament.players.map((p: any) => Number(p.id))
+);
+const [
+  players,
+  scores,
+  scrambleScores,
+  bonusWinners,
+  savedMoments,
+] = await Promise.all([
+  getPlayers(),
+  getScores(eventSlug),
+getScrambleScores(eventSlug),
+getBonusWinners(eventSlug),
+getLiveMoments(eventSlug),
+]);
 
     const currentRoundInfo = getCurrentRoundInfo(
-      tournamentSetup,
-      scores,
-      scrambleScores
-    );
+  tournamentSetup,
+  scores,
+  scrambleScores
+);
 
     const stablefordScores = scores.filter(
       (score: any) => score.score_type === "stableford" && score.player_id
@@ -817,7 +836,9 @@ export default function LiveCentrePage() {
       });
     });
 
-    const rows = players.map((player: any) => {
+    const rows = players
+  .filter((player: any) => tournamentPlayerIds.has(Number(player.id)))
+  .map((player: any) => {
       const playerScores = stablefordScores.filter(
         (score: any) => Number(score.player_id) === Number(player.id)
       );
@@ -862,7 +883,10 @@ export default function LiveCentrePage() {
 
     rows.sort((a, b) => b.points - a.points || b.through - a.through);
 
-    const previousPositions = getStoredPositions();
+    const previousPositions =
+  EVENT_SLUG
+    ? getStoredPositions(eventSlug)
+    : {};
 
     const rowsWithPositions = rows.map((player, index) => {
       const newPosition = index + 1;
@@ -929,7 +953,11 @@ export default function LiveCentrePage() {
       liveIcon: featuredLivePlayers.includes(player.id) ? player.liveIcon : "",
     }));
 
-    const sortedTeams = buildTeams(finalRows);
+    const hasTeams =
+  tournament.team_mode === "teams" ||
+  tournament.teamMode === "teams";
+
+const sortedTeams = hasTeams ? buildTeams(finalRows) : [];
 
     const generatedMoments = [
       buildLatestStablefordMoment(
@@ -961,16 +989,28 @@ export default function LiveCentrePage() {
       })
     );
 
-    saveStoredPositions(finalRows);
+    if (EVENT_SLUG) {
+  saveStoredPositions(finalRows, eventSlug);
+}
   }
 
   useEffect(() => {
+  if (!loading && tournament) {
+    setLeaderboard([]);
+    setTeamStandings([]);
+    setMoments([]);
+    setLiveStory("Waiting for live scores...");
+    setLastUpdatedAt("");
+
     loadLeaderboard();
-  }, []);
+  }
+}, [loading, tournament]);
 
   useEffect(() => {
-    const channel = supabase
-      .channel("live-centre-persistent-moments")
+  if (!tournament?.slug) return;
+
+  const channel = supabase
+    .channel(`live-centre-${tournament.slug}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "scores" },
@@ -999,7 +1039,7 @@ export default function LiveCentrePage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [tournament?.slug]);
 
   return (
     <PageContainer className="bg-slate-100 text-slate-900">
@@ -1212,7 +1252,7 @@ export default function LiveCentrePage() {
         </p>
 
         <Link
-          href="/events/carden-park-2026/live-leaderboard/live-scoring"
+          href="/live-scoring-v2"
           className="mt-3 flex w-full items-center justify-center rounded-2xl bg-green-700 px-5 py-3.5 text-base font-black text-white"
         >
           Enter Scoring →

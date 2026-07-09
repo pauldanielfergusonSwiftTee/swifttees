@@ -44,7 +44,7 @@ const EVENT_SLUG = tournament?.slug ?? "";
   const loadScoringPageData = useCallback(async () => {
     try {
       if (!tournament) return;
-
+console.log("ACTIVE TOURNAMENT PLAYERS:", tournament.players);
 const setup = {
   ...tournament,
   rounds: tournament.rounds?.map((round: any) => ({
@@ -60,11 +60,24 @@ const setup = {
         name: "All Players",
         teeTime: "",
         players: tournament.players?.map((player: any) => ({
-          player_id: player.id,
-          name: player.name,
-          team: player.eventTeam,
-          eventHandicap: 0,
-        })),
+  player_id: player.id,
+  name: player.name,
+  team: player.eventTeam,
+
+  eventHandicap:
+    player.stablefordHandicap ??
+    player.eventHandicap ??
+    0,
+
+  stablefordHandicap:
+    player.stablefordHandicap ??
+    player.eventHandicap ??
+    0,
+
+  scrambleHandicap:
+    player.scrambleHandicap ??
+    0,
+})),
         pairs: [],
       },
     ],
@@ -169,8 +182,10 @@ if (firstRound && !selectedGroupId) {
 }, [tournament, EVENT_SLUG]);
 
   useEffect(() => {
+  if (!loading && tournament) {
     loadScoringPageData();
-  }, [loadScoringPageData]);
+  }
+}, [loading, tournament, loadScoringPageData]);
 
   useEffect(() => {
     const channel = supabase

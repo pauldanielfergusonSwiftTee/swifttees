@@ -90,7 +90,7 @@ export default function SetupV2Page() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [eventName, setEventName] = useState("");
   const [editingSlug, setEditingSlug] = useState("");
-
+const [showEditor, setShowEditor] = useState(false);
   const [roundCount, setRoundCount] = useState<1 | 2>(1);
   const [rounds, setRounds] = useState<RoundSetup[]>([
     makeRound(1, COURSES[0]?.id ?? ""),
@@ -509,6 +509,20 @@ useGroups,
     );
   }
 
+function handleNewTournament() {
+  setEditingSlug("");
+  setEventName("");
+  setRoundCount(1);
+  setRounds([makeRound(1, COURSES[0]?.id ?? "")]);
+  setSelectedPlayerIds([]);
+  setPlayerTeams({});
+  setTeamMode("none");
+  setTeams(["Team 1", "Team 2"]);
+  setUseGroups(false);
+  setSaveMessage("New tournament started.");
+  setShowEditor(true);
+}
+
   async function handleSaveTournament() {
     try {
       setIsSaving(true);
@@ -682,7 +696,84 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
 
           
         </section>
+<button
+  type="button"
+  onClick={handleNewTournament}
+  className="w-full rounded-2xl border border-green-700 bg-white px-4 py-3 font-black text-green-950 shadow-sm"
+>
+  + New Tournament
+</button>
 
+
+ <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-black">Saved Tournaments</h2>
+
+            <button
+              type="button"
+              onClick={loadSavedTournaments}
+              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-black text-green-950 hover:bg-green-50"
+            >
+              Refresh
+            </button>
+          </div>
+
+          {isLoadingTournaments ? (
+            <p className="mt-3 text-slate-400">Loading...</p>
+          ) : (
+            <div className="mt-4 space-y-2">
+              {savedTournaments.map((tournament) => (
+                <div key={tournament.id} className="rounded-xl bg-slate-50 border border-slate-200 p-3">
+                  <p className="font-black">{tournament.name}</p>
+
+                  {tournament.is_active && (
+                    <p className="mt-1 text-xs font-black text-emerald-400">
+                      ✅ Active Tournament
+                    </p>
+                  )}
+
+                  <p className="text-xs text-slate-400">{tournament.slug}</p>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    {tournament.players?.length ?? 0} players •{" "}
+                    {tournament.rounds?.length ?? 0} rounds
+                  </p>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+  loadTournamentIntoEditor(tournament);
+  setShowEditor(true);
+}}
+                      className="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-black text-slate-950"
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSetActive(tournament)}
+                      className="rounded-lg bg-yellow-400 px-3 py-2 text-sm font-black text-slate-950"
+                    >
+                      Set Active
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTournament(tournament.slug)}
+                      className="rounded-lg bg-red-500 px-3 py-2 text-sm font-black text-white"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+{showEditor && (
+  <>
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
   
 
@@ -1307,74 +1398,9 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
 >
   ⛳ Go to Live Scoring V2
 </a>
-        </section>
-
-        <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-black">Saved Tournaments</h2>
-
-            <button
-              type="button"
-              onClick={loadSavedTournaments}
-              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-black text-green-950 hover:bg-green-50"
-            >
-              Refresh
-            </button>
-          </div>
-
-          {isLoadingTournaments ? (
-            <p className="mt-3 text-slate-400">Loading...</p>
-          ) : (
-            <div className="mt-4 space-y-2">
-              {savedTournaments.map((tournament) => (
-                <div key={tournament.id} className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-                  <p className="font-black">{tournament.name}</p>
-
-                  {tournament.is_active && (
-                    <p className="mt-1 text-xs font-black text-emerald-400">
-                      ✅ Active Tournament
-                    </p>
-                  )}
-
-                  <p className="text-xs text-slate-400">{tournament.slug}</p>
-
-                  <p className="mt-1 text-xs text-slate-500">
-                    {tournament.players?.length ?? 0} players •{" "}
-                    {tournament.rounds?.length ?? 0} rounds
-                  </p>
-
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => loadTournamentIntoEditor(tournament)}
-                      className="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-black text-slate-950"
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSetActive(tournament)}
-                      className="rounded-lg bg-yellow-400 px-3 py-2 text-sm font-black text-slate-950"
-                    >
-                      Set Active
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteTournament(tournament.slug)}
-                      className="rounded-lg bg-red-500 px-3 py-2 text-sm font-black text-white"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-
-       
+</section>
+  </>
+)}   
       </div>
     </main>
   );
