@@ -275,16 +275,51 @@ const groups = useGroups
             : [],
       };
     })
-  : [
-      {
-        id: 1,
-        groupNumber: 1,
-        name: "All Players",
-        teeTime: "",
-        players: selectedPlayers.map((player) => buildPlayerObject(player.id)),
-        pairs: [],
-      },
-    ];
+ : [
+    {
+      id: 1,
+      groupNumber: 1,
+      name: "All Players",
+      teeTime: "",
+      players: selectedPlayers.map((player) => buildPlayerObject(player.id)),
+      pairs:
+        round.format === "scramble"
+          ? (round.pairs[0] ?? [])
+              .filter((pair) => pair.player1Id || pair.player2Id)
+              .map((pair, pairIndex) => {
+                const player1 = getPlayer(pair.player1Id);
+                const player2 = getPlayer(pair.player2Id);
+
+                const calculatedHandicap = calculatePairHandicap(
+                  pair.player1Id,
+                  pair.player2Id
+                );
+
+                const finalHandicap =
+                  pair.finalHandicap !== ""
+                    ? pair.finalHandicap
+                    : calculatedHandicap !== ""
+                    ? calculatedHandicap
+                    : 0;
+
+                return {
+                  id: `${round.roundNumber}-1-${pairIndex + 1}`,
+                  pairNumber: pairIndex + 1,
+                  player1_id: pair.player1Id
+                    ? Number(pair.player1Id)
+                    : null,
+                  player2_id: pair.player2Id
+                    ? Number(pair.player2Id)
+                    : null,
+                  player1: player1?.name ?? "",
+                  player2: player2?.name ?? "",
+                  calculatedHandicap,
+                  finalHandicap,
+                };
+              })
+          : [],
+    },
+  ];
 
         return {
           id: round.roundNumber,
@@ -699,7 +734,7 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
 <button
   type="button"
   onClick={handleNewTournament}
-  className="w-full rounded-2xl border border-green-700 bg-white px-4 py-3 font-black text-green-950 shadow-sm"
+  className="w-full rounded-2xl border border-green-400 bg-green-100 px-4 py-3 font-black text-green-950 shadow-sm hover:bg-green-200"
 >
   + New Tournament
 </button>
@@ -723,23 +758,81 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
           ) : (
             <div className="mt-4 space-y-2">
               {savedTournaments.map((tournament) => (
-                <div key={tournament.id} className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-                  <p className="font-black">{tournament.name}</p>
+                
+<div
+  key={tournament.id}
+  className={`rounded-2xl border p-4 shadow-sm ${
+    tournament.is_active
+      ? "border-green-600 bg-green-100 shadow-md ring-2 ring-green-200"
+      : "border-slate-200 bg-white"
+  }`}
+>
+  <div className="flex items-start justify-between gap-3">
+    <div className="min-w-0">
+      <div className="flex flex-wrap items-center gap-2">
+        <h3 className="text-xl font-black text-green-950">
+          {tournament.name}
+        </h3>
 
-                  {tournament.is_active && (
-                    <p className="mt-1 text-xs font-black text-emerald-400">
-                      ✅ Active Tournament
-                    </p>
-                  )}
+        {tournament.is_active && (
+          <span className="rounded-full bg-green-700 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">
+            Active
+          </span>
+        )}
+      </div>
 
-                  <p className="text-xs text-slate-400">{tournament.slug}</p>
+      <p className="mt-1 text-xs font-semibold text-slate-400">
+        {tournament.slug}
+      </p>
+    </div>
 
-                  <p className="mt-1 text-xs text-slate-500">
-                    {tournament.players?.length ?? 0} players •{" "}
-                    {tournament.rounds?.length ?? 0} rounds
-                  </p>
+    <div className="text-2xl">
+      {tournament.is_active ? "🔥" : "⛳"}
+    </div>
+  </div>
 
-                  <div className="mt-3 flex flex-wrap gap-2">
+  <div className="mt-2 space-y-1.5">
+  <p className="text-xs font-semibold text-slate-600">
+    👥 {tournament.players?.length ?? 0} players
+    {" • "}
+    ⛳ {tournament.rounds?.length ?? 0} rounds
+    {" • "}
+    {tournament.team_mode === "teams" ||
+    tournament.teamMode === "teams"
+      ? "Teams"
+      : "Singles"}
+  </p>
+
+  <div className="flex flex-wrap gap-1.5">
+    {(tournament.rounds ?? []).map((round: any, index: number) => {
+      const course =
+        round.courseName ??
+        round.course ??
+        round.courseId ??
+        "Course";
+
+      const format =
+        round.format === "scramblePairs" ||
+        round.format === "scramble"
+          ? "Scramble"
+          : "Stableford";
+
+      return (
+        <span
+          key={round.id ?? round.roundNumber ?? index}
+          className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600"
+        >
+          {course} · {format}
+        </span>
+      );
+    })}
+  </div>
+</div>
+
+<div className="mt-3 flex flex-wrap gap-2">
+  
+
+
                     <button
                       type="button"
                       onClick={() => {
@@ -1279,6 +1372,115 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
               
   </div>
 )}
+{!useGroups && round.format === "scramble" && (
+  <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <h3 className="font-black text-green-950">Scramble Pairs</h3>
+
+    <p className="mt-1 text-sm text-slate-500">
+      Select the two players in each scramble pair.
+    </p>
+
+    <div className="mt-4 grid gap-3 md:grid-cols-2">
+      {[0, 1].map((pairIndex) => {
+        const pair =
+          round.pairs[0]?.[pairIndex] ?? makeEmptyPairs()[pairIndex];
+
+        const calculatedHandicap = calculatePairHandicap(
+          pair.player1Id,
+          pair.player2Id
+        );
+
+        const finalHandicap = getFinalPairHandicap(pair);
+
+        return (
+          <div
+            key={pairIndex}
+            className="rounded-2xl border border-slate-200 bg-white p-4"
+          >
+            <p className="font-black text-green-950">
+              Pair {pairIndex + 1}
+            </p>
+
+            <div className="mt-3 space-y-2">
+              <select
+                value={pair.player1Id}
+                onChange={(event) =>
+                  updatePairPlayer(
+                    round.roundNumber,
+                    0,
+                    pairIndex,
+                    "player1Id",
+                    event.target.value
+                  )
+                }
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900"
+              >
+                <option value="">Player 1</option>
+
+                {selectedPlayers.map((player) => (
+                  <option key={player.id} value={String(player.id)}>
+                    {player.name}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={pair.player2Id}
+                onChange={(event) =>
+                  updatePairPlayer(
+                    round.roundNumber,
+                    0,
+                    pairIndex,
+                    "player2Id",
+                    event.target.value
+                  )
+                }
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-slate-900"
+              >
+                <option value="">Player 2</option>
+
+                {selectedPlayers.map((player) => (
+                  <option key={player.id} value={String(player.id)}>
+                    {player.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-bold text-slate-500">
+                Calculated Scramble HCP
+              </p>
+
+              <p className="text-xl font-black text-green-950">
+                {calculatedHandicap === "" ? "-" : calculatedHandicap}
+              </p>
+
+              <label className="mt-3 block text-xs font-bold text-slate-500">
+                Final Pair HCP
+              </label>
+
+              <input
+                type="number"
+                inputMode="numeric"
+                value={finalHandicap}
+                onChange={(event) =>
+                  updatePairFinalHandicap(
+                    round.roundNumber,
+                    0,
+                    pairIndex,
+                    event.target.value
+                  )
+                }
+                className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-black text-slate-900"
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
               <div className="mt-5 rounded-xl bg-slate-50 border border-slate-200 p-3">
                 <h3 className="font-black">Bonus Holes</h3>
 
@@ -1396,7 +1598,7 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
   href="/live-scoring-v2"
   className="mt-3 flex w-full items-center justify-center rounded-xl border border-green-700 bg-white px-4 py-4 font-black text-green-950"
 >
-  ⛳ Go to Live Scoring V2
+  ⛳ Go to Scorecards
 </a>
 </section>
   </>

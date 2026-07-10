@@ -320,14 +320,14 @@ function timeAgo(date: Date) {
         </div>
 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
   <a
-    href="/events/carden-park-2026/live-leaderboard/live-scoring"
+    href="/live-scoring-v2"
     className="rounded-2xl bg-green-950 text-white px-6 py-5 text-center font-black border border-green-900 shadow-sm text-lg hover:bg-green-900"
   >
     ⛳ Update Scorecards
   </a>
 
   <a
-    href="/events/carden-park-2026/live-leaderboard/setup"
+    href="/setup-v2"
     className="rounded-2xl bg-white text-green-950 px-6 py-5 text-center font-black border border-slate-200 shadow-sm text-lg hover:border-green-700"
   >
     ⚙️ Tournament Setup

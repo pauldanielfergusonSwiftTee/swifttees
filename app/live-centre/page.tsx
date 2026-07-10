@@ -1052,20 +1052,32 @@ useEffect(() => {
   return (
     <PageContainer className="bg-slate-100 text-slate-900">
       <section className="rounded-3xl bg-green-950 p-5 text-white shadow-lg">
-        <p className="text-xs font-black uppercase tracking-[0.25em] text-green-300">
-          🔥 Swift Tees Live
-        </p>
+  <p className="text-xs font-black uppercase tracking-[0.22em] text-green-300">
+    🔥 Live Leaderboard
+  </p>
 
-        <h1 className="mt-2 text-3xl font-black tracking-tight">
-          Live Centre Beta
-        </h1>
+  <h3 className="mt-2 text-3xl font-black tracking-tight text-white">
+    {tournament?.name ?? "Swift Tees"}
+  </h3>
 
-        {lastUpdatedAt && (
-          <p className="mt-2 text-xs font-semibold text-green-200">
-            Last updated: {lastUpdatedAt}
-          </p>
-        )}
-      </section>
+  <p className="mt-2 text-sm font-semibold text-green-100">
+    👥 {tournament?.players?.length ?? 0} players
+    {" • "}
+    ⛳ {tournament?.rounds?.length ?? 0} round
+    {(tournament?.rounds?.length ?? 0) !== 1 ? "s" : ""}
+    {" • "}
+    {tournament?.team_mode === "teams" ||
+    tournament?.teamMode === "teams"
+      ? "Teams"
+      : "Singles"}
+  </p>
+
+  {lastUpdatedAt && (
+    <p className="mt-3 text-xs font-black text-green-200">
+      ● LIVE · Updated {lastUpdatedAt}
+    </p>
+  )}
+</section>
 
       {teamStandings.length > 0 && (
   <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
@@ -1265,7 +1277,7 @@ useEffect(() => {
           href="/live-scoring-v2"
           className="mt-3 flex w-full items-center justify-center rounded-2xl bg-green-700 px-5 py-3.5 text-base font-black text-white"
         >
-          Enter Scoring →
+          Scorecards →
         </Link>
       </section>
     </PageContainer>

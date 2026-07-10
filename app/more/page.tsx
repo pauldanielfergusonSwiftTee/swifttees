@@ -9,38 +9,36 @@ const moreLinks = [
     href: "/overall-leaderboard",
     icon: "🏆",
   },
-
-{
-  title: "Past Events",
-  description: "Browse previous Swift Tees weekends.",
-  href: "/events",
-  icon: "📅",
-},
+  {
+    title: "Past Events",
+    description: "Browse previous Swift Tees weekends.",
+    href: "/events",
+    icon: "📅",
+  },
   {
     title: "Hall of Fame",
     description: "Past winners, legends and questionable achievements.",
     href: "/hall-of-fame",
     icon: "🏅",
   },
- {
-  title: "Live Centre",
-  description: "Live leaderboard, moments feed and tournament updates.",
-  href: "/live-centre",
-  icon: "🔥",
-},
-{
-  title: "Tournament Setup",
-  description: "Create tournaments, select players, teams, rounds and handicaps.",
-  href: "/setup-v2",
-  icon: "⚙️",
-},
-{
-  title: "Live Scoring",
-  description: "Enter hole-by-hole scores for the active tournament.",
-  href: "/live-scoring-v2",
-  icon: "📝",
-},
- 
+  {
+    title: "Leaderboard",
+    description: "Live leaderboard, moments and tournament updates.",
+    href: "/live-centre",
+    icon: "🔥",
+  },
+  {
+    title: "Scorecards",
+    description: "Enter scores for the active tournament.",
+    href: "/live-scoring-v2",
+    icon: "📝",
+  },
+  {
+    title: "Tournament Setup",
+    description: "Create and manage tournaments, players, rounds and handicaps.",
+    href: "/setup-v2",
+    icon: "⚙️",
+  },
 ];
 
 

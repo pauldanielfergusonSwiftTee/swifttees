@@ -45,44 +45,156 @@ const EVENT_SLUG = tournament?.slug ?? "";
     try {
       if (!tournament) return;
 console.log("ACTIVE TOURNAMENT PLAYERS:", tournament.players);
+
 const setup = {
   ...tournament,
-  rounds: tournament.rounds?.map((round: any) => ({
-    ...round,
-    id: round.roundNumber,
-    day: `Round ${round.roundNumber}`,
-    course: round.courseName,
-    format: round.format === "scramble" ? "scramblePairs" : "stableford",
-    groups: [
-      {
-        id: 1,
-        groupNumber: 1,
-        name: "All Players",
-        teeTime: "",
-        players: tournament.players?.map((player: any) => ({
-  player_id: player.id,
-  name: player.name,
-  team: player.eventTeam,
 
-  eventHandicap:
-    player.stablefordHandicap ??
-    player.eventHandicap ??
-    0,
+  rounds: tournament.rounds?.map(
+    (round: any, roundIndex: number) => ({
+      ...round,
 
-  stablefordHandicap:
-    player.stablefordHandicap ??
-    player.eventHandicap ??
-    0,
+      id:
+        round.roundNumber ??
+        round.id ??
+        roundIndex + 1,
 
-  scrambleHandicap:
-    player.scrambleHandicap ??
-    0,
-})),
-        pairs: [],
-      },
-    ],
-  })),
+      roundNumber:
+        round.roundNumber ??
+        round.id ??
+        roundIndex + 1,
+
+      day:
+        round.day ??
+        `Round ${
+          round.roundNumber ??
+          round.id ??
+          roundIndex + 1
+        }`,
+
+      course:
+        round.course ??
+        round.courseName ??
+        "Course",
+
+      format:
+        round.format === "scramble" ||
+        round.format === "scramblePairs"
+          ? "scramblePairs"
+          : "stableford",
+
+      groups:
+        round.groups?.map(
+          (group: any, groupIndex: number) => ({
+            ...group,
+
+            id:
+              group.id ??
+              group.groupNumber ??
+              groupIndex + 1,
+
+            groupNumber:
+              group.groupNumber ??
+              group.id ??
+              groupIndex + 1,
+
+            name:
+              group.name ??
+              `Group ${groupIndex + 1}`,
+
+            teeTime:
+              group.teeTime ?? "",
+
+            players:
+              group.players?.length
+                ? group.players
+                : tournament.players?.map(
+                    (player: any) => ({
+                      player_id: player.id,
+                      name: player.name,
+                      team:
+                        player.eventTeam ?? "",
+                      eventHandicap:
+                        player.stablefordHandicap ??
+                        player.eventHandicap ??
+                        0,
+                      stablefordHandicap:
+                        player.stablefordHandicap ??
+                        player.eventHandicap ??
+                        0,
+                      scrambleHandicap:
+                        player.scrambleHandicap ??
+                        0,
+                    })
+                  ) ?? [],
+
+            pairs:
+              group.pairs?.map(
+                (pair: any, pairIndex: number) => {
+                  const player1 =
+                    tournament.players?.find(
+                      (player: any) =>
+                        Number(player.id) ===
+                        Number(pair.player1_id)
+                    );
+
+                  const player2 =
+                    tournament.players?.find(
+                      (player: any) =>
+                        Number(player.id) ===
+                        Number(pair.player2_id)
+                    );
+
+                  return {
+                    ...pair,
+
+                    id:
+                      pair.id ??
+                      `${
+                        round.roundNumber ??
+                        roundIndex + 1
+                      }-${
+                        group.groupNumber ??
+                        groupIndex + 1
+                      }-${
+                        pair.pairNumber ??
+                        pairIndex + 1
+                      }`,
+
+                    pairNumber:
+                      pair.pairNumber ??
+                      pairIndex + 1,
+
+                    player1_id:
+                      pair.player1_id ??
+                      null,
+
+                    player2_id:
+                      pair.player2_id ??
+                      null,
+
+                    player1:
+                      pair.player1 ??
+                      player1?.name ??
+                      "",
+
+                    player2:
+                      pair.player2 ??
+                      player2?.name ??
+                      "",
+
+                    finalHandicap:
+                      pair.finalHandicap ??
+                      pair.calculatedHandicap ??
+                      0,
+                  };
+                }
+              ) ?? [],
+          })
+        ) ?? [],
+    })
+  ),
 };
+
       setTournamentSetup(setup);
 
       const firstRound = setup.rounds?.[0];
@@ -753,7 +865,7 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
 
           <div className="mt-2 grid grid-cols-1 gap-2">
             <a
-              href="/match-centre"
+              href="/live-centre"
               className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-black text-green-950 shadow-sm transition hover:border-green-700"
             >
               🏆 Leaderboard

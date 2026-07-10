@@ -704,7 +704,7 @@ export default function LiveScoringPage() {
 
           <div className="mt-2 grid grid-cols-1 gap-2">
             <a
-              href="/match-centre"
+              href="/live-centre"
               className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-black text-green-950 shadow-sm transition hover:border-green-700"
             >
               🏆 Leaderboard

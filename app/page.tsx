@@ -168,14 +168,14 @@ export default function Home() {
               </a>
 
               <a
-                href="/match-centre"
+                href="/live-centre" 
                 className="rounded-2xl bg-white px-5 py-4 text-center font-black text-green-950 shadow-sm text-lg hover:bg-green-50"
               >
                 🏆 Match Hub 
               </a>
 
               <a
-                href="/events/carden-park-2026/live-leaderboard/live-scoring"
+                href="/live-scoring-v2"
                 className="rounded-2xl bg-green-500 px-5 py-4 text-center font-black text-white shadow-sm text-lg hover:bg-green-400"
               >
                 ⛳ Update Scorecards
