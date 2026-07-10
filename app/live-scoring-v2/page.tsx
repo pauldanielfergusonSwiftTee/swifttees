@@ -596,11 +596,23 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
   return (
     <main className="min-h-screen bg-slate-100 p-3 pb-64 text-slate-900 md:p-8 md:pb-16">
       <div className="mx-auto max-w-3xl">
-        <div className="mb-3">
-          <h1 className="text-2xl font-black text-green-950">
-            {currentRound.course} • {selectedGroup.name}
-          </h1>
-        </div>
+       
+       
+       <div className="mb-4 text-center">
+  <p className="text-xs font-black uppercase tracking-[0.2em] text-green-700">
+    ⛳ Live Scoring
+  </p>
+
+  <h1 className="mt-1 text-3xl font-black text-green-950">
+    {tournament.name}
+  </h1>
+
+  {currentRound.groups.length > 1 && (
+  <p className="mt-1 text-sm font-semibold text-slate-500">
+    {selectedGroup.name}
+  </p>
+)}
+</div>
 
         <div className="mb-3 space-y-2">
           {tournamentSetup.rounds.length > 1 && (
@@ -865,7 +877,7 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
 
           <div className="mt-2 grid grid-cols-1 gap-2">
             <a
-              href="/live-centre"
+              href="/match-centre"
               className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-black text-green-950 shadow-sm transition hover:border-green-700"
             >
               🏆 Leaderboard
