@@ -95,7 +95,8 @@ export async function saveBonusWinner(data: any) {
 export async function getBonusWinners(eventSlug: string) {
   const { data, error } = await supabase
     .from("bonus_winners")
-    .select("*");
+    .select("*")
+    .eq("event_slug", eventSlug);
 
   if (error) throw error;
 

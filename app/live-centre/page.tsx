@@ -80,6 +80,7 @@ function movementStyle(icon: string) {
 function teamDot(team: string) {
   if (team === "Blue") return "bg-blue-500";
   if (team === "Green") return "bg-green-500";
+  if (team === "Red") return "bg-red-500";
   if (team === "White") return "bg-white border border-slate-400";
   return "bg-slate-300";
 }
@@ -869,7 +870,13 @@ getLiveMoments(eventSlug),
       return {
         id: player.id,
         name: player.name,
-        team: player.team || "",
+        team:
+  tournament.players?.find(
+    (tournamentPlayer: any) =>
+      Number(tournamentPlayer.id) === Number(player.id)
+  )?.eventTeam ??
+  player.team ??
+  "",
         points: stablefordPoints + scramblePoints + bonusPoints,
         through: Math.max(stablefordThrough, scrambleThrough),
         movement: {

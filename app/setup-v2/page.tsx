@@ -18,6 +18,8 @@ type Player = {
 
 type RoundFormat = "stableford" | "scramble";
 
+const TEAM_COLOURS = ["White", "Blue", "Green", "Red"] as const;
+
 type PlayerHandicaps = {
   stableford: number | "";
   scramble: number | "";
@@ -102,7 +104,7 @@ const [showEditor, setShowEditor] = useState(false);
   );
 
   const [teamMode, setTeamMode] = useState<"none" | "teams">("none");
-  const [teams, setTeams] = useState<string[]>(["Team 1", "Team 2"]);
+  const teams = [...TEAM_COLOURS];
   const [playerTeams, setPlayerTeams] = useState<Record<number, string>>({});
 
   const [savedTournaments, setSavedTournaments] = useState<any[]>([]);
@@ -552,7 +554,7 @@ function handleNewTournament() {
   setSelectedPlayerIds([]);
   setPlayerTeams({});
   setTeamMode("none");
-  setTeams(["Team 1", "Team 2"]);
+
   setUseGroups(false);
   setSaveMessage("New tournament started.");
   setShowEditor(true);
@@ -610,7 +612,7 @@ await loadSavedTournaments();
     setEditingSlug(tournament.slug ?? "");
     setEventName(tournament.name ?? "");
     setTeamMode(tournament.team_mode ?? tournament.teamMode ?? "none");
-    setTeams(tournament.teams?.length ? tournament.teams : ["Team 1", "Team 2"]);
+    
 const savedRounds = tournament.rounds ?? [];
 const hasRealGroups = savedRounds.some((round: any) =>
   round.groups?.some((group: any) => group.name !== "All Players")
@@ -889,10 +891,32 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
   
 </section>
 
-        <section className="rounded-3xl border border-slate-200 bg-white shadow-sm p-4">
-          <h2 className="text-lg font-black">How many rounds?</h2>
+        <details className="group rounded-3xl border border-slate-200 bg-white shadow-sm">
+  <summary className="cursor-pointer list-none px-4 py-4">
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        <h2 className="text-lg font-black text-green-950">
+          Tournament Rounds
+        </h2>
 
-          <div className="mt-3 grid grid-cols-2 gap-3">
+        <p className="mt-1 text-sm text-slate-500">
+          {roundCount} round{roundCount === 1 ? "" : "s"}
+        </p>
+      </div>
+
+      <span className="text-sm font-black text-green-700 group-open:hidden">
+        Open
+      </span>
+
+      <span className="hidden text-sm font-black text-green-700 group-open:inline">
+        Close
+      </span>
+    </div>
+  </summary>
+
+  <div className="border-t border-slate-200 p-4">
+    <div className="grid grid-cols-2 gap-3">
+
             {[1, 2].map((count) => (
               <button
                 key={count}
@@ -907,14 +931,37 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
                 {count} Round{count === 2 ? "s" : ""}
               </button>
             ))}
-          </div>
-        </section>
+              </div>
+  </div>
+</details>
 
-        <section className="rounded-3xl border border-slate-200 bg-white shadow-sm p-4">
-          <h2 className="text-lg font-black">Players</h2>
-          <p className="mt-1 text-sm text-slate-400">
-            Select exactly who is playing this event.
-          </p>
+        <details className="group rounded-3xl border border-slate-200 bg-white shadow-sm">
+  <summary className="cursor-pointer list-none px-4 py-4">
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        <h2 className="text-lg font-black text-green-950">
+          Players
+        </h2>
+
+        <p className="mt-1 text-sm text-slate-500">
+          {selectedPlayerIds.length} selected
+        </p>
+      </div>
+
+      <span className="text-sm font-black text-green-700 group-open:hidden">
+        Open
+      </span>
+
+      <span className="hidden text-sm font-black text-green-700 group-open:inline">
+        Close
+      </span>
+    </div>
+  </summary>
+
+  <div className="border-t border-slate-200 p-4">
+    <p className="text-sm text-slate-500">
+      Select exactly who is playing this event.
+    </p>
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {players.map((player) => {
@@ -937,15 +984,38 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
             })}
           </div>
 
-          <p className="mt-3 text-sm text-slate-400">
-            Selected: {selectedPlayerIds.length}
-          </p>
-        </section>
+              <p className="mt-3 text-sm text-slate-500">
+      Selected: {selectedPlayerIds.length}
+    </p>
+  </div>
+</details>
 
-        <section className="rounded-3xl border border-slate-200 bg-white shadow-sm p-4">
-          <h2 className="text-lg font-black">Event Type</h2>
+       <details className="group rounded-3xl border border-slate-200 bg-white shadow-sm">
+  <summary className="cursor-pointer list-none px-4 py-4">
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        <h2 className="text-lg font-black text-green-950">
+          Event Type
+        </h2>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
+        <p className="mt-1 text-sm text-slate-500">
+          {teamMode === "teams" ? "Team Event" : "Individual Event"}
+        </p>
+      </div>
+
+      <span className="text-sm font-black text-green-700 group-open:hidden">
+        Open
+      </span>
+
+      <span className="hidden text-sm font-black text-green-700 group-open:inline">
+        Close
+      </span>
+    </div>
+  </summary>
+
+  <div className="border-t border-slate-200 p-4">
+    <div className="grid grid-cols-2 gap-3">
+       
             <button
               type="button"
               onClick={() => setTeamMode("none")}
@@ -971,77 +1041,186 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
             </button>
           </div>
 
-          {teamMode === "teams" && (
-            <div className="mt-4 space-y-4">
-              {teams.map((team, index) => (
-                <input
-                  key={index}
-                  value={team}
-                  onChange={(event) => {
-                    const value = event.target.value;
-                    setTeams((current) =>
-                      current.map((item, itemIndex) =>
-                        itemIndex === index ? value : item
-                      )
-                    );
-                  }}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 font-bold text-green-950"
-                />
-              ))}
+         {teamMode === "teams" && (
+  <div className="mt-4">
+    <div className="grid grid-cols-4 gap-2">
+      {teams.map((team) => {
+        const dotClass =
+          team === "White"
+            ? "border border-slate-400 bg-white"
+            : team === "Blue"
+              ? "bg-blue-500"
+              : team === "Green"
+                ? "bg-green-500"
+                : "bg-red-500";
 
-              <button
-                type="button"
-                onClick={() =>
-                  setTeams((current) => [
-                    ...current,
-                    `Team ${current.length + 1}`,
-                  ])
-                }
-                className="w-full rounded-xl border border-green-700 bg-green-50 px-4 py-3 font-black text-green-950"
-              >
-                + Add Team
-              </button>
+        return (
+          <div
+            key={team}
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-xs font-black text-green-950"
+          >
+            <span className={`h-3 w-3 rounded-full ${dotClass}`} />
+            {team}
+          </div>
+        );
+      })}
+    </div>
 
-              <div className="space-y-3">
-                <h3 className="font-black">Assign Players to Teams</h3>
+    <h3 className="mt-4 font-black text-green-950">
+      Assign Players to Teams
+    </h3>
 
-                {selectedPlayers.map((player) => (
-                  <div key={player.id} className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-                    <p className="font-bold">{player.name}</p>
+    <div className="mt-3 space-y-2">
+      {selectedPlayers.map((player) => (
+        <div
+          key={player.id}
+          className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-2.5"
+        >
+          <p className="min-w-0 flex-1 truncate font-black text-green-950">
+            {player.name}
+          </p>
 
-                    <select
-                      value={playerTeams[player.id] ?? ""}
-                      onChange={(event) =>
-                        setPlayerTeams((current) => ({
-                          ...current,
-                          [player.id]: event.target.value,
-                        }))
-                      }
-                      className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 font-bold text-green-950"
-                    >
-                      <option value="">No team selected</option>
-                      {teams.map((team) => (
-                        <option key={team} value={team}>
-                          {team}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </section>
-<section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-  <h2 className="text-xl font-black text-green-950">
-    Playing Structure
-  </h2>
+          <select
+            value={playerTeams[player.id] ?? ""}
+            onChange={(event) =>
+              setPlayerTeams((current) => ({
+                ...current,
+                [player.id]: event.target.value,
+              }))
+            }
+            className="w-32 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-green-950"
+          >
+            <option value="">No team</option>
 
-  <p className="mt-1 text-sm text-slate-500">
-    Will players score together or in separate tee groups?
-  </p>
+            {teams.map((team) => (
+              <option key={team} value={team}>
+                {team}
+              </option>
+            ))}
+          </select>
+        </div>
+      ))}
+    </div>
+  </div>
+    )}
+  </div>
+</details>
 
-  <div className="mt-4 grid grid-cols-2 gap-3">
+  <details className="group rounded-3xl border border-slate-200 bg-white shadow-sm">
+  <summary className="cursor-pointer list-none px-4 py-4">
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        <h2 className="text-lg font-black text-green-950">
+          Tournament Handicaps
+        </h2>
+
+        <p className="mt-1 text-sm text-slate-500">
+          {selectedPlayers.length} players
+        </p>
+      </div>
+
+      <span className="text-sm font-black text-green-700 group-open:hidden">
+        Open
+      </span>
+
+      <span className="hidden text-sm font-black text-green-700 group-open:inline">
+        Close
+      </span>
+    </div>
+  </summary>
+
+  <div className="border-t border-slate-200 p-4">
+    <p className="text-sm text-slate-500">
+      Individual and scramble handicaps for this tournament.
+    </p>
+
+  {selectedPlayers.length > 0 && (
+    <div className="mt-4 grid grid-cols-[minmax(0,1fr)_70px_70px] gap-2 px-2 text-[10px] font-black uppercase tracking-wide text-slate-500">
+      <span>Player</span>
+      <span className="text-center">HCP</span>
+      <span className="text-center">Scramble</span>
+    </div>
+  )}
+
+  <div className="mt-2 divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-slate-50">
+    {selectedPlayers.map((player) => (
+      <div
+        key={player.id}
+        className="grid grid-cols-[minmax(0,1fr)_70px_70px] items-center gap-2 px-3 py-2"
+      >
+        <p className="truncate text-sm font-black text-green-950">
+          {player.name}
+        </p>
+
+        <input
+          type="number"
+          inputMode="numeric"
+          aria-label={`${player.name} stableford handicap`}
+          value={handicaps[player.id]?.stableford ?? ""}
+          onChange={(event) =>
+            updateHandicap(
+              player.id,
+              "stableford",
+              event.target.value
+            )
+          }
+          className="w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-center text-sm font-black text-slate-900"
+        />
+
+        <input
+          type="number"
+          inputMode="numeric"
+          aria-label={`${player.name} scramble handicap`}
+          value={handicaps[player.id]?.scramble ?? ""}
+          onChange={(event) =>
+            updateHandicap(
+              player.id,
+              "scramble",
+              event.target.value
+            )
+          }
+          className="w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-center text-sm font-black text-slate-900"
+        />
+      </div>
+    ))}
+   </div>
+</div>
+</details>
+
+
+
+<details className="group rounded-3xl border border-slate-200 bg-white shadow-sm">
+  <summary className="cursor-pointer list-none px-4 py-4">
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        <h2 className="text-lg font-black text-green-950">
+          Playing Structure
+        </h2>
+
+        <p className="mt-1 text-sm text-slate-500">
+          {useGroups ? "Multiple Tee Times" : "Single Tee Time"}
+        </p>
+      </div>
+
+      <span className="text-sm font-black text-green-700 group-open:hidden">
+        Open
+      </span>
+
+      <span className="hidden text-sm font-black text-green-700 group-open:inline">
+        Close
+      </span>
+    </div>
+  </summary>
+
+  <div className="border-t border-slate-200 p-4">
+    <p className="text-sm text-slate-500">
+      Will players score together or in separate tee groups?
+    </p>
+
+    <div className="mt-4 grid grid-cols-2 gap-3">
+
+
+
     <button
       type="button"
       onClick={() => setUseGroups(false)}
@@ -1065,75 +1244,45 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
     >
       ⛳ Multiple Tee Times
     </button>
+     </div>
   </div>
-</section>
-        <section className="rounded-3xl border border-slate-200 bg-white shadow-sm p-4">
-          <h2 className="text-lg font-black">Tournament Handicaps</h2>
-          <p className="mt-1 text-sm text-slate-400">
-            Stableford handicap is used for individual scoring. Scramble handicap
-            is used for pair calculations.
-          </p>
-
-          <div className="mt-4 grid gap-3">
-            {selectedPlayers.map((player) => (
-              <div key={player.id} className="rounded-xl bg-slate-50 border border-slate-200 p-3">
-                <p className="font-black">{player.name}</p>
-
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs font-bold text-slate-400">
-                      Stableford HCP
-                    </label>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      value={handicaps[player.id]?.stableford ?? ""}
-                      onChange={(event) =>
-                        updateHandicap(
-                          player.id,
-                          "stableford",
-                          event.target.value
-                        )
-                      }
-                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-black text-slate-900"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-bold text-slate-400">
-                      Scramble HCP
-                    </label>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      value={handicaps[player.id]?.scramble ?? ""}
-                      onChange={(event) =>
-                        updateHandicap(
-                          player.id,
-                          "scramble",
-                          event.target.value
-                        )
-                      }
-                      className="mt-1 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 font-black text-slate-900"
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
+</details>
         {rounds.map((round) => {
           const course = getCourseById(round.courseId);
 
           return (
-            <section
-              key={round.roundNumber}
-               className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"
-            >
-              <h2 className="text-xl font-black">Round {round.roundNumber}</h2>
+            <details
+  key={round.roundNumber}
+  className="group rounded-3xl border border-slate-200 bg-white shadow-sm"
+>
+  <summary className="cursor-pointer list-none px-5 py-4">
+    <div className="flex items-center justify-between gap-3">
+      <div>
+        <h2 className="text-xl font-black text-green-950">
+          Round {round.roundNumber}
+        </h2>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <p className="mt-1 text-sm text-slate-500">
+          {course?.shortName ?? course?.name ?? "Choose course"}
+          {" • "}
+          {round.format === "scramble"
+            ? "Scramble Pairs"
+            : "Stableford"}
+        </p>
+      </div>
+
+      <span className="text-sm font-black text-green-700 group-open:hidden">
+        Open
+      </span>
+
+      <span className="hidden text-sm font-black text-green-700 group-open:inline">
+        Close
+      </span>
+    </div>
+  </summary>
+
+  <div className="border-t border-slate-200 p-5">
+    <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <label className="text-sm font-bold text-slate-600">
                     Course
@@ -1575,9 +1724,10 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
                     </div>
                   </div>
                 </div>
-              </div>
-            </section>
-          );
+                           </div>
+            </div>
+          </details>
+        );
         })}
 
         <section className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4">
