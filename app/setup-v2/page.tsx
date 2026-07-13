@@ -9,7 +9,7 @@ import {
   setActiveTournamentV2,
   deleteTournamentV2,
 } from "../../lib/tournaments-v2";
-
+import { resetEventScores } from "../../lib/scores";
 type Player = {
   id: number;
   name: string;
@@ -110,7 +110,8 @@ const [showEditor, setShowEditor] = useState(false);
   const [savedTournaments, setSavedTournaments] = useState<any[]>([]);
   const [isLoadingTournaments, setIsLoadingTournaments] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState("");
+const [resettingSlug, setResettingSlug] = useState("");
+const [saveMessage, setSaveMessage] = useState("");
 const [useGroups, setUseGroups] = useState(false);
   useEffect(() => {
     async function loadPage() {
@@ -165,27 +166,33 @@ const [useGroups, setUseGroups] = useState(false);
     return handicaps[Number(playerId)]?.stableford ?? "";
   }
 
-  function getScrambleHandicap(playerId: string | number) {
-    return handicaps[Number(playerId)]?.scramble ?? "";
-  }
-
   function calculatePairHandicap(player1Id: string, player2Id: string) {
-    const h1 = getScrambleHandicap(player1Id);
-    const h2 = getScrambleHandicap(player2Id);
+  const h1 = getStablefordHandicap(player1Id);
+  const h2 = getStablefordHandicap(player2Id);
 
-    if (!player1Id || !player2Id || h1 === "" || h2 === "") return "";
-
-    return Math.round(((Number(h1) + Number(h2)) / 2) * 10) / 10;
-  }
-
-  function getFinalPairHandicap(pair: PairSetup) {
-    const calculated = calculatePairHandicap(pair.player1Id, pair.player2Id);
-
-    if (pair.finalHandicap !== "") return pair.finalHandicap;
-    if (calculated !== "") return calculated;
-
+  if (!player1Id || !player2Id || h1 === "" || h2 === "") {
     return "";
   }
+
+  return Math.round(((Number(h1) + Number(h2)) / 2) * 10) / 10;
+}
+
+function getFinalPairHandicap(pair: PairSetup) {
+  const calculated = calculatePairHandicap(
+    pair.player1Id,
+    pair.player2Id
+  );
+
+  if (pair.finalHandicap !== "") {
+    return pair.finalHandicap;
+  }
+
+  return calculated;
+}
+
+
+
+
 
   const tournamentPreview = useMemo(() => {
     return {
@@ -198,7 +205,7 @@ const [useGroups, setUseGroups] = useState(false);
         name: player.name,
         eventTeam: teamMode === "teams" ? playerTeams[player.id] ?? null : null,
         stablefordHandicap: handicaps[player.id]?.stableford || 0,
-        scrambleHandicap: handicaps[player.id]?.scramble || 0,
+scrambleHandicap: handicaps[player.id]?.stableford || 0,
       })),
       rounds: rounds.map((round) => {
         const course = getCourseById(round.courseId);
@@ -222,9 +229,9 @@ const [useGroups, setUseGroups] = useState(false);
         ? 0
         : handicaps[Number(playerId)]?.stableford ?? 0,
     scrambleHandicap:
-      handicaps[Number(playerId)]?.scramble === ""
-        ? 0
-        : handicaps[Number(playerId)]?.scramble ?? 0,
+  handicaps[Number(playerId)]?.stableford === ""
+    ? 0
+    : handicaps[Number(playerId)]?.stableford ?? 0,
   };
 };
 
@@ -708,6 +715,60 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
   await loadSavedTournaments();
 }
 
+async function handleResetTournament(tournament: any) {
+  const tournamentName = tournament.name ?? "this tournament";
+  const tournamentSlug = tournament.slug;
+
+  if (!tournamentSlug) {
+    setSaveMessage("❌ Tournament slug could not be found.");
+    return;
+  }
+
+  const confirmed = window.confirm(
+    `Reset all scores for ${tournamentName}?\n\nThis will permanently delete:\n• Stableford scores\n• Scramble scores\n• Bonus-hole winners\n• Live scoring progress\n• Moments generated from these scores\n\nThe tournament setup itself will not be deleted.`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    setResettingSlug(tournamentSlug);
+    setSaveMessage("");
+
+    await resetEventScores(tournamentSlug);
+
+    /*
+      Save a reset marker for the Live Centre.
+      The Moments feed can listen for this marker and clear itself.
+    */
+    localStorage.setItem(
+      `swift-tees-reset-${tournamentSlug}`,
+      new Date().toISOString()
+    );
+
+    window.dispatchEvent(
+      new CustomEvent("swift-tees-tournament-reset", {
+        detail: {
+          eventSlug: tournamentSlug,
+        },
+      })
+    );
+
+    setSaveMessage(
+      `✅ ${tournamentName} scores, bonus winners, progress and commentary reset.`
+    );
+  } catch (error: any) {
+    console.error("Could not reset tournament:", error);
+
+    setSaveMessage(
+      `❌ Could not reset ${tournamentName}. ${
+        error?.message ?? "Please try again."
+      }`
+    );
+  } finally {
+    setResettingSlug("");
+  }
+}
+
   async function handleDeleteTournament(slug: string) {
     const confirmed = window.confirm(
       "Delete this tournament? This cannot be undone."
@@ -855,12 +916,24 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
                     </button>
 
                     <button
-                      type="button"
-                      onClick={() => handleDeleteTournament(tournament.slug)}
-                      className="rounded-lg bg-red-500 px-3 py-2 text-sm font-black text-white"
-                    >
-                      Delete
-                    </button>
+  type="button"
+  onClick={() => handleResetTournament(tournament)}
+  disabled={resettingSlug === tournament.slug}
+  className="rounded-lg border border-orange-300 bg-orange-100 px-3 py-2 text-sm font-black text-orange-900 disabled:cursor-not-allowed disabled:opacity-60"
+>
+  {resettingSlug === tournament.slug
+    ? "Resetting..."
+    : "Reset Scores"}
+</button>
+
+<button
+  type="button"
+  onClick={() => handleDeleteTournament(tournament.slug)}
+  disabled={resettingSlug === tournament.slug}
+  className="rounded-lg bg-red-500 px-3 py-2 text-sm font-black text-white disabled:opacity-60"
+>
+  Delete
+</button>
                   </div>
                 </div>
               ))}
@@ -1041,81 +1114,44 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
             </button>
           </div>
 
-         {teamMode === "teams" && (
-  <div className="mt-4">
-    <div className="grid grid-cols-4 gap-2">
-      {teams.map((team) => {
-        const dotClass =
-          team === "White"
-            ? "border border-slate-400 bg-white"
-            : team === "Blue"
-              ? "bg-blue-500"
-              : team === "Green"
-                ? "bg-green-500"
-                : "bg-red-500";
+        {teamMode === "teams" && (
+  <div className="mt-4 grid grid-cols-4 gap-2">
+    {teams.map((team) => {
+      const dotClass =
+        team === "White"
+          ? "border border-slate-400 bg-white"
+          : team === "Blue"
+          ? "bg-blue-500"
+          : team === "Green"
+          ? "bg-green-500"
+          : "bg-red-500";
 
-        return (
-          <div
-            key={team}
-            className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-xs font-black text-green-950"
-          >
-            <span className={`h-3 w-3 rounded-full ${dotClass}`} />
-            {team}
-          </div>
-        );
-      })}
-    </div>
-
-    <h3 className="mt-4 font-black text-green-950">
-      Assign Players to Teams
-    </h3>
-
-    <div className="mt-3 space-y-2">
-      {selectedPlayers.map((player) => (
+      return (
         <div
-          key={player.id}
-          className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-2.5"
+          key={team}
+          className="flex items-center justify-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-1.5 py-2 text-[11px] font-black text-green-950"
         >
-          <p className="min-w-0 flex-1 truncate font-black text-green-950">
-            {player.name}
-          </p>
-
-          <select
-            value={playerTeams[player.id] ?? ""}
-            onChange={(event) =>
-              setPlayerTeams((current) => ({
-                ...current,
-                [player.id]: event.target.value,
-              }))
-            }
-            className="w-32 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-green-950"
-          >
-            <option value="">No team</option>
-
-            {teams.map((team) => (
-              <option key={team} value={team}>
-                {team}
-              </option>
-            ))}
-          </select>
+          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotClass}`} />
+          <span className="truncate">{team}</span>
         </div>
-      ))}
-    </div>
+      );
+      })}
   </div>
-    )}
+)}
   </div>
 </details>
 
-  <details className="group rounded-3xl border border-slate-200 bg-white shadow-sm">
+<details className="group rounded-3xl border border-slate-200 bg-white shadow-sm">
   <summary className="cursor-pointer list-none px-4 py-4">
     <div className="flex items-center justify-between gap-3">
       <div>
         <h2 className="text-lg font-black text-green-950">
-          Tournament Handicaps
+          Tournament Handicaps / Teams
         </h2>
 
         <p className="mt-1 text-sm text-slate-500">
           {selectedPlayers.length} players
+          {teamMode === "teams" ? " • Teams included" : ""}
         </p>
       </div>
 
@@ -1131,60 +1167,82 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
 
   <div className="border-t border-slate-200 p-4">
     <p className="text-sm text-slate-500">
-      Individual and scramble handicaps for this tournament.
+      Enter each player&apos;s tournament handicap
+      {teamMode === "teams" ? " and assign their team." : "."}
     </p>
 
-  {selectedPlayers.length > 0 && (
-    <div className="mt-4 grid grid-cols-[minmax(0,1fr)_70px_70px] gap-2 px-2 text-[10px] font-black uppercase tracking-wide text-slate-500">
-      <span>Player</span>
-      <span className="text-center">HCP</span>
-      <span className="text-center">Scramble</span>
-    </div>
-  )}
-
-  <div className="mt-2 divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-slate-50">
-    {selectedPlayers.map((player) => (
+    {selectedPlayers.length > 0 && (
       <div
-        key={player.id}
-        className="grid grid-cols-[minmax(0,1fr)_70px_70px] items-center gap-2 px-3 py-2"
+        className={`mt-4 grid gap-2 px-3 text-[10px] font-black uppercase tracking-wide text-slate-500 ${
+          teamMode === "teams"
+            ? "grid-cols-[minmax(0,1fr)_64px_105px]"
+            : "grid-cols-[minmax(0,1fr)_70px]"
+        }`}
       >
-        <p className="truncate text-sm font-black text-green-950">
-          {player.name}
-        </p>
+        <span>Player</span>
 
-        <input
-          type="number"
-          inputMode="numeric"
-          aria-label={`${player.name} stableford handicap`}
-          value={handicaps[player.id]?.stableford ?? ""}
-          onChange={(event) =>
-            updateHandicap(
-              player.id,
-              "stableford",
-              event.target.value
-            )
-          }
-          className="w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-center text-sm font-black text-slate-900"
-        />
+        <span className="text-center">HCP</span>
 
-        <input
-          type="number"
-          inputMode="numeric"
-          aria-label={`${player.name} scramble handicap`}
-          value={handicaps[player.id]?.scramble ?? ""}
-          onChange={(event) =>
-            updateHandicap(
-              player.id,
-              "scramble",
-              event.target.value
-            )
-          }
-          className="w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-center text-sm font-black text-slate-900"
-        />
+        {teamMode === "teams" && (
+          <span className="text-center">Team</span>
+        )}
       </div>
-    ))}
-   </div>
-</div>
+    )}
+
+    <div className="mt-2 divide-y divide-slate-200 overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
+      {selectedPlayers.map((player) => (
+        <div
+          key={player.id}
+          className={`grid items-center gap-2 px-3 py-2 ${
+            teamMode === "teams"
+              ? "grid-cols-[minmax(0,1fr)_64px_105px]"
+              : "grid-cols-[minmax(0,1fr)_70px]"
+          }`}
+        >
+          <p className="truncate text-sm font-black text-green-950">
+            {player.name}
+          </p>
+
+          <input
+            type="number"
+            inputMode="decimal"
+            aria-label={`${player.name} tournament handicap`}
+            value={handicaps[player.id]?.stableford ?? ""}
+            onChange={(event) =>
+              updateHandicap(
+                player.id,
+                "stableford",
+                event.target.value
+              )
+            }
+            className="w-full rounded-lg border border-slate-300 bg-white px-1 py-2 text-center text-sm font-black text-slate-900"
+          />
+
+          {teamMode === "teams" && (
+            <select
+              value={playerTeams[player.id] ?? ""}
+              onChange={(event) =>
+                setPlayerTeams((current) => ({
+                  ...current,
+                  [player.id]: event.target.value,
+                }))
+              }
+              aria-label={`${player.name} team`}
+              className="w-full min-w-0 rounded-lg border border-slate-300 bg-white px-1.5 py-2 text-xs font-bold text-green-950"
+            >
+              <option value="">No team</option>
+
+              {teams.map((team) => (
+                <option key={team} value={team}>
+                  {team}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      ))}
+    </div>
+  </div>
 </details>
 
 
@@ -1194,7 +1252,7 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
     <div className="flex items-center justify-between gap-3">
       <div>
         <h2 className="text-lg font-black text-green-950">
-          Playing Structure
+          Single or Multiple Tee Times?
         </h2>
 
         <p className="mt-1 text-sm text-slate-500">
@@ -1213,9 +1271,7 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
   </summary>
 
   <div className="border-t border-slate-200 p-4">
-    <p className="text-sm text-slate-500">
-      Will players score together or in separate tee groups?
-    </p>
+    
 
     <div className="mt-4 grid grid-cols-2 gap-3">
 
@@ -1360,11 +1416,35 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
                   {Array.from({ length: round.groupCount }).map(
                     (_, groupIndex) => (
-                      <div
-                        key={groupIndex}
-                        className="rounded-xl border border-slate-200 bg-white p-3"
-                      >
-                        <h4 className="font-black">Group {groupIndex + 1}</h4>
+                     <div
+  key={groupIndex}
+  className={`rounded-2xl border-2 p-3 ${
+    groupIndex % 4 === 0
+      ? "border-blue-200 bg-blue-50"
+      : groupIndex % 4 === 1
+      ? "border-green-200 bg-green-50"
+      : groupIndex % 4 === 2
+      ? "border-amber-200 bg-amber-50"
+      : "border-red-200 bg-red-50"
+  }`}
+>
+                       <div className="flex items-center justify-between gap-2">
+  <h4 className="font-black text-green-950">
+    Group {groupIndex + 1}
+  </h4>
+
+  <span
+    className={`h-3 w-3 rounded-full ${
+      groupIndex % 4 === 0
+        ? "bg-blue-500"
+        : groupIndex % 4 === 1
+        ? "bg-green-500"
+        : groupIndex % 4 === 2
+        ? "bg-amber-500"
+        : "bg-red-500"
+    }`}
+  />
+</div>
 
                         <input
                           value={round.teeTimes[groupIndex] ?? ""}
@@ -1482,14 +1562,17 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
                                   </div>
 
                                   <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
-                                    <p className="text-xs font-bold text-slate-400">
-                                      Calculated Scramble HCP
-                                    </p>
-                                    <p className="text-xl font-black">
-                                      {calculatedHandicap === ""
-                                        ? "-"
-                                        : calculatedHandicap}
-                                    </p>
+                                    <p className="text-xs font-bold text-slate-500">
+  Calculated Scramble HCP
+</p>
+
+<p className="mt-1 text-sm font-black text-green-950">
+  {calculatedHandicap === ""
+    ? "Select both players"
+    : `(${getStablefordHandicap(pair.player1Id)} + ${getStablefordHandicap(
+        pair.player2Id
+      )}) ÷ 2 = ${calculatedHandicap}`}
+</p>
 
                                     <label className="mt-3 block text-xs font-bold text-slate-400">
                                       Final Pair HCP
@@ -1598,12 +1681,16 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
 
             <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
               <p className="text-xs font-bold text-slate-500">
-                Calculated Scramble HCP
-              </p>
+  Calculated Scramble HCP
+</p>
 
-              <p className="text-xl font-black text-green-950">
-                {calculatedHandicap === "" ? "-" : calculatedHandicap}
-              </p>
+<p className="mt-1 text-sm font-black text-green-950">
+  {calculatedHandicap === ""
+    ? "Select both players"
+    : `(${getStablefordHandicap(pair.player1Id)} + ${getStablefordHandicap(
+        pair.player2Id
+      )}) ÷ 2 = ${calculatedHandicap}`}
+</p>
 
               <label className="mt-3 block text-xs font-bold text-slate-500">
                 Final Pair HCP

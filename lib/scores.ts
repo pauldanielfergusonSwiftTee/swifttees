@@ -135,4 +135,11 @@ export async function resetEventScores(eventSlug: string) {
     .eq("event_slug", eventSlug);
 
   if (bonusError) throw bonusError;
+
+  const { error: momentsError } = await supabase
+    .from("live_moments")
+    .delete()
+    .eq("event_slug", eventSlug);
+
+  if (momentsError) throw momentsError;
 }

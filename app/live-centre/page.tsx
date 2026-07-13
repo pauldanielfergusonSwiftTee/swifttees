@@ -963,7 +963,13 @@ getLiveMoments(eventSlug),
 
 const sortedTeams = hasTeams ? buildTeams(finalRows) : [];
 
-    const generatedMoments = [
+    const hasScoringActivity =
+  stablefordScores.length > 0 ||
+  scrambleScores.length > 0 ||
+  bonusWinners.length > 0;
+
+const generatedMoments = hasScoringActivity
+  ? ([
       buildLatestStablefordMoment(
         latestStablefordScore,
         players,
@@ -974,13 +980,18 @@ const sortedTeams = hasTeams ? buildTeams(finalRows) : [];
       ...buildBonusMoments(bonusWinners),
       ...buildMovementMoments(finalRows),
       ...buildBattleMoments(finalRows, sortedTeams),
-    ].filter(Boolean) as LiveMomentRow[];
+    ].filter(Boolean) as LiveMomentRow[])
+  : [];
 
-    if (generatedMoments.length > 0) {
-      await saveGeneratedMoments(generatedMoments);
-    }
+if (generatedMoments.length > 0) {
+  await saveGeneratedMoments(generatedMoments);
+}
 
-    const refreshedMoments = await getLiveMoments(eventSlug);
+if (!hasScoringActivity && typeof window !== "undefined") {
+  localStorage.removeItem(getPositionStorageKey(eventSlug));
+}
+
+const refreshedMoments = await getLiveMoments(eventSlug);
 
     setLeaderboard(finalRows);
     setTeamStandings(sortedTeams);
@@ -993,8 +1004,10 @@ const sortedTeams = hasTeams ? buildTeams(finalRows) : [];
       })
     );
 
-   if (eventSlug) {
+  if (eventSlug && hasScoringActivity) {
   saveStoredPositions(finalRows, eventSlug);
+} else if (eventSlug && typeof window !== "undefined") {
+  localStorage.removeItem(getPositionStorageKey(eventSlug));
 }
   }, [tournament]);
 
@@ -1203,7 +1216,7 @@ useEffect(() => {
       <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
         <div className="mb-3">
           <h2 className="text-xl font-black text-green-950">
-            🎙️ Moments Feed
+            🎙️ Commentary Feed
           </h2>
 
           <p className="text-xs font-semibold text-slate-400">

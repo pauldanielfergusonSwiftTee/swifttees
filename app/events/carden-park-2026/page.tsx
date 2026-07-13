@@ -406,14 +406,14 @@ export default function CardenParkEventPage() {
 
           <div className="grid grid-cols-1 gap-3">
             <a
-              href="/match-centre"
+              href="/live-centre"
               className="rounded-2xl bg-white text-green-950 px-5 py-4 text-center font-black text-lg"
             >
               🏆 Live Leaderboard
             </a>
 
             <a
-              href="/events/carden-park-2026/live-leaderboard/live-scoring"
+              href="/live-scoring-v2"
               className="rounded-2xl bg-green-500 text-white px-5 py-4 text-center font-black text-lg"
             >
               ⛳ Live Scorecards

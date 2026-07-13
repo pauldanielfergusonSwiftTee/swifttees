@@ -616,8 +616,13 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
 
         <div className="mb-3 space-y-2">
           {tournamentSetup.rounds.length > 1 && (
-  <div className="flex flex-wrap justify-center gap-3">
-    {tournamentSetup.rounds.map((round: any) => (
+  <div
+  className="grid w-full gap-2"
+  style={{
+    gridTemplateColumns: `repeat(${tournamentSetup.rounds.length}, minmax(0, 1fr))`,
+  }}
+>
+  {tournamentSetup.rounds.map((round: any) => (
               <button
                 key={round.id}
                 onClick={() => {
@@ -626,7 +631,7 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
                   setHole(1);
                   setSavedMessage("");
                 }}
-                className={`rounded-2xl border p-2 text-center font-black ${
+                className={`min-w-0 w-full rounded-2xl border p-2 text-center font-black ${
                   roundId === round.id
                     ? "border-green-900 bg-green-950 text-white"
                     : "border-slate-200 bg-white text-green-950"
@@ -645,15 +650,20 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
 )}
 
           {currentRound.groups.length > 1 && (
-            <div className="flex flex-wrap justify-center gap-3">
-            {currentRound.groups.map((group: any) => (
+            <div
+  className="grid w-full gap-2"
+  style={{
+    gridTemplateColumns: `repeat(${currentRound.groups.length}, minmax(0, 1fr))`,
+  }}
+>
+  {currentRound.groups.map((group: any) => (
               <button
                 key={group.id}
                 onClick={() => {
                   setSelectedGroupId(group.id);
                   setSavedMessage("");
                 }}
-                className={`rounded-2xl border p-2 text-center font-black ${
+                className={`min-w-0 w-full rounded-2xl border p-2 text-center font-black ${
                   selectedGroupId === group.id
                     ? "border-green-900 bg-green-950 text-white"
                     : "border-slate-200 bg-white text-green-950"
@@ -877,7 +887,7 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
 
           <div className="mt-2 grid grid-cols-1 gap-2">
             <a
-              href="/match-centre"
+              href="/live-centre"
               className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-black text-green-950 shadow-sm transition hover:border-green-700"
             >
               🏆 Leaderboard

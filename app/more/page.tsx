@@ -21,18 +21,7 @@ const moreLinks = [
     href: "/hall-of-fame",
     icon: "🏅",
   },
-  {
-    title: "Leaderboard",
-    description: "Live leaderboard, moments and tournament updates.",
-    href: "/live-centre",
-    icon: "🔥",
-  },
-  {
-    title: "Scorecards",
-    description: "Enter scores for the active tournament.",
-    href: "/live-scoring-v2",
-    icon: "📝",
-  },
+  
   {
     title: "Tournament Setup",
     description: "Create and manage tournaments, players, rounds and handicaps.",
