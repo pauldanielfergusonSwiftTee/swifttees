@@ -778,9 +778,9 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
                       </label>
 
                       <p className="text-xs font-bold text-slate-500">
-                        {player.team || "No Team"} • HCP{" "}
-                        {player.eventHandicap}
-                      </p>
+  {player.team ? `${player.team} • ` : ""}
+  HCP {player.eventHandicap}
+</p>
                     </div>
                   </div>
 

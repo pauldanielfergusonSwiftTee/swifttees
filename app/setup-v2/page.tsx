@@ -174,7 +174,11 @@ const [useGroups, setUseGroups] = useState(false);
     return "";
   }
 
-  return Math.round(((Number(h1) + Number(h2)) / 2) * 10) / 10;
+  return (
+  Math.round(
+    (((Number(h1) + Number(h2)) / 2) * 0.75) * 10
+  ) / 10
+);
 }
 
 function getFinalPairHandicap(pair: PairSetup) {
@@ -1569,9 +1573,9 @@ async function handleResetTournament(tournament: any) {
 <p className="mt-1 text-sm font-black text-green-950">
   {calculatedHandicap === ""
     ? "Select both players"
-    : `(${getStablefordHandicap(pair.player1Id)} + ${getStablefordHandicap(
+    : `((${getStablefordHandicap(pair.player1Id)} + ${getStablefordHandicap(
         pair.player2Id
-      )}) ÷ 2 = ${calculatedHandicap}`}
+      )}) ÷ 2) × 0.75 = ${calculatedHandicap}`}
 </p>
 
                                     <label className="mt-3 block text-xs font-bold text-slate-400">
@@ -1681,15 +1685,15 @@ async function handleResetTournament(tournament: any) {
 
             <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
               <p className="text-xs font-bold text-slate-500">
-  Calculated Scramble HCP
+  Calculated Scramble HCP (75%)
 </p>
 
 <p className="mt-1 text-sm font-black text-green-950">
   {calculatedHandicap === ""
     ? "Select both players"
-    : `(${getStablefordHandicap(pair.player1Id)} + ${getStablefordHandicap(
-        pair.player2Id
-      )}) ÷ 2 = ${calculatedHandicap}`}
+    : `((${getStablefordHandicap(pair.player1Id)} + ${getStablefordHandicap(
+    pair.player2Id
+  )}) ÷ 2) × 0.75 = ${calculatedHandicap}`}
 </p>
 
               <label className="mt-3 block text-xs font-bold text-slate-500">
