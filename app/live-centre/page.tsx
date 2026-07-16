@@ -17,6 +17,41 @@ import { getLiveMoments, saveLiveMoment } from "@/lib/liveMoments";
 function getPositionStorageKey(eventSlug: string) {
   return `swift-tees-${eventSlug}-live-centre-positions`;
 }
+
+function getMovementStorageKey(eventSlug: string) {
+  return `swift-tees-${eventSlug}-live-centre-movement`;
+}
+
+function getScoreSignatureStorageKey(eventSlug: string) {
+  return `swift-tees-${eventSlug}-live-centre-score-signature`;
+}
+function getCopiedMomentsStorageKey(eventSlug: string) {
+  return `swift-tees-${eventSlug}-copied-moments`;
+}
+
+function getStoredCopiedMoments(eventSlug: string): string[] {
+  if (typeof window === "undefined") return [];
+
+  try {
+    return JSON.parse(
+      localStorage.getItem(getCopiedMomentsStorageKey(eventSlug)) ?? "[]"
+    );
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredCopiedMoments(
+  eventSlug: string,
+  copiedMomentKeys: string[]
+) {
+  if (typeof window === "undefined") return;
+
+  localStorage.setItem(
+    getCopiedMomentsStorageKey(eventSlug),
+    JSON.stringify(copiedMomentKeys)
+  );
+}
 let EVENT_SLUG = "";
 type Movement = {
   icon: string;
@@ -197,10 +232,106 @@ function saveStoredPositions(
   );
 
   localStorage.setItem(
-  getPositionStorageKey(eventSlug),
-  JSON.stringify(positions)
-);
+    getPositionStorageKey(eventSlug),
+    JSON.stringify(positions)
+  );
 }
+
+function getStoredMovement(eventSlug: string): Record<string, Movement> {
+  if (typeof window === "undefined") return {};
+
+  try {
+    return JSON.parse(
+      localStorage.getItem(getMovementStorageKey(eventSlug)) ?? "{}"
+    );
+  } catch {
+    return {};
+  }
+}
+
+function saveStoredMovement(
+  rows: LeaderboardRow[],
+  eventSlug: string
+) {
+  if (typeof window === "undefined") return;
+
+  const movement = Object.fromEntries(
+    rows.map((player) => [String(player.id), player.movement])
+  );
+
+  localStorage.setItem(
+    getMovementStorageKey(eventSlug),
+    JSON.stringify(movement)
+  );
+}
+
+function clearStoredLeaderboardState(eventSlug: string) {
+  if (typeof window === "undefined") return;
+
+  localStorage.removeItem(getPositionStorageKey(eventSlug));
+  localStorage.removeItem(getMovementStorageKey(eventSlug));
+  localStorage.removeItem(getScoreSignatureStorageKey(eventSlug));
+  localStorage.removeItem(getCopiedMomentsStorageKey(eventSlug));
+}
+
+function buildScoreSignature(
+  scores: any[],
+  scrambleScores: any[],
+  bonusWinners: any[]
+) {
+  const stablefordSignature = scores
+    .map(
+      (score: any) =>
+        [
+          score.id,
+          score.round_number,
+          score.player_id,
+          score.hole_number,
+          score.gross_score,
+          score.points,
+          score.updated_at,
+        ].join("-")
+    )
+    .sort()
+    .join("|");
+
+  const scrambleSignature = scrambleScores
+    .map(
+      (score: any) =>
+        [
+          score.id,
+          score.round_number,
+          score.group_number,
+          score.pair_number,
+          score.hole_number,
+          score.gross_score,
+          score.points,
+          score.updated_at,
+        ].join("-")
+    )
+    .sort()
+    .join("|");
+
+  const bonusSignature = bonusWinners
+    .map(
+      (bonus: any) =>
+        [
+          bonus.id,
+          bonus.round_number,
+          bonus.hole,
+          bonus.bonus_type,
+          bonus.winner_player_name,
+          bonus.points,
+          bonus.updated_at,
+        ].join("-")
+    )
+    .sort()
+    .join("|");
+
+  return `${stablefordSignature}::${scrambleSignature}::${bonusSignature}`;
+}
+
+
 
 function getLatestStablefordScore(scores: any[]) {
   return scores
@@ -372,37 +503,7 @@ function buildTeams(rows: LeaderboardRow[]) {
     }));
 }
 
-function buildLiveStory(
-  leaderboard: LeaderboardRow[],
-  teamStandings: TeamStanding[],
-  savedMoments: LiveMomentRow[]
-) {
-  const latestMoment = savedMoments[0];
-  const leader = leaderboard[0];
-  const second = leaderboard[1];
-  const teamLeader = teamStandings[0];
-  const secondTeam = teamStandings[1];
 
-  if (latestMoment) return `${latestMoment.icon} ${latestMoment.text}`;
-  if (!leader) return "Waiting for the first scores to land.";
-
-  const playerGap = second ? leader.points - second.points : 0;
-  const teamGap = secondTeam ? teamLeader.points - secondTeam.points : 0;
-
-  if (second && playerGap <= 1) {
-    return playerGap === 0
-      ? `⚔️ ${leader.name} and ${second.name} are level at the top.`
-      : `⚔️ ${leader.name} leads ${second.name} by just ${playerGap} point.`;
-  }
-
-  if (secondTeam && teamGap <= 2) {
-    return `🥊 ${teamLeader.team} lead ${secondTeam.team} by ${teamGap} points in the team race.`;
-  }
-
-  return `👑 ${leader.name} leads on ${leader.points} points. ${
-    teamLeader?.team ?? "The leading team"
-  } are currently top of the team race.`;
-}
 
 function formatWhatsAppMoment(moment: Moment) {
   return `🚨 ${moment.title.toUpperCase()}
@@ -412,13 +513,7 @@ ${moment.icon} ${moment.text}
 #SwiftTees`;
 }
 
-function formatCopyText(title: string, text: string) {
-  return `🚨 ${title}
 
-${text}
-
-#SwiftTees`;
-}
 
 function formatLeaderboardCopy(
   leaderboard: LeaderboardRow[],
@@ -731,9 +826,10 @@ EVENT_SLUG = tournament?.slug ?? "";
   const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
   const [teamStandings, setTeamStandings] = useState<TeamStanding[]>([]);
   const [moments, setMoments] = useState<LiveMomentRow[]>([]);
-  const [liveStory, setLiveStory] = useState("Waiting for live scores...");
+  
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [lastUpdatedAt, setLastUpdatedAt] = useState("");
+const [copiedMomentKeys, setCopiedMomentKeys] = useState<string[]>([]);
+const [lastUpdatedAt, setLastUpdatedAt] = useState("");
 
   async function copyText(text: string, key: string) {
     try {
@@ -747,6 +843,42 @@ EVENT_SLUG = tournament?.slug ?? "";
       console.error("Could not copy:", error);
     }
   }
+async function copyMoment(moment: LiveMomentRow, index: number) {
+  try {
+    await navigator.clipboard.writeText(
+      formatWhatsAppMoment(moment)
+    );
+
+    const momentKey =
+      moment.moment_key ?? `${moment.title}-${index}`;
+
+    setCopiedKey(`moment-${index}`);
+
+    setCopiedMomentKeys((current) => {
+      const updated = current.includes(momentKey)
+        ? current
+        : [...current, momentKey];
+
+      if (tournament?.slug) {
+        saveStoredCopiedMoments(
+          tournament.slug,
+          updated
+        );
+      }
+
+      return updated;
+    });
+
+    setTimeout(() => {
+      setCopiedKey(null);
+    }, 1500);
+  } catch (error) {
+    console.error("Could not copy moment:", error);
+  }
+}
+
+
+
 
   const loadLeaderboard = useCallback(async () => {
     if (!tournament) return;
@@ -890,17 +1022,53 @@ getLiveMoments(eventSlug),
 
     rows.sort((a, b) => b.points - a.points || b.through - a.through);
 
-   const previousPositions = eventSlug ? getStoredPositions(eventSlug) : {};
+   const hasScoringActivity =
+  stablefordScores.length > 0 ||
+  scrambleScores.length > 0 ||
+  bonusWinners.length > 0;
 
-    const rowsWithPositions = rows.map((player, index) => {
-      const newPosition = index + 1;
+const currentScoreSignature = buildScoreSignature(
+  stablefordScores,
+  scrambleScores,
+  bonusWinners
+);
 
-      return {
-        ...player,
-        pos: newPosition,
-        movement: formatPlaceMovement(previousPositions[player.id], newPosition),
+const previousScoreSignature =
+  typeof window !== "undefined"
+    ? localStorage.getItem(getScoreSignatureStorageKey(eventSlug)) ?? ""
+    : "";
+
+const scoreStateChanged =
+  hasScoringActivity &&
+  currentScoreSignature !== previousScoreSignature;
+
+const previousPositions = eventSlug
+  ? getStoredPositions(eventSlug)
+  : {};
+
+const storedMovement = eventSlug
+  ? getStoredMovement(eventSlug)
+  : {};
+
+const rowsWithPositions = rows.map((player, index) => {
+  const newPosition = index + 1;
+
+  const movement = scoreStateChanged
+    ? formatPlaceMovement(previousPositions[player.id], newPosition)
+    : storedMovement[String(player.id)] ?? {
+        icon: "➖",
+        text: "No movement",
       };
-    });
+
+  return {
+    ...player,
+    pos: newPosition,
+    movement,
+  };
+});
+
+
+
 
     const biggestClimber = rowsWithPositions
       .filter((player) => player.movement.icon === "▲")
@@ -963,11 +1131,6 @@ getLiveMoments(eventSlug),
 
 const sortedTeams = hasTeams ? buildTeams(finalRows) : [];
 
-    const hasScoringActivity =
-  stablefordScores.length > 0 ||
-  scrambleScores.length > 0 ||
-  bonusWinners.length > 0;
-
 const generatedMoments = hasScoringActivity
   ? ([
       buildLatestStablefordMoment(
@@ -993,10 +1156,13 @@ if (!hasScoringActivity && typeof window !== "undefined") {
 
 const refreshedMoments = await getLiveMoments(eventSlug);
 
-    setLeaderboard(finalRows);
-    setTeamStandings(sortedTeams);
-    setMoments(refreshedMoments);
-    setLiveStory(buildLiveStory(finalRows, sortedTeams, refreshedMoments));
+const visibleMoments = hasScoringActivity
+  ? refreshedMoments ?? []
+  : [];
+
+setLeaderboard(finalRows);
+setTeamStandings(sortedTeams);
+setMoments(visibleMoments);
     setLastUpdatedAt(
       new Date().toLocaleTimeString("en-GB", {
         hour: "2-digit",
@@ -1004,24 +1170,39 @@ const refreshedMoments = await getLiveMoments(eventSlug);
       })
     );
 
-  if (eventSlug && hasScoringActivity) {
+if (eventSlug && hasScoringActivity && scoreStateChanged) {
   saveStoredPositions(finalRows, eventSlug);
-} else if (eventSlug && typeof window !== "undefined") {
-  localStorage.removeItem(getPositionStorageKey(eventSlug));
+  saveStoredMovement(finalRows, eventSlug);
+
+  if (typeof window !== "undefined") {
+    localStorage.setItem(
+      getScoreSignatureStorageKey(eventSlug),
+      currentScoreSignature
+    );
+  }
+} else if (eventSlug && !hasScoringActivity) {
+  clearStoredLeaderboardState(eventSlug);
+  setCopiedMomentKeys([]);
 }
+
+
+
   }, [tournament]);
 
-  useEffect(() => {
+ useEffect(() => {
   if (!loading && tournament) {
     setLeaderboard([]);
     setTeamStandings([]);
     setMoments([]);
-    setLiveStory("Waiting for live scores...");
     setLastUpdatedAt("");
+
+    setCopiedMomentKeys(
+      getStoredCopiedMoments(tournament.slug)
+    );
 
     loadLeaderboard();
   }
-}, [loading, tournament]);
+}, [loading, tournament, loadLeaderboard]);
 
   useEffect(() => {
   if (!tournament?.slug) return;
@@ -1224,42 +1405,41 @@ useEffect(() => {
           </p>
         </div>
 
-        <div className="mb-3 rounded-2xl border border-amber-300 bg-amber-50 p-3">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-wide text-green-700">
-                🚨 Live Story
-              </p>
-
-              <p className="mt-1 text-sm font-black leading-snug text-green-950">
-                {liveStory}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() =>
-                copyText(formatCopyText("Swift Tees Update", liveStory), "story")
-              }
-              className="shrink-0 rounded-full bg-green-950 px-2.5 py-1 text-[10px] font-black text-white"
-            >
-              {copiedKey === "story" ? "Copied" : "Copy"}
-            </button>
-          </div>
-        </div>
+       
 
         <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
-          {moments.map((moment, index) => (
-            <div
-              key={moment.moment_key ?? `${moment.title}-${index}`}
-              className={`rounded-2xl border border-l-4 p-3 transition-all ${
-                moment.rarity === "major"
-                  ? "border-yellow-300 bg-yellow-50"
-                  : moment.rarity === "rare"
-                    ? "border-green-300 bg-green-50"
-                    : "border-slate-200 bg-slate-50"
-              }`}
-            >
+  {moments.length === 0 && (
+    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center">
+      <p className="text-sm font-black text-green-950">
+        Waiting for tournament moments
+      </p>
+
+      <p className="mt-1 text-xs font-semibold text-slate-500">
+        Commentary will appear as scores and bonus winners are added.
+      </p>
+    </div>
+  )}
+
+ {moments.map((moment, index) => {
+  const momentKey =
+    moment.moment_key ?? `${moment.title}-${index}`;
+
+  const hasBeenCopied =
+    copiedMomentKeys.includes(momentKey);
+
+  return (
+    <div
+      key={momentKey}
+      className={`rounded-2xl border border-l-4 p-3 transition-all ${
+        hasBeenCopied
+          ? "border-slate-300 bg-slate-100 opacity-70"
+          : moment.rarity === "major"
+          ? "border-yellow-300 bg-yellow-50"
+          : moment.rarity === "rare"
+          ? "border-green-300 bg-green-50"
+          : "border-slate-200 bg-slate-50"
+      }`}
+    >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-wide text-green-700">
@@ -1272,17 +1452,24 @@ useEffect(() => {
                 </div>
 
                 <button
-                  type="button"
-                  onClick={() =>
-                    copyText(formatWhatsAppMoment(moment), `moment-${index}`)
-                  }
-                  className="shrink-0 rounded-full bg-green-950 px-2.5 py-1 text-[10px] font-black text-white"
-                >
-                  {copiedKey === `moment-${index}` ? "Copied" : "Copy"}
-                </button>
+  type="button"
+  onClick={() => copyMoment(moment, index)}
+  className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black ${
+    hasBeenCopied
+      ? "bg-slate-300 text-slate-700"
+      : "bg-green-950 text-white"
+  }`}
+>
+  {copiedKey === `moment-${index}`
+    ? "Copied!"
+    : hasBeenCopied
+    ? "✓ Copied"
+    : "Copy"}
+</button>
               </div>
-            </div>
-          ))}
+                </div>
+  );
+})}
         </div>
       </section>
 
