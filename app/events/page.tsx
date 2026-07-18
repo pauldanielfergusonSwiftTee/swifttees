@@ -16,36 +16,28 @@ const events = [
   },
   {
     title: "Mottram Hall",
-    date: "March 2026",
-    label: "Past Event",
-    description: "Players and photos from the weekend.",
+    label: "March 2026",
     href: "/events/mottram-hall-march-2026",
     image: "/images/mottram-march-2026/photo-1.png",
     featured: false,
   },
   {
     title: "Shrigley Hall",
-    date: "September 2025",
-    label: "Past Event",
-    description: "Players and photos from the weekend.",
+    label: "September 2025",
     href: "/events/shrigley-hall-september-2025",
     image: "/images/shrigley-25/shrigley-bg.jpg",
     featured: false,
   },
   {
     title: "Mottram Hall",
-    date: "June 2025",
-    label: "Past Event",
-    description: "Players and photos from the weekend.",
+    label: "June 2025",
     href: "/events/mottram-hall-june-2025",
     image: "/images/mottram-25/mottram-25-bg.JPG",
     featured: false,
   },
   {
     title: "Tarporley",
-    date: "April 2025",
-    label: "Past Event",
-    description: "Players and photos from the weekend.",
+    label: "April 2025",
     href: "/events/tarporley-april-2025",
     image: "/images/portal-25/portal-25-bg.jpg",
     featured: false,
@@ -57,7 +49,7 @@ export default function EventsPage() {
     <PageContainer className="bg-slate-100 text-slate-900">
       <PageHeader
         eyebrow="Swift Tees"
-        title="Events"
+        title="Past Events"
         subtitle="Upcoming trips, past weekends and the photographic evidence."
       />
 

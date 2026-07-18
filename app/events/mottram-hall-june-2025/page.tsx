@@ -1,28 +1,100 @@
-export default function TarporleyApril2025Page() {
-  return (
-    <main className="min-h-screen bg-slate-100 text-slate-900 p-8">
-      <div className="max-w-4xl mx-auto">
-        <a href="/events" className="text-green-700 text-sm font-bold">
-          ← Back to all events
-        </a>
+import Link from "next/link";
+import PageContainer from "@/components/PageContainer";
+import ImageGallery from "@/components/ImageGallery";
 
-        <h1 className="text-5xl md:text-6xl font-black mt-6 mb-2 text-green-950">
-          Mottram Hall
+const attendees = [
+  "Ian",
+  "Stu",
+  "John W",
+  "Painy",
+  "Paul",
+  "Wrighty",
+  "Chris Mc",
+];
+
+const photos = [
+   {
+    src: "/images/mottram-25/mottram25-02.jpeg",
+    alt: "Mottram Hall golf weekend photo 2",
+  },
+  {
+    src: "/images/mottram-25/mottram25-01.jpeg",
+    alt: "Mottram Hall golf weekend photo 1",
+  },
+  {
+    src: "/images/mottram-25/mottram25-03.png",
+    alt: "Mottram Hall golf weekend photo 3",
+  },
+  {
+    src: "/images/mottram-25/mottram25-4.JPG",
+    alt: "Mottram Hall golf weekend photo 4",
+  },
+  {
+    src: "/images/mottram-25/mottram25-05.JPG",
+    alt: "Mottram Hall golf weekend photo 5",
+  },
+];
+
+export default function MottramHallMarch2026Page() {
+  return (
+    <PageContainer className="bg-slate-100 text-slate-900">
+      <Link
+        href="/events"
+        className="mb-4 inline-flex text-sm font-black text-green-700"
+      >
+        ← Back to Events
+      </Link>
+
+      <section className="rounded-3xl bg-green-950 p-5 text-white shadow-lg">
+        <p className="text-xs font-black uppercase tracking-[0.25em] text-green-300">
+          Past Event
+        </p>
+
+        <h1 className="mt-2 text-3xl font-black tracking-tight">
+          Mottram Hall 2025
         </h1>
 
-        <p className="text-slate-600 mb-8">June 2025</p>
+        <p className="mt-1 text-sm font-bold text-green-100">
+          June 2025
+        </p>
+      </section>
 
-        <div className="rounded-3xl bg-white p-8 border border-slate-200 shadow-sm">
-          <h2 className="text-3xl font-black mb-4 text-green-950">
-            Write-up coming soon
+      <section className="mt-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-2xl font-black text-green-950">
+            🏌️ Players
           </h2>
 
-          <p className="text-slate-700 leading-7">
-            This page will eventually include the trip write-up, results,
-            photos, awards and any incidents that can legally be mentioned.
-          </p>
+          <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-black text-green-800">
+            {attendees.length} Players
+          </span>
         </div>
-      </div>
-    </main>
+
+       <div className="flex flex-wrap gap-2">
+  {attendees.map((player) => (
+    <div
+      key={player}
+      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-bold text-slate-800 transition hover:bg-green-50"
+    >
+      {player}
+    </div>
+  ))}
+</div>
+      </section>
+
+            <section className="mt-5">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-2xl font-black text-green-950">
+            📸 Weekend Gallery
+          </h2>
+
+          <span className="text-sm font-bold text-slate-500">
+            {photos.length} Photos
+          </span>
+        </div>
+
+        <ImageGallery images={photos} />
+      </section>
+    </PageContainer>
   );
 }

@@ -3,18 +3,19 @@ import PageContainer from "@/components/PageContainer";
 import PageHeader from "@/components/PageHeader";
 
 const moreLinks = [
+   {
+    title: "Past Events",
+    description: "Browse previous Swift Tees weekends.",
+    href: "/events",
+    icon: "📅",
+  },
   {
     title: "Overall Leaderboard",
     description: "Full standings and detailed results.",
     href: "/overall-leaderboard",
     icon: "🏆",
   },
-  {
-    title: "Past Events",
-    description: "Browse previous Swift Tees weekends.",
-    href: "/events",
-    icon: "📅",
-  },
+ 
   {
     title: "Hall of Fame",
     description: "Past winners, legends and questionable achievements.",

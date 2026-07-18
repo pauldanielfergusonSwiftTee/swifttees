@@ -91,6 +91,10 @@ export default function Home() {
     src: "/images/mainpage/main1.JPG",
     alt: "Swift Tees golf trip moment",
   },
+   {
+    src: "/images/mottram-25/mottram25-02.jpeg",
+    alt: "Mottram Hall golf weekend photo 2",
+  },
   {
     src: "/images/mainpage/main2.jpeg",
     alt: "Swift Tees players on the golf course",
@@ -103,6 +107,7 @@ export default function Home() {
     src: "/images/mainpage/main4.jpeg",
     alt: "Swift Tees golf trip photograph",
   },
+  
 ];
 
   return (
