@@ -1,9 +1,18 @@
-import AppPageHeader from "@/components/AppPageHeader";
-import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type {
+  Metadata,
+  Viewport,
+} from "next";
+
+import {
+  Geist,
+  Geist_Mono,
+} from "next/font/google";
+
 import BottomNav from "@/components/BottomNav";
-import "./globals.css";
 import TopNav from "@/components/TopNav";
+import AppPageHeader from "@/components/AppPageHeader";
+
+import "./globals.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -23,8 +32,6 @@ export const metadata: Metadata = {
   description: "Swift Tees Golf Society",
 };
 
-
-
 export const viewport: Viewport = {
   themeColor: "#052e16",
 };
@@ -40,10 +47,14 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-slate-950 text-white">
-  <TopNav />
-  {children}
-  <BottomNav />
-</body>
+        <TopNav />
+
+        <AppPageHeader />
+
+        {children}
+
+        <BottomNav />
+      </body>
     </html>
   );
 }
