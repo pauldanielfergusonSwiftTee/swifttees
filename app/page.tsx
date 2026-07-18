@@ -143,12 +143,11 @@ export default function Home() {
 
             <p className="mb-8 mt-4 max-w-2xl text-2xl font-black leading-tight text-white drop-shadow-md md:text-4xl">
               Questionable golf. Elite admin. A bunch of mates
-              chasing glory, bragging rights and unforgettable
-              stories
+              chasing glory, bragging rights and a few fairways
             </p>
 
             <p className="mb-4 inline-flex items-center gap-2 rounded-full bg-green-500 px-4 py-2 text-xs font-black uppercase tracking-wider">
-              🟢 Next Event
+              🟢 Upcoming Event
             </p>
 
             <div className="mb-5 rounded-3xl border border-white/20 bg-white/10 p-4 backdrop-blur md:p-6">

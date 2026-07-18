@@ -11,7 +11,7 @@ const players = [
     handicap: 20,
     trips: 4,
     
-    bio: "One of the stronger contenders on paper if the scorecard reflects the experience. Most likely to seen examining the scorecards.",
+    bio: "One of the stronger contenders on paper if the scorecard reflects the talk and experience. The most likely to seen examining the scorecards.",
   },
    {
     name: "Stu",
@@ -20,7 +20,7 @@ const players = [
     handicap: 28,
     trips: 4,
   
-    bio: "The man of the moment as Swift Tees celebrates his big 5-0. Expect laughs, decent golf... and at least one unnecessary flop shot",
+    bio: "The man of the moment as Swift Tees celebrates his big 5-0. Expect laughs, decent golf... and at least one exquisite flop shot",
   },
  {
     name: "Paul",
@@ -96,7 +96,7 @@ const players = [
     handicap: 20,
     trips: 4,
     
-    bio: "Once the undisputed man to beat. Stil a solid golfer with a dangerous consistency... and a diary full of backup plans.",
+    bio: "Once the undisputed man to beat. Stil a solid golfer with a dangerous consistency... loves a backup plan.",
   },
   
   {
@@ -143,14 +143,14 @@ const predictions = [
     icon: "⚪",
     rating: "⭐⭐⭐⭐☆",
     score: "8.5/10",
-    text: "The White Team might be the most unpredictable side in the competition. Gav will demand nothing less than victory and will almost certainly have the points permutations worked out before the first tee shot lands. Carl arrives with the newest and most expensive equipment in the UK, hoping this is finally the set that delivers glory, while Wrighty continues to prove that even clubs older than Carl can still get the job done. Adam completes the quartet as the wildcard— capable of surprising everyone and never short on distance. If the Whites click, they'll be incredibly hard to stop. If not, expect plenty of post-round analysis... particularly from Gav and Carl.",
+    text: "The White Team might be the most unpredictable side in the competition. Gav will demand nothing less than victory and will almost certainly have the points permutations worked out before the first tee shot lands. Carl arrives with the newest and most expensive golf clubs, hoping this is finally the set that delivers glory, while Wrighty continues to prove that even 20 year old hand me downs can still get the job done. Adam completes the quartet as the wildcard— capable of surprising everyone and never short on distance. If the Whites click, they'll be incredibly hard to stop. If not, expect plenty of post-round analysis... particularly from Gav and Carl.",
   },
   {
     team: "Blue Team",
     icon: "🔵",
     rating: "⭐⭐⭐⭐⭐",
     score: "9/10",
-    text: "On paper, this looks like the most balanced team in the field. Dan is always a genuine contender when he's anywhere near his best, Liam quietly strings together solid rounds while pretending he hardly plays, Stu is capable of moments of brilliance and the pressurewon't get to him, and Phil brings the social aspect and plenty of liquids to keep morale high. There isn't an obvious weakness here, making Blue a strong favourite if everyone performs to their handicap.",
+    text: "On paper, this looks like the most balanced team in the field. Dan is always a genuine contender when he's anywhere near his best, Liam quietly strings together solid rounds while pretending he hardly plays. Stu is capable of moments of brilliance and the pressure won't get to him, and Phil brings the social aspect and plenty of liquids to keep morale high. There isn't any big weaknesses here, making Blue a strong favourite if everyone performs to their handicap.",
   },
   {
     team: "Green Team",
