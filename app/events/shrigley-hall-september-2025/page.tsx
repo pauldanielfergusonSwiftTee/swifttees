@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 import PageContainer from "@/components/PageContainer";
+import ImageGallery from "@/components/ImageGallery";
 
 const attendees = [
   "Chris Mc",
@@ -15,14 +15,30 @@ const attendees = [
 ];
 
 const photos = [
-  "/images/shrigley-25/shrigley-1.jpeg",
-  "/images/shrigley-25/shrigley-2.jpeg",
-  "/images/shrigley-25/shrigley-3.png",
-  "/images/shrigley-25/shrigley-4.png",
-  "/images/shrigley-25/shrigley-5.png",
+  {
+    src: "/images/shrigley-25/shrigley-5.png",
+    alt: "Shrigley Hall golf weekend photo 5",
+  },
+  {
+    src: "/images/shrigley-25/shrigley-1.jpeg",
+    alt: "Shrigley Hall golf weekend photo 1",
+  },
+  {
+    src: "/images/shrigley-25/shrigley-2.jpeg",
+    alt: "Shrigley Hall golf weekend photo 2",
+  },
+  {
+    src: "/images/shrigley-25/shrigley-3.png",
+    alt: "Shrigley Hall golf weekend photo 3",
+  },
+  {
+    src: "/images/shrigley-25/shrigley-4.png",
+    alt: "Shrigley Hall golf weekend photo 4",
+  },
+  
 ];
 
-export default function MottramHallMarch2026Page() {
+export default function ShrigleyHallSeptember2025Page() {
   return (
     <PageContainer className="bg-slate-100 text-slate-900">
       <Link
@@ -57,16 +73,16 @@ export default function MottramHallMarch2026Page() {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {attendees.map((player) => (
-            <div
-              key={player}
-              className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center text-sm font-black text-green-950 transition hover:bg-green-50"
-            >
-              {player}
-            </div>
-          ))}
-        </div>
+       <div className="flex flex-wrap gap-2">
+  {attendees.map((player) => (
+    <div
+      key={player}
+      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-bold text-slate-800 transition hover:bg-green-50"
+    >
+      {player}
+    </div>
+  ))}
+</div>
       </section>
 
       <section className="mt-5">
@@ -80,30 +96,9 @@ export default function MottramHallMarch2026Page() {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          {photos.map((photo, index) => (
-            <Link
-              key={photo}
-              href={photo}
-              target="_blank"
-              className={`relative overflow-hidden rounded-2xl bg-slate-200 shadow-sm ${
-                index === 0 ? "col-span-2 aspect-[16/10]" : "aspect-square"
-              }`}
-            >
-              <Image
-                src={photo}
-                alt={`Mottram Hall ${index + 1}`}
-                fill
-                sizes={
-                  index === 0
-                    ? "(max-width:768px) 100vw, 768px"
-                    : "(max-width:768px) 50vw, 384px"
-                }
-                className="object-cover transition duration-300 hover:scale-105"
-              />
-            </Link>
-          ))}
-        </div>
+       
+       <ImageGallery images={photos} />
+
       </section>
     </PageContainer>
   );

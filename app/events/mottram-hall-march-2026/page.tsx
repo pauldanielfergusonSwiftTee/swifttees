@@ -1,6 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
 import PageContainer from "@/components/PageContainer";
+import ImageGallery from "@/components/ImageGallery";
 
 const attendees = [
   "Paul",
@@ -18,11 +18,26 @@ const attendees = [
 ];
 
 const photos = [
-  "/images/mottram-march-2026/photo-1.png",
-  "/images/mottram-march-2026/photo-2.jpeg",
-  "/images/mottram-march-2026/photo-3.jpeg",
-  "/images/mottram-march-2026/photo-5.png",
-  "/images/mottram-march-2026/photo-6.png",
+  {
+    src: "/images/mottram-march-2026/photo-1.png",
+    alt: "Mottram Hall golf weekend photo 1",
+  },
+  {
+    src: "/images/mottram-march-2026/photo-2.jpeg",
+    alt: "Mottram Hall golf weekend photo 2",
+  },
+  {
+    src: "/images/mottram-march-2026/photo-3.jpeg",
+    alt: "Mottram Hall golf weekend photo 3",
+  },
+  {
+    src: "/images/mottram-march-2026/photo-5.png",
+    alt: "Mottram Hall golf weekend photo 4",
+  },
+  {
+    src: "/images/mottram-march-2026/photo-6.png",
+    alt: "Mottram Hall golf weekend photo 5",
+  },
 ];
 
 export default function MottramHallMarch2026Page() {
@@ -60,19 +75,19 @@ export default function MottramHallMarch2026Page() {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {attendees.map((player) => (
-            <div
-              key={player}
-              className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center text-sm font-black text-green-950 transition hover:bg-green-50"
-            >
-              {player}
-            </div>
-          ))}
-        </div>
+       <div className="flex flex-wrap gap-2">
+  {attendees.map((player) => (
+    <div
+      key={player}
+      className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-bold text-slate-800 transition hover:bg-green-50"
+    >
+      {player}
+    </div>
+  ))}
+</div>
       </section>
 
-      <section className="mt-5">
+            <section className="mt-5">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-2xl font-black text-green-950">
             📸 Weekend Gallery
@@ -83,30 +98,7 @@ export default function MottramHallMarch2026Page() {
           </span>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          {photos.map((photo, index) => (
-            <Link
-              key={photo}
-              href={photo}
-              target="_blank"
-              className={`relative overflow-hidden rounded-2xl bg-slate-200 shadow-sm ${
-                index === 0 ? "col-span-2 aspect-[16/10]" : "aspect-square"
-              }`}
-            >
-              <Image
-                src={photo}
-                alt={`Mottram Hall ${index + 1}`}
-                fill
-                sizes={
-                  index === 0
-                    ? "(max-width:768px) 100vw, 768px"
-                    : "(max-width:768px) 50vw, 384px"
-                }
-                className="object-cover transition duration-300 hover:scale-105"
-              />
-            </Link>
-          ))}
-        </div>
+        <ImageGallery images={photos} />
       </section>
     </PageContainer>
   );

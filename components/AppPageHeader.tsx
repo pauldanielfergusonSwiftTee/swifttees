@@ -204,50 +204,35 @@ export default function AppPageHeader() {
     }
   );
 
-  return (
+    return (
     <header className="sticky top-0 z-[80] border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-md [@media(min-width:1200px)]:hidden">
-      <div className="mx-auto max-w-6xl px-4 py-2">
-        <div className="flex items-center justify-between gap-3">
-          <Link
-            href={backRoute.href}
-            className="inline-flex min-h-9 min-w-0 items-center rounded-xl px-2 text-sm font-black text-green-800 transition hover:bg-green-50"
-          >
-            <span className="mr-1 shrink-0">←</span>
+      <div className="mx-auto flex min-h-12 max-w-6xl items-center gap-3 px-4 py-2">
+        <Link
+          href={backRoute.href}
+          className="inline-flex shrink-0 items-center rounded-lg px-1.5 py-1 text-sm font-black text-green-800 transition hover:bg-green-50"
+        >
+          <span className="mr-1">←</span>
 
-            <span className="truncate">
-              {backRoute.label}
-            </span>
-          </Link>
+          <span className="max-w-[110px] truncate">
+            {backRoute.label}
+          </span>
+        </Link>
 
-          <Link
-            href="/"
-            aria-label="Go to home page"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg transition hover:bg-green-50"
-          >
-            🏠
-          </Link>
-        </div>
+        <div className="h-5 w-px shrink-0 bg-slate-200" />
 
         <nav
           aria-label="Breadcrumb"
-          className="mt-1 overflow-x-auto px-2 pb-0.5 scrollbar-none"
+          className="min-w-0 flex-1 overflow-x-auto scrollbar-none"
         >
-          <div className="flex min-w-max items-center gap-1 text-[11px] font-bold text-slate-400">
-            <Link
-              href="/"
-              className="shrink-0 transition hover:text-green-800"
-            >
-              Home
-            </Link>
-
-            {breadcrumbs.map((crumb) => (
+          <div className="flex min-w-max items-center gap-1.5 text-xs font-bold text-slate-400">
+            {breadcrumbs.map((crumb, index) => (
               <span
                 key={crumb.href}
-                className="flex shrink-0 items-center gap-1"
+                className="flex shrink-0 items-center gap-1.5"
               >
-                <span className="text-slate-300">
-                  ›
-                </span>
+                {index > 0 && (
+                  <span className="text-slate-300">›</span>
+                )}
 
                 {crumb.current ? (
                   <span
@@ -259,7 +244,7 @@ export default function AppPageHeader() {
                 ) : (
                   <Link
                     href={crumb.href}
-                    className="max-w-[160px] truncate transition hover:text-green-800"
+                    className="max-w-[150px] truncate transition hover:text-green-800"
                   >
                     {crumb.label}
                   </Link>

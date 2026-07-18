@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import ImageGallery from "@/components/ImageGallery";
 import { supabase } from "../lib/supabase";
 
 export default function Home() {
@@ -18,9 +19,7 @@ export default function Home() {
     secs: 0,
   });
 
-  const [selectedImage, setSelectedImage] = useState<string | null>(
-    null
-  );
+ 
 
   useEffect(() => {
     async function loadInterestStats() {
@@ -85,32 +84,26 @@ export default function Home() {
     return () => clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    if (!selectedImage) return;
+  
 
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setSelectedImage(null);
-      }
-    }
-
-    const previousOverflow = document.body.style.overflow;
-
-    document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [selectedImage]);
-
-  const momentImages = [
-    "/images/mainpage/main1.JPG",
-    "/images/mainpage/main2.jpeg",
-    "/images/mainpage/main3.jpeg",
-    "/images/mainpage/main4.jpeg",
-  ];
+    const momentImages = [
+  {
+    src: "/images/mainpage/main1.JPG",
+    alt: "Swift Tees golf trip moment",
+  },
+  {
+    src: "/images/mainpage/main2.jpeg",
+    alt: "Swift Tees players on the golf course",
+  },
+  {
+    src: "/images/mainpage/main3.jpeg",
+    alt: "Swift Tees golf society event",
+  },
+  {
+    src: "/images/mainpage/main4.jpeg",
+    alt: "Swift Tees golf trip photograph",
+  },
+];
 
   return (
     <main className="min-h-screen bg-slate-100 text-slate-900">
@@ -324,28 +317,9 @@ export default function Home() {
         </a>
 
         {/* MOMENTS */}
+               {/* MOMENTS */}
         <section className="mb-8">
-          <div className="mb-4 flex items-end justify-between gap-4" />
-
-          <div className="flex gap-4 overflow-x-auto pb-2">
-            {momentImages.map((src, index) => (
-              <button
-                type="button"
-                key={`${src}-${index}`}
-                onClick={() => setSelectedImage(src)}
-                aria-label={`Open Swift Tees moment ${index + 1}`}
-                className="relative h-44 min-w-[260px] shrink-0 cursor-zoom-in overflow-hidden rounded-3xl border border-slate-200 bg-white p-0 shadow-sm"
-              >
-                <Image
-                  src={src}
-                  alt={`Swift Tees moment ${index + 1}`}
-                  fill
-                  sizes="260px"
-                  className="object-cover transition duration-300 hover:scale-[1.03]"
-                />
-              </button>
-            ))}
-          </div>
+          <ImageGallery images={momentImages} />
         </section>
 
         {/* ORIGINAL SMALL TILES */}
@@ -395,39 +369,7 @@ export default function Home() {
         <div className="h-40 md:hidden" />
       </section>
 
-      {/* IMAGE POP-OUT */}
-      {selectedImage && (
-        <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-3 backdrop-blur-sm md:p-6"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Expanded Swift Tees moment"
-          onClick={() => setSelectedImage(null)}
-        >
-          <div
-            className="relative h-[85vh] w-full max-w-6xl overflow-hidden rounded-3xl bg-black shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <Image
-              src={selectedImage}
-              alt="Expanded Swift Tees moment"
-              fill
-              priority
-              sizes="100vw"
-              className="object-contain"
-            />
-
-            <button
-              type="button"
-              onClick={() => setSelectedImage(null)}
-              aria-label="Close image"
-              className="absolute right-3 top-3 z-10 flex h-12 w-12 items-center justify-center rounded-full border border-white/20 bg-black/65 text-3xl font-light leading-none text-white shadow-lg backdrop-blur transition hover:bg-white hover:text-black"
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
+      
     </main>
   );
 }
