@@ -125,6 +125,20 @@ function progressText(through: number) {
   return `Thru ${through}`;
 }
 
+function formatLiveRoundDate(dateValue: string) {
+  if (!dateValue) return "";
+
+  const date = new Date(`${dateValue}T12:00:00`);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleDateString("en-GB", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+});
+}
+
 function getRoundNumber(round: any) {
   return Number(round.roundNumber ?? round.round_number ?? round.id);
 }
@@ -830,7 +844,7 @@ EVENT_SLUG = tournament?.slug ?? "";
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 const [copiedMomentKeys, setCopiedMomentKeys] = useState<string[]>([]);
 const [lastUpdatedAt, setLastUpdatedAt] = useState("");
-
+const [currentRound, setCurrentRound] = useState<any>(null);
   async function copyText(text: string, key: string) {
     try {
       await navigator.clipboard.writeText(text);
@@ -908,7 +922,7 @@ getLiveMoments(eventSlug),
   scores,
   scrambleScores
 );
-
+setCurrentRound(currentRoundInfo.round ?? null);
     const stablefordScores = scores.filter(
       (score: any) => score.score_type === "stableford" && score.player_id
     );
@@ -1194,7 +1208,8 @@ if (eventSlug && hasScoringActivity && scoreStateChanged) {
     setLeaderboard([]);
     setTeamStandings([]);
     setMoments([]);
-    setLastUpdatedAt("");
+setLastUpdatedAt("");
+setCurrentRound(null);
 
     setCopiedMomentKeys(
       getStoredCopiedMoments(tournament.slug)
@@ -1252,49 +1267,63 @@ useEffect(() => {
 
   return (
     <PageContainer className="bg-slate-100 text-slate-900">
-      <section className="rounded-3xl bg-green-950 p-5 text-white shadow-lg">
-  <p className="text-xs font-black uppercase tracking-[0.22em] text-green-300">
-    🔥 Live Leaderboard
-  </p>
+    <section className="rounded-3xl bg-green-950 px-5 py-4 text-white shadow-lg">
+  <div className="flex items-center justify-between gap-3">
+    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-green-300">
+      🔥 Live
+    </p>
 
-  <h3 className="mt-2 text-3xl font-black tracking-tight text-white">
+    {lastUpdatedAt && (
+      <p className="shrink-0 text-[10px] font-black uppercase tracking-wide text-green-200">
+        ● {lastUpdatedAt}
+      </p>
+    )}
+  </div>
+
+  <h3 className="mt-2 text-3xl font-black leading-none tracking-tight text-white">
     {tournament?.name ?? "Swift Tees"}
   </h3>
 
-  <p className="mt-2 text-sm font-semibold text-green-100">
-    👥 {tournament?.players?.length ?? 0} players
-    {" • "}
-    ⛳ {tournament?.rounds?.length ?? 0} round
-    {(tournament?.rounds?.length ?? 0) !== 1 ? "s" : ""}
+  {currentRound && (
+    <p className="mt-3 text-sm font-black text-green-100">
+      {currentRound.date && (
+        <>
+          {formatLiveRoundDate(currentRound.date)}
+          {" • "}
+        </>
+      )}
+
+      {currentRound.course ??
+        currentRound.courseName ??
+        "Course"}
+    </p>
+  )}
+
+  <p className="mt-1.5 text-sm font-semibold text-green-200">
+    👥 {tournament?.players?.length ?? 0} Players
     {" • "}
     {tournament?.team_mode === "teams" ||
     tournament?.teamMode === "teams"
       ? "Teams"
       : "Singles"}
   </p>
-
-  {lastUpdatedAt && (
-    <p className="mt-3 text-xs font-black text-green-200">
-      ● LIVE · Updated {lastUpdatedAt}
-    </p>
-  )}
 </section>
 
       {teamStandings.length > 0 && (
-  <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-    <div className="grid grid-cols-3 gap-2">
+  <section className="mt-2.5 rounded-3xl border border-slate-200 bg-white p-2.5 shadow-sm">
+  <div className="grid grid-cols-3 gap-1.5">
       {teamStandings.map((team) => (
             <div
               key={team.team}
-              className="rounded-xl bg-slate-50 px-2 py-3 text-center"
+              className="rounded-xl bg-slate-50 px-2 py-2 text-center"
             >
-              <div className="text-2xl">{team.icon}</div>
+              <div className="text-lg leading-none">{team.icon}</div>
 
               <div className="text-[10px] font-black uppercase text-green-950">
                 {team.team}
               </div>
 
-              <div className="mt-1 text-2xl font-black leading-none text-green-950">
+              <div className="mt-1 text-xl font-black leading-none text-green-950">
                 {team.points}
               </div>
 
@@ -1307,11 +1336,11 @@ useEffect(() => {
   </section>
 )}
 
-      <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-xl font-black text-green-950">
-            🏆 Live Leaderboard
-          </h2>
+      <section className="mt-2.5 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+  <div className="mb-2 flex items-center justify-between gap-3">
+          <h2 className="text-lg font-black text-green-950">
+  🏆 Live Leaderboard
+</h2>
 
           <button
             type="button"
@@ -1327,18 +1356,18 @@ useEffect(() => {
           </button>
         </div>
 
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {leaderboard.map((player) => (
             <div
               key={player.id}
-              className={`flex items-center justify-between rounded-2xl px-3 py-2.5 ${
+              className={`flex items-center justify-between rounded-xl px-3 py-2 ${
                 player.pos === 1
                   ? "border border-yellow-300 bg-yellow-50"
                   : "bg-slate-50"
               }`}
             >
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-950 text-sm font-black text-white">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-green-950 text-xs font-black text-white">
                   {player.pos}
                 </span>
 
@@ -1350,7 +1379,7 @@ useEffect(() => {
                       )}`}
                     />
 
-                    <p className="truncate text-base font-black text-green-950">
+                    <p className="truncate text-sm font-black text-green-950">
                       {player.pos === 1 ? "👑 " : ""}
                       {player.name}
                       {player.bonusIcons.length > 0 && (
@@ -1361,11 +1390,9 @@ useEffect(() => {
                     </p>
                   </div>
 
-                  <p className="text-xs font-semibold text-slate-500">
-                    {player.pos === 1
-                      ? `Leader • ${progressText(player.through)}`
-                      : progressText(player.through)}
-                  </p>
+                  <p className="text-[11px] font-semibold text-slate-500">
+  {progressText(player.through)}
+</p>
                 </div>
               </div>
 
@@ -1385,7 +1412,7 @@ useEffect(() => {
                   {player.movement.icon}
                 </span>
 
-                <p className="min-w-10 text-right text-xl font-black leading-none text-green-950">
+                <p className="min-w-8 text-right text-lg font-black leading-none text-green-950">
                   {player.points}
                 </p>
               </div>
@@ -1394,20 +1421,20 @@ useEffect(() => {
         </div>
       </section>
 
-      <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-        <div className="mb-3">
-          <h2 className="text-xl font-black text-green-950">
+      <section className="mt-2.5 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+        <div className="mb-2">
+          <h2 className="text-lg font-black text-green-950">
             🎙️ Commentary Feed
           </h2>
 
-          <p className="text-xs font-semibold text-slate-400">
-            Pick and choose updates to paste into WhatsApp
-          </p>
+          <p className="text-[11px] font-semibold text-slate-400">
+  Tap Copy to share an update
+</p>
         </div>
 
        
 
-        <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
+        <div className="max-h-80 space-y-1.5 overflow-y-auto pr-1">
   {moments.length === 0 && (
     <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center">
       <p className="text-sm font-black text-green-950">
@@ -1430,7 +1457,7 @@ useEffect(() => {
   return (
     <div
       key={momentKey}
-      className={`rounded-2xl border border-l-4 p-3 transition-all ${
+      className={`rounded-xl border border-l-4 px-3 py-2.5 transition-all ${
         hasBeenCopied
           ? "border-slate-300 bg-slate-100 opacity-70"
           : moment.rarity === "major"
@@ -1446,7 +1473,7 @@ useEffect(() => {
                     {moment.icon} {moment.title}
                   </p>
 
-                  <p className="mt-1 text-sm font-black leading-snug text-green-950">
+                  <p className="mt-0.5 text-sm font-bold leading-snug text-green-950">
                     {moment.text}
                   </p>
                 </div>
@@ -1473,20 +1500,26 @@ useEffect(() => {
         </div>
       </section>
 
-      <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-2xl font-black text-green-950">📝 Live Scoring</h2>
+     <section className="mt-2.5 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+  <div className="flex items-center justify-between gap-3">
+    <div className="min-w-0">
+      <h2 className="text-lg font-black text-green-950">
+        📝 Live Scoring
+      </h2>
 
-        <p className="mt-1 text-sm text-slate-600">
-          For nominated scorers only. Enter hole-by-hole scores for your group.
-        </p>
+      <p className="mt-0.5 text-xs text-slate-500">
+        Enter your group&apos;s scores
+      </p>
+    </div>
 
-        <Link
-          href="/live-scoring-v2"
-          className="mt-3 flex w-full items-center justify-center rounded-2xl bg-green-700 px-5 py-3.5 text-base font-black text-white"
-        >
-          Scorecards →
-        </Link>
-      </section>
+    <Link
+      href="/live-scoring-v2"
+      className="shrink-0 rounded-xl bg-green-700 px-4 py-2.5 text-sm font-black text-white"
+    >
+      Scorecards →
+    </Link>
+  </div>
+</section>
     </PageContainer>
   );
 }

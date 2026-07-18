@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { COURSES, getCourseById } from "../../lib/courses";
 import { getPlayers } from "../../lib/players";
 import {
@@ -33,6 +33,7 @@ type PairSetup = {
 
 type RoundSetup = {
   roundNumber: number;
+  date: string;
   courseId: string;
   format: RoundFormat;
   groupCount: number;
@@ -74,9 +75,10 @@ function makeEmptyPairs(): PairSetup[] {
 
 function makeRound(roundNumber: number, courseId: string): RoundSetup {
   return {
-    roundNumber,
-    courseId,
-    format: "stableford",
+  roundNumber,
+  date: "",
+  courseId,
+  format: "stableford",
     groupCount: 1,
     teeTimes: [""],
     groups: [makeEmptyGroup()],
@@ -87,12 +89,27 @@ function makeRound(roundNumber: number, courseId: string): RoundSetup {
     nearestPinHoles: [],
   };
 }
+function formatRoundDate(dateValue: string) {
+  if (!dateValue) return "";
 
+  const date = new Date(`${dateValue}T12:00:00`);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
 export default function SetupV2Page() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [eventName, setEventName] = useState("");
   const [editingSlug, setEditingSlug] = useState("");
 const [showEditor, setShowEditor] = useState(false);
+const [savedTournamentsOpen, setSavedTournamentsOpen] = useState(true);
+const editorRef = useRef<HTMLDivElement | null>(null);
   const [roundCount, setRoundCount] = useState<1 | 2>(1);
   const [rounds, setRounds] = useState<RoundSetup[]>([
     makeRound(1, COURSES[0]?.id ?? ""),
@@ -334,11 +351,13 @@ const groups = useGroups
     },
   ];
 
-        return {
-          id: round.roundNumber,
-          roundNumber: round.roundNumber,
-          day: `Round ${round.roundNumber}`,
-          courseId: round.courseId,
+       
+         return {
+  id: round.roundNumber,
+  roundNumber: round.roundNumber,
+  day: `Round ${round.roundNumber}`,
+  date: round.date,
+  courseId: round.courseId,
           courseName: course?.name,
           course: course?.shortName ?? course?.name,
           format: round.format === "scramble" ? "scramblePairs" : "stableford",
@@ -557,6 +576,18 @@ useGroups,
     );
   }
 
+function openEditor() {
+  setShowEditor(true);
+  setSavedTournamentsOpen(false);
+
+  setTimeout(() => {
+    editorRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }, 100);
+}
+
 function handleNewTournament() {
   setEditingSlug("");
   setEventName("");
@@ -568,7 +599,7 @@ function handleNewTournament() {
 
   setUseGroups(false);
   setSaveMessage("New tournament started.");
-  setShowEditor(true);
+  openEditor();
 }
 
   async function handleSaveTournament() {
@@ -659,9 +690,10 @@ setUseGroups(Boolean(tournament.useGroups ?? hasRealGroups));
         const groupCount = round.groups?.length || 1;
 
         return {
-          roundNumber: round.roundNumber ?? round.id ?? index + 1,
-          courseId: round.courseId,
-          format:
+  roundNumber: round.roundNumber ?? round.id ?? index + 1,
+  date: round.date ?? round.roundDate ?? round.round_date ?? "",
+  courseId: round.courseId,
+  format:
             round.format === "scramblePairs" || round.format === "scramble"
               ? "scramble"
               : "stableford",
@@ -807,18 +839,42 @@ async function handleResetTournament(tournament: any) {
 </button>
 
 
- <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-black">Saved Tournaments</h2>
+ <section className="rounded-3xl border border-slate-200 bg-white shadow-sm">
+  <div className="flex items-center justify-between gap-3 p-4">
+    <button
+      type="button"
+      onClick={() => setSavedTournamentsOpen((current) => !current)}
+      className="flex min-w-0 flex-1 items-center justify-between gap-3 text-left"
+    >
+      <div>
+        <h2 className="text-lg font-black text-green-950">
+          Saved Tournaments
+        </h2>
 
-            <button
-              type="button"
-              onClick={loadSavedTournaments}
-              className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-black text-green-950 hover:bg-green-50"
-            >
-              Refresh
-            </button>
-          </div>
+        <p className="mt-1 text-xs font-semibold text-slate-500">
+          {savedTournaments.length} saved
+          {!savedTournamentsOpen && showEditor ? " • Editing below" : ""}
+        </p>
+      </div>
+
+      <span className="shrink-0 text-sm font-black text-green-700">
+        {savedTournamentsOpen ? "Collapse ▲" : "Open ▼"}
+      </span>
+    </button>
+
+    {savedTournamentsOpen && (
+      <button
+        type="button"
+        onClick={loadSavedTournaments}
+        className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-black text-green-950 hover:bg-green-50"
+      >
+        Refresh
+      </button>
+    )}
+  </div>
+
+  {savedTournamentsOpen && (
+    <div className="border-t border-slate-200 p-4">
 
           {isLoadingTournaments ? (
             <p className="mt-3 text-slate-400">Loading...</p>
@@ -889,7 +945,8 @@ async function handleResetTournament(tournament: any) {
           key={round.id ?? round.roundNumber ?? index}
           className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600"
         >
-          {course} · {format}
+          {round.date ? `${formatRoundDate(round.date)} · ` : ""}
+{course} · {format}
         </span>
       );
     })}
@@ -904,7 +961,7 @@ async function handleResetTournament(tournament: any) {
                       type="button"
                       onClick={() => {
   loadTournamentIntoEditor(tournament);
-  setShowEditor(true);
+  openEditor();
 }}
                       className="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-black text-slate-950"
                     >
@@ -942,10 +999,13 @@ async function handleResetTournament(tournament: any) {
                 </div>
               ))}
             </div>
-          )}
-        </section>
+                    )}
+        </div>
+      )}
+    </section>
+
 {showEditor && (
-  <>
+  <div ref={editorRef} className="scroll-mt-4">
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
   
 
@@ -968,56 +1028,14 @@ async function handleResetTournament(tournament: any) {
   
 </section>
 
-        <details className="group rounded-3xl border border-slate-200 bg-white shadow-sm">
-  <summary className="cursor-pointer list-none px-4 py-4">
-    <div className="flex items-center justify-between gap-3">
-      <div>
-        <h2 className="text-lg font-black text-green-950">
-          Tournament Rounds
-        </h2>
-
-        <p className="mt-1 text-sm text-slate-500">
-          {roundCount} round{roundCount === 1 ? "" : "s"}
-        </p>
-      </div>
-
-      <span className="text-sm font-black text-green-700 group-open:hidden">
-        Open
-      </span>
-
-      <span className="hidden text-sm font-black text-green-700 group-open:inline">
-        Close
-      </span>
-    </div>
-  </summary>
-
-  <div className="border-t border-slate-200 p-4">
-    <div className="grid grid-cols-2 gap-3">
-
-            {[1, 2].map((count) => (
-              <button
-                key={count}
-                type="button"
-                onClick={() => setRoundCount(count as 1 | 2)}
-                className={`rounded-xl border px-4 py-4 text-left font-black ${
-                  roundCount === count
-                    ? "border-emerald-400 bg-emerald-500 text-slate-950"
-                    : "border-slate-200 bg-white text-green-950"
-                }`}
-              >
-                {count} Round{count === 2 ? "s" : ""}
-              </button>
-            ))}
-              </div>
-  </div>
-</details>
+    
 
         <details className="group rounded-3xl border border-slate-200 bg-white shadow-sm">
   <summary className="cursor-pointer list-none px-4 py-4">
     <div className="flex items-center justify-between gap-3">
       <div>
         <h2 className="text-lg font-black text-green-950">
-          Players
+          Select Players
         </h2>
 
         <p className="mt-1 text-sm text-slate-500">
@@ -1067,96 +1085,23 @@ async function handleResetTournament(tournament: any) {
   </div>
 </details>
 
-       <details className="group rounded-3xl border border-slate-200 bg-white shadow-sm">
-  <summary className="cursor-pointer list-none px-4 py-4">
-    <div className="flex items-center justify-between gap-3">
-      <div>
-        <h2 className="text-lg font-black text-green-950">
-          Event Type
-        </h2>
-
-        <p className="mt-1 text-sm text-slate-500">
-          {teamMode === "teams" ? "Team Event" : "Individual Event"}
-        </p>
-      </div>
-
-      <span className="text-sm font-black text-green-700 group-open:hidden">
-        Open
-      </span>
-
-      <span className="hidden text-sm font-black text-green-700 group-open:inline">
-        Close
-      </span>
-    </div>
-  </summary>
-
-  <div className="border-t border-slate-200 p-4">
-    <div className="grid grid-cols-2 gap-3">
-       
-            <button
-              type="button"
-              onClick={() => setTeamMode("none")}
-              className={`rounded-xl border p-4 text-left font-black ${
-                teamMode === "none"
-                  ? "border-emerald-400 bg-emerald-500 text-slate-950"
-                  : "border-slate-200 bg-white text-green-950"
-              }`}
-            >
-              👤 Individual Event
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setTeamMode("teams")}
-              className={`rounded-xl border p-4 text-left font-black ${
-                teamMode === "teams"
-                  ? "border-emerald-400 bg-emerald-500 text-slate-950"
-                  : "border-slate-200 bg-white text-green-950"
-              }`}
-            >
-              👥 Team Event
-            </button>
-          </div>
-
-        {teamMode === "teams" && (
-  <div className="mt-4 grid grid-cols-4 gap-2">
-    {teams.map((team) => {
-      const dotClass =
-        team === "White"
-          ? "border border-slate-400 bg-white"
-          : team === "Blue"
-          ? "bg-blue-500"
-          : team === "Green"
-          ? "bg-green-500"
-          : "bg-red-500";
-
-      return (
-        <div
-          key={team}
-          className="flex items-center justify-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-1.5 py-2 text-[11px] font-black text-green-950"
-        >
-          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dotClass}`} />
-          <span className="truncate">{team}</span>
-        </div>
-      );
-      })}
-  </div>
-)}
-  </div>
-</details>
+      
 
 <details className="group rounded-3xl border border-slate-200 bg-white shadow-sm">
   <summary className="cursor-pointer list-none px-4 py-4">
     <div className="flex items-center justify-between gap-3">
       <div>
         <h2 className="text-lg font-black text-green-950">
-          Tournament Handicaps / Teams
-        </h2>
+  Tournament Setup
+</h2>
 
         <p className="mt-1 text-sm text-slate-500">
-          {selectedPlayers.length} players
-          {teamMode === "teams" ? " • Teams included" : ""}
-        </p>
+  {roundCount} round{roundCount === 1 ? "" : "s"}
+  {" • "}
+  {selectedPlayers.length} players
+  {" • "}
+  {teamMode === "teams" ? "Team event" : "Individual event"}
+</p>
       </div>
 
       <span className="text-sm font-black text-green-700 group-open:hidden">
@@ -1170,10 +1115,103 @@ async function handleResetTournament(tournament: any) {
   </summary>
 
   <div className="border-t border-slate-200 p-4">
-    <p className="text-sm text-slate-500">
+  <div>
+    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+      Number of Rounds
+    </p>
+
+    <div className="mt-2 grid grid-cols-2 gap-2">
+      {[1, 2].map((count) => (
+        <button
+          key={count}
+          type="button"
+          onClick={() => setRoundCount(count as 1 | 2)}
+          className={`rounded-xl border px-3 py-3 text-sm font-black ${
+            roundCount === count
+              ? "border-emerald-500 bg-emerald-500 text-slate-950"
+              : "border-slate-200 bg-white text-green-950"
+          }`}
+        >
+          {count} Round{count === 2 ? "s" : ""}
+        </button>
+      ))}
+    </div>
+  </div>
+
+  <div className="mt-5 border-t border-slate-200 pt-4">
+    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+      Event Type
+    </p>
+
+    <div className="mt-2 grid grid-cols-2 gap-2">
+      <button
+        type="button"
+        onClick={() => setTeamMode("none")}
+        className={`rounded-xl border px-3 py-3 text-sm font-black ${
+          teamMode === "none"
+            ? "border-emerald-500 bg-emerald-500 text-slate-950"
+            : "border-slate-200 bg-white text-green-950"
+        }`}
+      >
+        👤 Individual
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setTeamMode("teams")}
+        className={`rounded-xl border px-3 py-3 text-sm font-black ${
+          teamMode === "teams"
+            ? "border-emerald-500 bg-emerald-500 text-slate-950"
+            : "border-slate-200 bg-white text-green-950"
+        }`}
+      >
+        👥 Teams
+      </button>
+       </div>
+  </div>
+
+  <div className="mt-5 border-t border-slate-200 pt-4">
+    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+      Playing Structure
+    </p>
+
+    <div className="mt-2 grid grid-cols-2 gap-2">
+      <button
+        type="button"
+        onClick={() => setUseGroups(false)}
+        className={`rounded-xl border px-3 py-3 text-sm font-black ${
+          !useGroups
+            ? "border-emerald-500 bg-emerald-500 text-slate-950"
+            : "border-slate-200 bg-white text-green-950"
+        }`}
+      >
+        👥 Single Tee Time
+      </button>
+
+      <button
+        type="button"
+        onClick={() => setUseGroups(true)}
+        className={`rounded-xl border px-3 py-3 text-sm font-black ${
+          useGroups
+            ? "border-emerald-500 bg-emerald-500 text-slate-950"
+            : "border-slate-200 bg-white text-green-950"
+        }`}
+      >
+        ⛳ Multiple Tee Times
+      </button>
+    </div>
+  </div>
+
+  <div className="mt-5 border-t border-slate-200 pt-4">
+    <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+      Player Handicaps
+    </p>
+
+    <p className="mt-1 text-sm text-slate-500">
       Enter each player&apos;s tournament handicap
       {teamMode === "teams" ? " and assign their team." : "."}
     </p>
+  </div>
 
     {selectedPlayers.length > 0 && (
       <div
@@ -1251,62 +1289,7 @@ async function handleResetTournament(tournament: any) {
 
 
 
-<details className="group rounded-3xl border border-slate-200 bg-white shadow-sm">
-  <summary className="cursor-pointer list-none px-4 py-4">
-    <div className="flex items-center justify-between gap-3">
-      <div>
-        <h2 className="text-lg font-black text-green-950">
-          Single or Multiple Tee Times?
-        </h2>
 
-        <p className="mt-1 text-sm text-slate-500">
-          {useGroups ? "Multiple Tee Times" : "Single Tee Time"}
-        </p>
-      </div>
-
-      <span className="text-sm font-black text-green-700 group-open:hidden">
-        Open
-      </span>
-
-      <span className="hidden text-sm font-black text-green-700 group-open:inline">
-        Close
-      </span>
-    </div>
-  </summary>
-
-  <div className="border-t border-slate-200 p-4">
-    
-
-    <div className="mt-4 grid grid-cols-2 gap-3">
-
-
-
-    <button
-      type="button"
-      onClick={() => setUseGroups(false)}
-      className={`rounded-2xl border p-4 font-black ${
-        !useGroups
-         ? "border-emerald-400 bg-emerald-500 text-slate-950"
-                  : "border-slate-200 bg-white text-green-950"
-      }`}
-    >
-      👥 Single Tee Time
-    </button>
-
-    <button
-      type="button"
-      onClick={() => setUseGroups(true)}
-      className={`rounded-2xl border p-4 font-black ${
-        useGroups
-          ? "border-emerald-400 bg-emerald-500 text-slate-950"
-                  : "border-slate-200 bg-white text-green-950"
-      }`}
-    >
-      ⛳ Multiple Tee Times
-    </button>
-     </div>
-  </div>
-</details>
         {rounds.map((round) => {
           const course = getCourseById(round.courseId);
 
@@ -1323,12 +1306,19 @@ async function handleResetTournament(tournament: any) {
         </h2>
 
         <p className="mt-1 text-sm text-slate-500">
-          {course?.shortName ?? course?.name ?? "Choose course"}
-          {" • "}
-          {round.format === "scramble"
-            ? "Scramble Pairs"
-            : "Stableford"}
-        </p>
+  {round.date && (
+    <>
+      {formatRoundDate(round.date)}
+      {" • "}
+    </>
+  )}
+
+  {course?.shortName ?? course?.name ?? "Choose course"}
+  {" • "}
+  {round.format === "scramble"
+    ? "Scramble Pairs"
+    : "Stableford"}
+</p>
       </div>
 
       <span className="text-sm font-black text-green-700 group-open:hidden">
@@ -1342,11 +1332,30 @@ async function handleResetTournament(tournament: any) {
   </summary>
 
   <div className="border-t border-slate-200 p-5">
-    <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="text-sm font-bold text-slate-600">
-                    Course
-                  </label>
+    <div className="grid gap-3 sm:grid-cols-3">
+  <div>
+    <label className="text-sm font-bold text-slate-600">
+      Round Date
+    </label>
+
+    <input
+      type="date"
+      value={round.date}
+      onChange={(event) =>
+        updateRound(
+          round.roundNumber,
+          "date",
+          event.target.value
+        )
+      }
+      className="mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 font-bold text-green-950"
+    />
+  </div>
+
+  <div>
+    <label className="text-sm font-bold text-slate-600">
+      Course
+    </label>
                   <select
                     value={round.courseId}
                     onChange={(event) =>
@@ -1842,8 +1851,8 @@ async function handleResetTournament(tournament: any) {
   ⛳ Go to Scorecards
 </a>
 </section>
-  </>
-)}   
+    </div>
+)} 
       </div>
     </main>
   );
