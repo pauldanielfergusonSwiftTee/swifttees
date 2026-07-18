@@ -5,7 +5,7 @@ import PageHeader from "@/components/PageHeader";
 
 const events = [
   {
-    title: "Carden Park",
+    title: "Carden Park 2026",
     date: "July 2026",
     label: "Next Event",
     description:
@@ -15,28 +15,28 @@ const events = [
     featured: true,
   },
   {
-    title: "Mottram Hall",
+    title: "Mottram Hall 2026",
     label: "March 2026",
     href: "/events/mottram-hall-march-2026",
     image: "/images/mottram-march-2026/photo-1.png",
     featured: false,
   },
   {
-    title: "Shrigley Hall",
+    title: "Shrigley Hall 2025",
     label: "September 2025",
     href: "/events/shrigley-hall-september-2025",
     image: "/images/shrigley-25/shrigley-bg.jpg",
     featured: false,
   },
   {
-    title: "Mottram Hall",
+    title: "Mottram Hall 2025",
     label: "June 2025",
     href: "/events/mottram-hall-june-2025",
     image: "/images/mottram-25/mottram-25-bg.JPG",
     featured: false,
   },
   {
-    title: "Tarporley",
+    title: "Tarporley 2025",
     label: "April 2025",
     href: "/events/tarporley-april-2025",
     image: "/images/portal-25/portal-25-bg.jpg",
