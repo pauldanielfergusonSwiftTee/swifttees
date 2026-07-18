@@ -246,7 +246,7 @@ export default function Home() {
           className="group relative mb-8 block overflow-hidden rounded-3xl border border-green-900 bg-green-950 p-6 text-white shadow-sm md:p-8"
         >
           <Image
-            src="/images/mainpage/main3.jpeg"
+            src="/images/mainpage/main5.png"
             alt=""
             fill
             sizes="100vw"
