@@ -409,6 +409,28 @@ export default function CardenParkEventPage() {
         </div>
       </div>
     </div>
+
+<div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+  <div className="flex items-start gap-3">
+    <span className="text-3xl">🚫</span>
+
+    <div>
+      <p className="text-xs font-black uppercase tracking-wide text-red-700">
+        Putting
+      </p>
+
+      <h3 className="text-lg font-black text-green-950">
+        No Gimmies
+      </h3>
+
+      <p className="mt-1 text-sm leading-6 text-slate-700">
+        Every putt must be holed out. No gimmies. Adds to the pressure. 
+      </p>
+    </div>
+  </div>
+</div>
+
+
   </div>
 </section>
 

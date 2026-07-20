@@ -13,6 +13,15 @@ import {
 
 import { supabase } from "@/lib/supabase";
 import { getLiveMoments, saveLiveMoment } from "@/lib/liveMoments";
+import {
+  buildStablefordEvent,
+  buildScrambleEvent,
+} from "@/lib/commentary/eventBuilders";
+import { buildCommentary } from "@/lib/commentary/commentaryEngine";
+import type {
+  CommentaryTier,
+  CommentaryEventType,
+} from "@/lib/commentary/types";
 
 function getPositionStorageKey(eventSlug: string) {
   return `swift-tees-${eventSlug}-live-centre-positions`;
@@ -104,6 +113,15 @@ type LatestScrambleInfo = {
   holeNumber: number;
   points: number;
   roundNumber: number;
+};
+
+type ScramblePairStanding = {
+  pairKey: string;
+  playerIds: number[];
+  pairNames: string;
+  points: number;
+  through: number;
+  pos: number;
 };
 
 function movementStyle(icon: string) {
@@ -235,6 +253,42 @@ function getStoredPositions(eventSlug: string) {
   }
 }
 
+function getStoredPairStandings(eventSlug: string) {
+  if (typeof window === "undefined") return {};
+
+  try {
+    return JSON.parse(
+      localStorage.getItem(
+        `swift-tees-${eventSlug}-pair-positions`
+      ) ?? "{}"
+    );
+  } catch {
+    return {};
+  }
+}
+
+function saveStoredPairStandings(
+  standings: ScramblePairStanding[],
+  eventSlug: string
+) {
+  if (typeof window === "undefined") return;
+
+  const data = Object.fromEntries(
+    standings.map((pair) => [
+      pair.pairKey,
+      {
+        pos: pair.pos,
+        points: pair.points,
+      },
+    ])
+  );
+
+  localStorage.setItem(
+    `swift-tees-${eventSlug}-pair-positions`,
+    JSON.stringify(data)
+  );
+}
+
 function saveStoredPositions(
   rows: LeaderboardRow[],
   eventSlug: string
@@ -286,6 +340,9 @@ function clearStoredLeaderboardState(eventSlug: string) {
   localStorage.removeItem(getMovementStorageKey(eventSlug));
   localStorage.removeItem(getScoreSignatureStorageKey(eventSlug));
   localStorage.removeItem(getCopiedMomentsStorageKey(eventSlug));
+  localStorage.removeItem(
+  `swift-tees-${eventSlug}-pair-positions`
+);
 }
 
 function buildScoreSignature(
@@ -445,6 +502,72 @@ function getLatestScrambleInfo(
   };
 }
 
+function buildScramblePairStandings(
+  scrambleScores: any[],
+  tournamentSetup: any,
+  players: any[],
+  currentRoundNumber: number
+): ScramblePairStanding[] {
+  const pairs: Record<
+    string,
+    Omit<ScramblePairStanding, "pos">
+  > = {};
+
+  scrambleScores
+    .filter(
+      (score: any) =>
+        Number(score.round_number) ===
+        Number(currentRoundNumber)
+    )
+    .forEach((score: any) => {
+      const pairInfo = getPairInfoForScrambleScore(
+        score,
+        tournamentSetup,
+        players
+      );
+
+      if (
+        pairInfo.playerIds.length === 0 ||
+        !pairInfo.pairNames
+      ) {
+        return;
+      }
+
+      const pairKey = pairInfo.playerIds
+        .slice()
+        .sort((a, b) => a - b)
+        .join("-");
+
+      if (!pairs[pairKey]) {
+        pairs[pairKey] = {
+          pairKey,
+          playerIds: pairInfo.playerIds,
+          pairNames: pairInfo.pairNames,
+          points: 0,
+          through: 0,
+        };
+      }
+
+      pairs[pairKey].points += Number(score.points ?? 0);
+
+      pairs[pairKey].through = Math.max(
+        pairs[pairKey].through,
+        Number(score.hole_number ?? 0)
+      );
+    });
+
+  return Object.values(pairs)
+    .sort(
+      (a, b) =>
+        b.points - a.points ||
+        b.through - a.through
+    )
+    .map((pair, index) => ({
+      ...pair,
+      pos: index + 1,
+    }));
+}
+
 function formatPlaceMovement(oldPosition: number | undefined, newPosition: number) {
   if (!oldPosition) {
     return {
@@ -517,7 +640,39 @@ function buildTeams(rows: LeaderboardRow[]) {
     }));
 }
 
+function commentaryTierToRarity(
+  tier: CommentaryTier
+): Moment["rarity"] {
+  if (tier === "major" || tier === "rare") {
+    return "major";
+  }
 
+  if (tier === "notable") {
+    return "rare";
+  }
+
+  return "common";
+}
+
+function stablefordMomentType(eventType: CommentaryEventType) {
+  switch (eventType) {
+    case "eagle":
+      return "stableford_eagle";
+
+    case "birdie":
+      return "stableford_birdie";
+
+    case "bogey":
+      return "stableford_bogey";
+
+    case "double_bogey_or_worse":
+      return "stableford_disaster";
+
+    case "par":
+    default:
+      return "stableford_score";
+  }
+}
 
 function formatWhatsAppMoment(moment: Moment) {
   return `🚨 ${moment.title.toUpperCase()}
@@ -565,127 +720,119 @@ function buildLatestStablefordMoment(
   if (!latestStablefordScore) return null;
 
   const player = players.find(
-    (item: any) => Number(item.id) === Number(latestStablefordScore.player_id)
+    (item: any) =>
+      Number(item.id) ===
+      Number(latestStablefordScore.player_id)
   );
 
   if (!player) return null;
 
-  const roundNumber = Number(latestStablefordScore.round_number);
-  const holeNumber = Number(latestStablefordScore.hole_number);
-  const gross = Number(latestStablefordScore.gross_score ?? 0);
-  const points = Number(latestStablefordScore.points ?? 0);
-  const par = getHolePar(currentRound, holeNumber);
-  const scoreIcon = getScoreIconFromGross(gross, par);
-  const leaderboardRow = leaderboard.find((row) => Number(row.id) === Number(player.id));
+  const leaderboardRow = leaderboard.find(
+    (row) => Number(row.id) === Number(player.id)
+  );
 
-  if (scoreIcon === "🦅") {
-    return {
-      event_slug: EVENT_SLUG,
-      moment_key: `stableford-eagle-${roundNumber}-${player.id}-${holeNumber}`,
-      moment_type: "stableford_eagle",
-      player_id: Number(player.id),
-      player_name: player.name,
-      team: player.team || null,
-      round_number: roundNumber,
-      hole_number: holeNumber,
-      icon: "🦅",
-      title: "Eagle Alert",
-      text: `${player.name} makes eagle on hole ${holeNumber}. Big move.`,
-      rarity: "major",
-    };
+  const commentaryEvent = buildStablefordEvent(
+    latestStablefordScore,
+    {
+      ...player,
+      team: leaderboardRow?.team ?? player.team ?? "",
+    },
+    currentRound
+  );
+
+  if (!commentaryEvent) return null;
+
+  const commentary = buildCommentary(commentaryEvent);
+
+  const roundNumber = commentaryEvent.roundNumber;
+  const holeNumber = commentaryEvent.holeNumber;
+
+  let momentKey = `stableford-score-${roundNumber}-${player.id}-${holeNumber}`;
+
+  if (commentaryEvent.eventType === "birdie") {
+    momentKey = `stableford-birdie-${roundNumber}-${player.id}-${holeNumber}`;
   }
 
-  if (scoreIcon === "🐦") {
-    return {
-      event_slug: EVENT_SLUG,
-      moment_key: `stableford-birdie-${roundNumber}-${player.id}-${holeNumber}`,
-      moment_type: "stableford_birdie",
-      player_id: Number(player.id),
-      player_name: player.name,
-      team: player.team || null,
-      round_number: roundNumber,
-      hole_number: holeNumber,
-      icon: "🐦",
-      title: "Birdie Alert",
-      text: `${player.name} birdies hole ${holeNumber}${
-        leaderboardRow ? ` and moves to ${leaderboardRow.points} points` : ""
-      }.`,
-      rarity: "rare",
-    };
+  if (commentaryEvent.eventType === "eagle") {
+    momentKey = `stableford-eagle-${roundNumber}-${player.id}-${holeNumber}`;
   }
 
   return {
     event_slug: EVENT_SLUG,
-    moment_key: `stableford-score-${roundNumber}-${player.id}-${holeNumber}`,
-    moment_type: "stableford_score",
+    moment_key: momentKey,
+    moment_type: stablefordMomentType(
+      commentaryEvent.eventType
+    ),
+
     player_id: Number(player.id),
     player_name: player.name,
-    team: player.team || null,
+    team: leaderboardRow?.team ?? player.team ?? null,
+
     round_number: roundNumber,
     hole_number: holeNumber,
-    icon: "⛳",
-    title: "Latest Score",
-    text: `${player.name} scores ${gross || "saved"} on hole ${holeNumber}${
-      points ? ` for ${points} point${points === 1 ? "" : "s"}` : ""
-    }.`,
-    rarity: "common",
+
+    icon: commentary.icon,
+    title: commentary.title,
+    text: commentary.text,
+
+    rarity: commentaryTierToRarity(commentary.tier),
   };
 }
+
+
 
 function buildLatestScrambleMoment(
   latestScrambleInfo: LatestScrambleInfo | null
 ): LiveMomentRow | null {
-  if (!latestScrambleInfo) return null;
+  const commentaryEvent = buildScrambleEvent(latestScrambleInfo);
 
-  if (latestScrambleInfo.icon === "🦅") {
-    return {
-      event_slug: EVENT_SLUG,
-      moment_key: `scramble-eagle-${latestScrambleInfo.roundNumber}-${latestScrambleInfo.playerIds.join("-")}-${latestScrambleInfo.holeNumber}`,
-      moment_type: "scramble_eagle",
-      player_id: null,
-      player_name: latestScrambleInfo.pairNames,
-      team: null,
-      round_number: latestScrambleInfo.roundNumber,
-      hole_number: latestScrambleInfo.holeNumber,
-      icon: "🦅",
-      title: "Scramble Eagle",
-      text: `${latestScrambleInfo.pairNames} make eagle on hole ${latestScrambleInfo.holeNumber}.`,
-      rarity: "major",
-    };
+  if (!commentaryEvent || !latestScrambleInfo) return null;
+if (commentaryEvent.eventType === "scramble_score") {
+  return null;
+
+}
+  const commentary = buildCommentary(commentaryEvent);
+
+  let momentType = "scramble_score";
+  let momentKey = `scramble-score-${latestScrambleInfo.roundNumber}-${latestScrambleInfo.playerIds.join(
+    "-"
+  )}-${latestScrambleInfo.holeNumber}`;
+
+  if (commentaryEvent.eventType === "scramble_birdie") {
+    momentType = "scramble_birdie";
+    momentKey = `scramble-birdie-${
+      latestScrambleInfo.roundNumber
+    }-${latestScrambleInfo.playerIds.join("-")}-${
+      latestScrambleInfo.holeNumber
+    }`;
   }
 
-  if (latestScrambleInfo.icon === "🐦") {
-    return {
-      event_slug: EVENT_SLUG,
-      moment_key: `scramble-birdie-${latestScrambleInfo.roundNumber}-${latestScrambleInfo.playerIds.join("-")}-${latestScrambleInfo.holeNumber}`,
-      moment_type: "scramble_birdie",
-      player_id: null,
-      player_name: latestScrambleInfo.pairNames,
-      team: null,
-      round_number: latestScrambleInfo.roundNumber,
-      hole_number: latestScrambleInfo.holeNumber,
-      icon: "🐦",
-      title: "Scramble Birdie",
-      text: `${latestScrambleInfo.pairNames} make birdie on hole ${latestScrambleInfo.holeNumber}.`,
-      rarity: "rare",
-    };
+  if (commentaryEvent.eventType === "scramble_eagle") {
+    momentType = "scramble_eagle";
+    momentKey = `scramble-eagle-${
+      latestScrambleInfo.roundNumber
+    }-${latestScrambleInfo.playerIds.join("-")}-${
+      latestScrambleInfo.holeNumber
+    }`;
   }
 
   return {
     event_slug: EVENT_SLUG,
-    moment_key: `scramble-score-${latestScrambleInfo.roundNumber}-${latestScrambleInfo.playerIds.join("-")}-${latestScrambleInfo.holeNumber}`,
-    moment_type: "scramble_score",
+    moment_key: momentKey,
+    moment_type: momentType,
+
     player_id: null,
     player_name: latestScrambleInfo.pairNames,
     team: null,
+
     round_number: latestScrambleInfo.roundNumber,
     hole_number: latestScrambleInfo.holeNumber,
-    icon: "🤝",
-    title: "Scramble Update",
-    text: `${latestScrambleInfo.pairNames} score ${latestScrambleInfo.points} point${
-      latestScrambleInfo.points === 1 ? "" : "s"
-    } on hole ${latestScrambleInfo.holeNumber}.`,
-    rarity: latestScrambleInfo.points >= 4 ? "rare" : "common",
+
+    icon: commentary.icon,
+    title: commentary.title,
+    text: commentary.text,
+
+    rarity: commentaryTierToRarity(commentary.tier),
   };
 }
 
@@ -771,8 +918,16 @@ function buildMovementMoments(leaderboard: LeaderboardRow[]): LiveMomentRow[] {
 
 function buildBattleMoments(
   leaderboard: LeaderboardRow[],
-  teamStandings: TeamStanding[]
+  teamStandings: TeamStanding[],
+  currentRound: any
 ): LiveMomentRow[] {
+  if (
+    currentRound?.format === "scramblePairs" ||
+    currentRound?.format === "scramble"
+  ) {
+    return [];
+  }
+
   const moments: LiveMomentRow[] = [];
   const leader = leaderboard[0];
   const second = leaderboard[1];
@@ -934,7 +1089,20 @@ setCurrentRound(currentRoundInfo.round ?? null);
       tournamentSetup,
       players
     );
+const scramblePairStandings =
+  buildScramblePairStandings(
+    scrambleScores,
+    tournamentSetup,
+    players,
+    currentRoundInfo.roundNumber
+  );
 
+  const previousPairStandings =
+  getStoredPairStandings(eventSlug);
+  console.log(
+  "SCRAMBLE PAIR STANDINGS:",
+  scramblePairStandings
+);
     const scramblePointsByPlayerId: Record<number, number> = {};
     const scrambleThroughByPlayerId: Record<number, number> = {};
     const bonusPointsByPlayerName: Record<string, number> = {};
@@ -1156,7 +1324,11 @@ const generatedMoments = hasScoringActivity
       buildLatestScrambleMoment(latestScrambleInfo),
       ...buildBonusMoments(bonusWinners),
       ...buildMovementMoments(finalRows),
-      ...buildBattleMoments(finalRows, sortedTeams),
+      ...buildBattleMoments(
+  finalRows,
+  sortedTeams,
+  currentRoundInfo.round
+),
     ].filter(Boolean) as LiveMomentRow[])
   : [];
 
@@ -1170,8 +1342,21 @@ if (!hasScoringActivity && typeof window !== "undefined") {
 
 const refreshedMoments = await getLiveMoments(eventSlug);
 
+const isScrambleRound =
+  currentRoundInfo.round?.format === "scramblePairs" ||
+  currentRoundInfo.round?.format === "scramble";
+
 const visibleMoments = hasScoringActivity
-  ? refreshedMoments ?? []
+  ? (refreshedMoments ?? []).filter(
+      (moment: LiveMomentRow) =>
+        !(
+          isScrambleRound &&
+          (
+            moment.moment_type === "battle_alert" ||
+            moment.moment_type === "scramble_score"
+          )
+        )
+    )
   : [];
 
 setLeaderboard(finalRows);
@@ -1187,7 +1372,10 @@ setMoments(visibleMoments);
 if (eventSlug && hasScoringActivity && scoreStateChanged) {
   saveStoredPositions(finalRows, eventSlug);
   saveStoredMovement(finalRows, eventSlug);
-
+saveStoredPairStandings(
+  scramblePairStandings,
+  eventSlug
+);
   if (typeof window !== "undefined") {
     localStorage.setItem(
       getScoreSignatureStorageKey(eventSlug),
@@ -1469,9 +1657,20 @@ useEffect(() => {
     >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-wide text-green-700">
-                    {moment.icon} {moment.title}
-                  </p>
+                  <div className="flex items-center gap-2">
+  <p className="text-[10px] font-black uppercase tracking-wide text-green-700">
+    {moment.icon} {moment.title}
+  </p>
+
+  {moment.created_at && (
+    <span className="text-[10px] font-semibold text-slate-400">
+      {new Date(moment.created_at).toLocaleTimeString("en-GB", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}
+    </span>
+  )}
+</div>
 
                   <p className="mt-0.5 text-sm font-bold leading-snug text-green-950">
                     {moment.text}
