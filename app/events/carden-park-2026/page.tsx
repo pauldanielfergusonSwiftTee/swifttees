@@ -266,13 +266,11 @@ export default function CardenParkEventPage() {
           <p className="mt-2 text-sm leading-6 text-slate-700">
             Show the <span className="font-bold">sticker attached to your room key</span> to receive
             <span className="font-bold text-green-800"> 10% off all drinks </span>
-            across every bar throughout the resort.
+            across every bar throughout the weekend.
           </p>
         </div>
 
-        <span className="shrink-0 rounded-full bg-green-600 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-white shadow">
-          SAVE ON EVERY ROUND
-        </span>
+        
       </div>
     </div>
 
