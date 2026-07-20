@@ -225,6 +225,69 @@ export default function CardenParkEventPage() {
      
   </div>
 </section>
+
+<section className="mb-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+  <p className="text-sm font-bold text-green-700">
+    Arrival Information
+  </p>
+
+  <h2 className="mb-4 text-2xl font-black text-green-950">
+    📍 Before You Tee Off
+  </h2>
+
+  <div className="space-y-3">
+
+    <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+      <p className="text-xs font-black uppercase tracking-wide text-blue-700">
+        Check In
+      </p>
+
+      <h3 className="mt-1 text-lg font-black text-green-950">
+        🏌️ Check In at Clubhouse Pro Shop
+      </h3>
+
+      <p className="mt-2 text-sm leading-6 text-slate-700">
+        On arrival, head straight to the <span className="font-bold">Clubhouse Pro Shop</span> to
+        check in. Our contact is Matthew Parry.
+      </p>
+    </div>
+
+    <div className="rounded-2xl border border-green-300 bg-gradient-to-r from-green-50 to-emerald-50 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-wide text-green-700">
+            Drinks Discount
+          </p>
+
+          <h3 className="mt-1 text-lg font-black text-green-950">
+            🍺 10% Off Across All Bars
+          </h3>
+
+          <p className="mt-2 text-sm leading-6 text-slate-700">
+            Show the <span className="font-bold">sticker attached to your room key</span> to receive
+            <span className="font-bold text-green-800"> 10% off all drinks </span>
+            across every bar throughout the resort.
+          </p>
+        </div>
+
+        <span className="shrink-0 rounded-full bg-green-600 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-white shadow">
+          SAVE ON EVERY ROUND
+        </span>
+      </div>
+    </div>
+
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <p className="text-xs font-black uppercase tracking-wide text-slate-600">
+        Sat Nav
+      </p>
+
+      <p className="mt-1 text-3xl font-black tracking-wide text-green-950">
+        📍 SY14 7HZ
+      </p>
+    </div>
+
+  </div>
+</section>
 <section className="mb-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
   <p className="text-sm font-bold text-green-700">
     Competition Format
@@ -338,11 +401,11 @@ export default function CardenParkEventPage() {
           </p>
 
           <h3 className="text-lg font-black text-green-950">
-            One Borrowed Drive
+            Borrowed Drives
           </h3>
 
           <p className="mt-1 text-sm leading-6 text-slate-700">
-            Taz may choose to use his partner&apos;s drive on any hole
+            Taz may choose to use his partner&apos;s drive on any holes
             both days.
           </p>
         </div>
@@ -370,7 +433,7 @@ export default function CardenParkEventPage() {
         </p>
 
         <h3 className="text-lg font-black text-green-950">
-          Redmond's Restaurant
+          Redmond's Brasserie
         </h3>
       </div>
     </div>
@@ -384,9 +447,9 @@ export default function CardenParkEventPage() {
       </div>
 
       <div className="flex justify-between rounded-xl bg-white px-3 py-2">
-        <span className="font-bold">🍽️ Dinner</span>
+        <span className="font-bold">🍽️ Evening Meal </span>
         <span className="font-black text-green-900">
-          From 6:00pm
+          8:45pm
         </span>
       </div>
 
@@ -407,7 +470,7 @@ export default function CardenParkEventPage() {
   <div className="grid gap-3 md:grid-cols-2">
     <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
       <p className="text-xs font-black uppercase tracking-wide text-blue-700">
-        Available Facilities
+        Facilities Included
       </p>
 
       <ul className="mt-3 space-y-2 text-sm font-medium text-slate-700">
@@ -426,18 +489,20 @@ export default function CardenParkEventPage() {
 
       <div className="mt-3 space-y-3">
         <div className="flex justify-between rounded-xl bg-white px-3 py-2">
-          <span className="font-bold">Mon – Fri</span>
+          <span className="font-bold">Sunday</span>
+          <span className="font-black text-green-900">
+            7:00am – 8:00pm
+          </span>
+        </div>
+
+        <div className="flex justify-between rounded-xl bg-white px-3 py-2">
+          <span className="font-bold">Monday</span>
           <span className="font-black text-green-900">
             6:30am – 9:00pm
           </span>
         </div>
 
-        <div className="flex justify-between rounded-xl bg-white px-3 py-2">
-          <span className="font-bold">Sat – Sun</span>
-          <span className="font-black text-green-900">
-            7:00am – 8:00pm
-          </span>
-        </div>
+        
 
         
       </div>
