@@ -35,8 +35,6 @@ function selectTemplate(
   return templates[index];
 }
 
-
-
 const birdieTemplates: CommentaryTemplate[] = [
   {
     id: "birdie-clinical",
@@ -55,11 +53,11 @@ const birdieTemplates: CommentaryTemplate[] = [
     tier: "notable",
   },
   {
-    id: "birdie-sky-sports",
+    id: "birdie-quality",
     icon: "🐦",
-    title: () => "Shot Made",
+    title: () => "Quality Golf",
     text: (event) =>
-      `That is quality from ${event.playerName}. Birdie secured at hole ${event.holeNumber}.`,
+      `That is excellent from ${event.playerName}. Birdie secured at hole ${event.holeNumber}.`,
     tier: "notable",
   },
   {
@@ -76,6 +74,110 @@ const birdieTemplates: CommentaryTemplate[] = [
     title: () => "Birdie Business",
     text: (event) =>
       `${event.playerName} quietly removes a shot from the card at hole ${event.holeNumber}. Very tidy.`,
+    tier: "notable",
+  },
+  {
+    id: "birdie-dangerous",
+    icon: "🔥",
+    title: () => "Looking Dangerous",
+    text: (event) =>
+      `${event.playerName} picks up a birdie on ${event.holeNumber} and is beginning to look dangerous.`,
+    tier: "notable",
+  },
+  {
+    id: "birdie-circle",
+    icon: "🐦",
+    title: () => "Circle on the Card",
+    text: (event) =>
+      `Another circle goes onto the card for ${event.playerName} at hole ${event.holeNumber}.`,
+    tier: "notable",
+  },
+  {
+    id: "birdie-reward",
+    icon: "🐦",
+    title: () => "Reward Earned",
+    text: (event) =>
+      `${event.playerName} gets the reward at ${event.holeNumber}. A very well-earned birdie.`,
+    tier: "notable",
+  },
+  {
+    id: "birdie-putter",
+    icon: "🎯",
+    title: () => "Putter Wakes Up",
+    text: (event) =>
+      `${event.playerName}'s putter delivers at hole ${event.holeNumber}. Birdie.`,
+    tier: "notable",
+  },
+  {
+    id: "birdie-noiseless",
+    icon: "🐦",
+    title: () => "Quietly Done",
+    text: (event) =>
+      `No fuss from ${event.playerName}. Just a birdie at ${event.holeNumber} and straight onto the next tee.`,
+    tier: "notable",
+  },
+  {
+    id: "birdie-answer",
+    icon: "💪",
+    title: () => "Strong Answer",
+    text: (event) =>
+      `${event.playerName} answers with a birdie on hole ${event.holeNumber}. That is a confident response.`,
+    tier: "notable",
+  },
+  {
+    id: "birdie-statement",
+    icon: "📣",
+    title: () => "Statement Made",
+    text: (event) =>
+      `Birdie for ${event.playerName} at ${event.holeNumber}. A little message sent to the rest of the field.`,
+    tier: "notable",
+  },
+  {
+    id: "birdie-cash-in",
+    icon: "🐦",
+    title: () => "Chance Taken",
+    text: (event) =>
+      `${event.playerName} cashes in at hole ${event.holeNumber}. Birdie safely banked.`,
+    tier: "notable",
+  },
+  {
+    id: "birdie-timing",
+    icon: "⏱️",
+    title: () => "Perfect Timing",
+    text: (event) =>
+      `A timely birdie for ${event.playerName} on hole ${event.holeNumber}.`,
+    tier: "notable",
+  },
+  {
+    id: "birdie-leaderboard",
+    icon: "📈",
+    title: () => "Leaderboard Move",
+    text: (event) =>
+      `${event.playerName} makes birdie at ${event.holeNumber}. That will improve the view of the leaderboard.`,
+    tier: "notable",
+  },
+  {
+    id: "birdie-clean",
+    icon: "🐦",
+    title: () => "Clean Work",
+    text: (event) =>
+      `Clean, controlled and converted. ${event.playerName} birdies hole ${event.holeNumber}.`,
+    tier: "notable",
+  },
+  {
+    id: "birdie-refuses",
+    icon: "🔥",
+    title: () => "Still in the Fight",
+    text: (event) =>
+      `${event.playerName} refuses to go away. Birdie at hole ${event.holeNumber}.`,
+    tier: "notable",
+  },
+  {
+    id: "birdie-problem",
+    icon: "⚠️",
+    title: () => "Problem for the Field",
+    text: (event) =>
+      `One swing, one putt, one more problem for everyone else. Birdie for ${event.playerName} on ${event.holeNumber}.`,
     tier: "notable",
   },
 ];
@@ -103,6 +205,46 @@ const eagleTemplates: CommentaryTemplate[] = [
     title: () => "Statement Made",
     text: (event) =>
       `Eagle for ${event.playerName}. Hole ${event.holeNumber} has just delivered a major tournament moment.`,
+    tier: "major",
+  },
+  {
+    id: "eagle-stunner",
+    icon: "🤯",
+    title: () => "Stunning Golf",
+    text: (event) =>
+      `${event.playerName} lights up hole ${event.holeNumber} with an eagle. Sensational.`,
+    tier: "major",
+  },
+  {
+    id: "eagle-two-shot-swing",
+    icon: "🦅",
+    title: () => "Two-Shot Swing",
+    text: (event) =>
+      `A huge leap forward for ${event.playerName}. Eagle at hole ${event.holeNumber}.`,
+    tier: "major",
+  },
+  {
+    id: "eagle-roar",
+    icon: "📣",
+    title: () => "Roar Around the Course",
+    text: (event) =>
+      `That will be heard around the course. ${event.playerName} makes eagle on ${event.holeNumber}.`,
+    tier: "major",
+  },
+  {
+    id: "eagle-highlight",
+    icon: "🎥",
+    title: () => "Highlight Reel",
+    text: (event) =>
+      `${event.playerName} delivers a highlight-reel eagle at hole ${event.holeNumber}.`,
+    tier: "major",
+  },
+  {
+    id: "eagle-tournament",
+    icon: "🏆",
+    title: () => "Tournament Moment",
+    text: (event) =>
+      `Eagle for ${event.playerName} on ${event.holeNumber}. That is the kind of score tournaments turn on.`,
     tier: "major",
   },
 ];
@@ -140,6 +282,70 @@ const parTemplates: CommentaryTemplate[] = [
       `Fairway, green, par. ${event.playerName} keeps things under control on ${event.holeNumber}.`,
     tier: "normal",
   },
+  {
+    id: "par-solid",
+    icon: "⛳",
+    title: () => "Solid Work",
+    text: (event) =>
+      `${event.playerName} keeps the card tidy with par at hole ${event.holeNumber}.`,
+    tier: "normal",
+  },
+  {
+    id: "par-bank",
+    icon: "🏦",
+    title: () => "Par Banked",
+    text: (event) =>
+      `Par safely banked by ${event.playerName} on hole ${event.holeNumber}.`,
+    tier: "normal",
+  },
+  {
+    id: "par-quiet",
+    icon: "⛳",
+    title: () => "Quiet Progress",
+    text: (event) =>
+      `${event.playerName} makes an uneventful par at ${event.holeNumber}. Exactly the point.`,
+    tier: "normal",
+  },
+  {
+    id: "par-steady-hands",
+    icon: "👐",
+    title: () => "Steady Hands",
+    text: (event) =>
+      `Nothing spectacular, nothing wasted. Par for ${event.playerName} on ${event.holeNumber}.`,
+    tier: "normal",
+  },
+  {
+    id: "par-hold",
+    icon: "🧱",
+    title: () => "Holding Firm",
+    text: (event) =>
+      `${event.playerName} holds firm with par at hole ${event.holeNumber}.`,
+    tier: "normal",
+  },
+  {
+    id: "par-clean-card",
+    icon: "✅",
+    title: () => "Card Kept Clean",
+    text: (event) =>
+      `A clean par for ${event.playerName} at ${event.holeNumber}. No damage done.`,
+    tier: "normal",
+  },
+  {
+    id: "par-routine",
+    icon: "⛳",
+    title: () => "Routine Work",
+    text: (event) =>
+      `${event.playerName} makes hole ${event.holeNumber} look pleasantly straightforward.`,
+    tier: "normal",
+  },
+  {
+    id: "par-next",
+    icon: "➡️",
+    title: () => "On to the Next",
+    text: (event) =>
+      `Par for ${event.playerName} at ${event.holeNumber}. Take it and move on.`,
+    tier: "normal",
+  },
 ];
 
 const bogeyTemplates: CommentaryTemplate[] = [
@@ -175,6 +381,70 @@ const bogeyTemplates: CommentaryTemplate[] = [
       `Hole ${event.holeNumber} takes one from ${event.playerName}. Bogey recorded.`,
     tier: "normal",
   },
+  {
+    id: "bogey-not-script",
+    icon: "😬",
+    title: () => "Not in the Script",
+    text: (event) =>
+      `${event.playerName} walks off ${event.holeNumber} with bogey. That was not part of the plan.`,
+    tier: "normal",
+  },
+  {
+    id: "bogey-stumble",
+    icon: "📉",
+    title: () => "Brief Stumble",
+    text: (event) =>
+      `A stumble for ${event.playerName} at hole ${event.holeNumber}, but there is plenty of golf left.`,
+    tier: "normal",
+  },
+  {
+    id: "bogey-one-back",
+    icon: "↩️",
+    title: () => "One Given Back",
+    text: (event) =>
+      `${event.playerName} hands one back to the course at ${event.holeNumber}.`,
+    tier: "normal",
+  },
+  {
+    id: "bogey-frustration",
+    icon: "😤",
+    title: () => "Frustrating Finish",
+    text: (event) =>
+      `Bogey for ${event.playerName} on ${event.holeNumber}. A frustrating end to the hole.`,
+    tier: "normal",
+  },
+  {
+    id: "bogey-damage-limited",
+    icon: "🛠️",
+    title: () => "Damage Limited",
+    text: (event) =>
+      `${event.playerName} escapes hole ${event.holeNumber} with only a bogey.`,
+    tier: "normal",
+  },
+  {
+    id: "bogey-course-wins",
+    icon: "🌳",
+    title: () => "Course Wins That One",
+    text: (event) =>
+      `The course takes the point on ${event.holeNumber}. Bogey for ${event.playerName}.`,
+    tier: "normal",
+  },
+  {
+    id: "bogey-reset",
+    icon: "🔄",
+    title: () => "Reset Required",
+    text: (event) =>
+      `${event.playerName} drops a shot at ${event.holeNumber}. Reset and go again.`,
+    tier: "normal",
+  },
+  {
+    id: "bogey-not-fatal",
+    icon: "📉",
+    title: () => "No Disaster",
+    text: (event) =>
+      `A bogey goes on the card for ${event.playerName} at ${event.holeNumber}. Recoverable.`,
+    tier: "normal",
+  },
 ];
 
 const disasterTemplates: CommentaryTemplate[] = [
@@ -202,7 +472,64 @@ const disasterTemplates: CommentaryTemplate[] = [
       `A difficult hole for ${event.playerName}. A search party may be required for the scorecard.`,
     tier: "notable",
   },
+  {
+    id: "disaster-forget",
+    icon: "🗑️",
+    title: () => "One to Forget",
+    text: (event) =>
+      `${event.playerName} will be deleting hole ${event.holeNumber} from the memory bank immediately.`,
+    tier: "notable",
+  },
+  {
+    id: "disaster-spiral",
+    icon: "🌀",
+    title: () => "Things Escalated",
+    text: (event) =>
+      `Hole ${event.holeNumber} escalated quickly for ${event.playerName}.`,
+    tier: "notable",
+  },
+  {
+    id: "disaster-survival",
+    icon: "🆘",
+    title: () => "Survival Mode",
+    text: (event) =>
+      `${event.playerName} eventually reaches the safety of the next tee after a bruising hole ${event.holeNumber}.`,
+    tier: "notable",
+  },
+  {
+    id: "disaster-scorecard",
+    icon: "✏️",
+    title: () => "Plenty of Ink",
+    text: (event) =>
+      `The pencil needed overtime for ${event.playerName} on hole ${event.holeNumber}.`,
+    tier: "notable",
+  },
+  {
+    id: "disaster-course-bites",
+    icon: "🦷",
+    title: () => "Course Bites Back",
+    text: (event) =>
+      `The course bites back hard at ${event.playerName} on hole ${event.holeNumber}.`,
+    tier: "notable",
+  },
+  {
+    id: "disaster-no-footage",
+    icon: "📵",
+    title: () => "Footage Withheld",
+    text: (event) =>
+      `For everyone's sake, footage of ${event.playerName}'s hole ${event.holeNumber} will not be replayed.`,
+    tier: "notable",
+  },
+  {
+    id: "disaster-rebuild",
+    icon: "🔧",
+    title: () => "Rebuild Needed",
+    text: (event) =>
+      `Major repairs are required after hole ${event.holeNumber} for ${event.playerName}.`,
+    tier: "notable",
+  },
 ];
+
 const scrambleEagleTemplates: CommentaryTemplate[] = [
   {
     id: "scramble-eagle-perfect",
@@ -225,10 +552,35 @@ const scrambleEagleTemplates: CommentaryTemplate[] = [
     icon: "🦅",
     title: () => "Statement Made",
     text: (event) =>
-      `${event.playerName} produce one of the shots of the day: eagle at ${event.holeNumber}.`,
+      `${event.playerName} produce one of the moments of the day: eagle at ${event.holeNumber}.`,
+    tier: "major",
+  },
+  {
+    id: "scramble-eagle-partnership",
+    icon: "🤝",
+    title: () => "Partnership Perfected",
+    text: (event) =>
+      `${event.playerName} piece the hole together perfectly and walk off ${event.holeNumber} with eagle.`,
+    tier: "major",
+  },
+  {
+    id: "scramble-eagle-surge",
+    icon: "🚀",
+    title: () => "Pair Surging",
+    text: (event) =>
+      `A massive eagle for ${event.playerName} at hole ${event.holeNumber}.`,
+    tier: "major",
+  },
+  {
+    id: "scramble-eagle-roar",
+    icon: "📣",
+    title: () => "Huge Roar",
+    text: (event) =>
+      `${event.playerName} deliver an eagle on ${event.holeNumber}. The scramble leaderboard has been warned.`,
     tier: "major",
   },
 ];
+
 const scrambleBirdieTemplates: CommentaryTemplate[] = [
   {
     id: "scramble-birdie-teamwork",
@@ -254,6 +606,46 @@ const scrambleBirdieTemplates: CommentaryTemplate[] = [
       `Excellent scramble golf from ${event.playerName}. Birdie at hole ${event.holeNumber}.`,
     tier: "notable",
   },
+  {
+    id: "scramble-birdie-combination",
+    icon: "🧩",
+    title: () => "Perfect Combination",
+    text: (event) =>
+      `${event.playerName} put the pieces together for birdie on hole ${event.holeNumber}.`,
+    tier: "notable",
+  },
+  {
+    id: "scramble-birdie-pressure",
+    icon: "🎯",
+    title: () => "Pressure Applied",
+    text: (event) =>
+      `${event.playerName} add a scramble birdie at ${event.holeNumber} and turn up the pressure.`,
+    tier: "notable",
+  },
+  {
+    id: "scramble-birdie-clean",
+    icon: "🐦",
+    title: () => "Clean Pair Golf",
+    text: (event) =>
+      `A clean, efficient birdie for ${event.playerName} on hole ${event.holeNumber}.`,
+    tier: "notable",
+  },
+  {
+    id: "scramble-birdie-synchronised",
+    icon: "🤝",
+    title: () => "In Sync",
+    text: (event) =>
+      `${event.playerName} are in sync at ${event.holeNumber}. Birdie secured.`,
+    tier: "notable",
+  },
+  {
+    id: "scramble-birdie-bank",
+    icon: "🏦",
+    title: () => "Birdie Banked",
+    text: (event) =>
+      `${event.playerName} bank another scramble birdie at hole ${event.holeNumber}.`,
+    tier: "notable",
+  },
 ];
 
 const scrambleTemplates: CommentaryTemplate[] = [
@@ -277,6 +669,30 @@ const scrambleTemplates: CommentaryTemplate[] = [
     title: () => "Score Posted",
     text: (event) =>
       `${event.playerName} add another completed hole to the card at ${event.holeNumber}.`,
+    tier: "normal",
+  },
+  {
+    id: "scramble-progress",
+    icon: "➡️",
+    title: () => "Pair Progress",
+    text: (event) =>
+      `${event.playerName} move through hole ${event.holeNumber} and continue their round.`,
+    tier: "normal",
+  },
+  {
+    id: "scramble-in",
+    icon: "📝",
+    title: () => "Card Updated",
+    text: (event) =>
+      `The score is in for ${event.playerName} at hole ${event.holeNumber}.`,
+    tier: "normal",
+  },
+  {
+    id: "scramble-next",
+    icon: "🤝",
+    title: () => "On They Go",
+    text: (event) =>
+      `${event.playerName} finish hole ${event.holeNumber} and head to the next tee.`,
     tier: "normal",
   },
 ];
@@ -306,6 +722,46 @@ const bonusTemplates: CommentaryTemplate[] = [
       `${event.playerName} wins the bonus contest at hole ${event.holeNumber}.`,
     tier: "major",
   },
+  {
+    id: "bonus-delivery",
+    icon: "🎯",
+    title: () => "Delivered Under Pressure",
+    text: (event) =>
+      `${event.playerName} delivers when it matters and takes the bonus on hole ${event.holeNumber}.`,
+    tier: "major",
+  },
+  {
+    id: "bonus-name-board",
+    icon: "📋",
+    title: () => "Name on the Board",
+    text: (event) =>
+      `${event.playerName}'s name goes onto the bonus board at hole ${event.holeNumber}.`,
+    tier: "major",
+  },
+  {
+    id: "bonus-society-glory",
+    icon: "🏅",
+    title: () => "Society Glory",
+    text: (event) =>
+      `Bonus-hole glory belongs to ${event.playerName} at ${event.holeNumber}.`,
+    tier: "major",
+  },
+  {
+    id: "bonus-pressure",
+    icon: "💪",
+    title: () => "Pressure Handled",
+    text: (event) =>
+      `${event.playerName} handles the bonus-hole pressure and takes the prize.`,
+    tier: "major",
+  },
+  {
+    id: "bonus-rights",
+    icon: "👑",
+    title: () => "Rights Secured",
+    text: (event) =>
+      `${event.playerName} owns the bragging rights after winning the contest on hole ${event.holeNumber}.`,
+    tier: "major",
+  },
 ];
 
 function getTemplatesForEvent(event: CommentaryEvent) {
@@ -325,8 +781,8 @@ function getTemplatesForEvent(event: CommentaryEvent) {
     case "double_bogey_or_worse":
       return disasterTemplates;
 
-      case "scramble_eagle":
-  return scrambleEagleTemplates;
+    case "scramble_eagle":
+      return scrambleEagleTemplates;
 
     case "scramble_birdie":
       return scrambleBirdieTemplates;
