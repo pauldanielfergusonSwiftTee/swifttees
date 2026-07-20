@@ -23,6 +23,11 @@ import {
   buildScrambleEvent,
 } from "@/lib/commentary/eventBuilders";
 
+import {
+  getPrimaryStoryline,
+  type Storyline,
+} from "@/lib/commentary/storylineEngine";
+
 import type {
   CommentaryTier,
   CommentaryEventType,
@@ -682,6 +687,82 @@ function commentaryTierToRarity(
   return "common";
 }
 
+function storylineToLiveMoment(
+  storyline: Storyline,
+  eventSlug: string,
+  currentRoundNumber: number
+): LiveMomentRow {
+  return {
+    event_slug: eventSlug,
+    moment_key: `storyline-${storyline.key}`,
+    moment_type: `storyline_${storyline.kind}`,
+
+    player_id: storyline.playerId ?? null,
+    player_name:
+      storyline.playerName ??
+      storyline.pairNames ??
+      null,
+
+    team: storyline.team ?? null,
+
+    round_number:
+      storyline.roundNumber ??
+      currentRoundNumber ??
+      null,
+
+    hole_number: storyline.holeNumber ?? null,
+
+    icon: storyline.icon,
+    title: storyline.title,
+    text: storyline.text,
+
+    rarity: commentaryTierToRarity(storyline.tier),
+  };
+}
+
+function removeMomentsDuplicatedByStoryline(
+  moments: LiveMomentRow[],
+  storyline: Storyline | null
+): LiveMomentRow[] {
+  if (!storyline) return moments;
+
+  const blockedMomentTypes = new Set<string>();
+
+  if (
+    storyline.kind === "new_leader" ||
+    storyline.kind === "joined_lead" ||
+    storyline.kind === "within_one" ||
+    storyline.kind === "lead_extended"
+  ) {
+    blockedMomentTypes.add("battle_alert");
+  }
+
+  if (
+    storyline.kind === "big_climber" ||
+    storyline.kind === "pair_recovery"
+  ) {
+    blockedMomentTypes.add("movement_up");
+    blockedMomentTypes.add("scramble_movement_up");
+  }
+
+  if (storyline.kind === "big_drop") {
+    blockedMomentTypes.add("movement_down");
+  }
+
+  if (
+    storyline.kind === "team_lead_change" ||
+    storyline.kind === "team_pressure"
+  ) {
+    blockedMomentTypes.add("team_battle");
+  }
+
+  return moments.filter(
+    (moment) =>
+      moment.moment_key === `storyline-${storyline.key}` ||
+      !blockedMomentTypes.has(moment.moment_type)
+  );
+}
+
 function stablefordMomentType(eventType: CommentaryEventType) {
   switch (eventType) {
     case "eagle":
@@ -705,9 +786,7 @@ function stablefordMomentType(eventType: CommentaryEventType) {
 function formatWhatsAppMoment(moment: Moment) {
   return `🚨 ${moment.title.toUpperCase()}
 
-${moment.icon} ${moment.text}
-
-#SwiftTees`;
+${moment.icon} ${moment.text}`;
 }
 
 
@@ -734,9 +813,7 @@ function formatLeaderboardCopy(
 ${playerLines}
 
 🥊 Team Race
-${teamLines}
-
-#SwiftTees`;
+${teamLines}`;
 }
 
 function buildLatestStablefordMoment(
@@ -1675,35 +1752,111 @@ const rowsWithPositions = rows.map((player, index) => {
 
 const sortedTeams = hasTeams ? buildTeams(finalRows) : [];
 
+const primaryStoryline = scoreStateChanged
+  ? getPrimaryStoryline({
+      eventSlug,
+
+      players: players.map((player: any) => ({
+        id: Number(player.id),
+        name: player.name,
+        team: player.team ?? "",
+        eventTeam:
+          tournament.players?.find(
+            (tournamentPlayer: any) =>
+              Number(tournamentPlayer.id) === Number(player.id)
+          )?.eventTeam ?? "",
+      })),
+
+      scores: stablefordScores,
+      scrambleScores,
+
+      rounds: tournamentSetup.rounds,
+
+      leaderboard: finalRows.map((row) => ({
+        id: Number(row.id),
+        name: row.name,
+        team: row.team,
+        pos: row.pos,
+        points: row.points,
+        through: row.through,
+        movement: row.movement,
+      })),
+
+      previousPositions,
+
+      teamStandings: sortedTeams.map((team) => ({
+        team: team.team,
+        points: team.points,
+        through: team.through,
+      })),
+
+      pairStandings: scramblePairStandings,
+
+      previousPairStandings,
+
+      latestPlayerId: latestStablefordScore
+        ? Number(latestStablefordScore.player_id)
+        : null,
+
+      currentRoundNumber: currentRoundInfo.roundNumber,
+
+      totalHoles:
+        Array.isArray(currentRoundInfo.round?.holes) &&
+        currentRoundInfo.round.holes.length > 0
+          ? currentRoundInfo.round.holes.length
+          : 18,
+    })
+  : null;
+
+ const storylineMoment = primaryStoryline
+  ? storylineToLiveMoment(
+      primaryStoryline,
+      eventSlug,
+      currentRoundInfo.roundNumber
+    )
+  : null; 
+
 const generatedMoments = hasScoringActivity
   ? ([
       buildLatestStablefordMoment(
-  latestStablefordScore,
-  players,
-  currentRoundInfo.round,
-  finalRows,
-  previousPositions,
-  scoreStateChanged
-),
-    buildLatestScrambleMoment(
-  latestScrambleInfo,
-  players,
-  scramblePairStandings,
-  previousPairStandings,
-  scoreStateChanged
-),
+        latestStablefordScore,
+        players,
+        currentRoundInfo.round,
+        finalRows,
+        previousPositions,
+        scoreStateChanged
+      ),
+
+      buildLatestScrambleMoment(
+        latestScrambleInfo,
+        players,
+        scramblePairStandings,
+        previousPairStandings,
+        scoreStateChanged
+      ),
+
+      storylineMoment,
+
       ...buildBonusMoments(bonusWinners),
+
       ...buildMovementMoments(finalRows),
+
       ...buildBattleMoments(
-  finalRows,
-  sortedTeams,
-  currentRoundInfo.round
-),
+        finalRows,
+        sortedTeams,
+        currentRoundInfo.round
+      ),
     ].filter(Boolean) as LiveMomentRow[])
   : [];
 
-if (generatedMoments.length > 0) {
-  await saveGeneratedMoments(generatedMoments);
+const filteredGeneratedMoments =
+  removeMomentsDuplicatedByStoryline(
+    generatedMoments,
+    primaryStoryline
+  );
+
+if (filteredGeneratedMoments.length > 0) {
+  await saveGeneratedMoments(filteredGeneratedMoments);
 }
 
 if (!hasScoringActivity && typeof window !== "undefined") {
