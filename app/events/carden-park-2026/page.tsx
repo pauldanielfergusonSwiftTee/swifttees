@@ -205,23 +205,246 @@ export default function CardenParkEventPage() {
   
 
   <div className="space-y-3">
+     <div className="rounded-2xl bg-slate-50 p-3">
+      <p className="text-xs font-black uppercase text-green-700">Meeting</p>
+      <p className="font-black text-green-950">Sunday 26th. 10am. Bengarth Road</p>
+    </div>
     <div className="rounded-2xl bg-slate-50 p-3">
       <p className="text-xs font-black uppercase text-green-700">Sunday 26 July</p>
-      <p className="font-black text-green-950">Cheshire Course · 13:10</p>
+      <p className="font-black text-green-950">Cheshire Course · First Tee 13:10</p>
     </div>
 
-    <div className="rounded-2xl bg-slate-50 p-3">
+   
+     <div className="rounded-2xl bg-slate-50 p-3">
       <p className="text-xs font-black uppercase text-green-700">Monday 27 July</p>
-      <p className="font-black text-green-950">Nicklaus Course · 12:25</p>
+      <p className="font-black text-green-950">Nicklaus Course · First Tee 12:25</p>
     </div>
 
-    <div className="rounded-2xl bg-slate-50 p-3">
-      <p className="text-xs font-black uppercase text-green-700">Format</p>
-      <p className="font-black text-green-950">12 golfers · 3 teams · 2 rounds</p>
+
+
+     
+  </div>
+</section>
+<section className="mb-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+  <p className="text-sm font-bold text-green-700">
+    Competition Format
+  </p>
+
+  <h2 className="mb-4 text-2xl font-black text-green-950">
+    How The Weekend Works
+  </h2>
+
+  <div className="space-y-3">
+
+    <div className="rounded-2xl border border-green-200 bg-green-50 p-4">
+      <div className="flex items-center gap-3">
+        <span className="text-3xl">🤝</span>
+
+        <div>
+          <p className="text-xs font-black uppercase tracking-wide text-green-700">
+            Sunday
+          </p>
+
+          <h3 className="text-lg font-black text-green-950">
+            Team Scramble
+          </h3>
+
+          <p className="mt-1 text-sm text-slate-700">
+            Players compete in pairs, with every hole played as a scramble.
+            Stableford points are awarded to each player based on the pair's score.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+      <div className="flex items-center gap-3">
+        <span className="text-3xl">🏌️</span>
+
+        <div>
+          <p className="text-xs font-black uppercase tracking-wide text-blue-700">
+            Monday
+          </p>
+
+          <h3 className="text-lg font-black text-green-950">
+            Individual Stableford
+          </h3>
+
+          <p className="mt-1 text-sm text-slate-700">
+            Everyone plays their own ball with Stableford scoring on the Nicklaus Course.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+      <div className="flex items-center gap-3">
+        <span className="text-3xl">🏆</span>
+
+        <div>
+          <p className="text-xs font-black uppercase tracking-wide text-amber-700">
+            Overall Winner
+          </p>
+
+          <h3 className="text-lg font-black text-green-950">
+            Two Days. One Champion.
+          </h3>
+
+          <p className="mt-1 text-sm text-slate-700">
+            Points earned on both days are combined to create one overall leaderboard.
+            Every point matters right until the final putt on Monday.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section className="mb-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+  <p className="text-sm font-bold text-green-700">
+    Competition Rules
+  </p>
+
+  <h2 className="mb-4 text-2xl font-black text-green-950">
+    Weekend Rules
+  </h2>
+
+  <div className="space-y-3">
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <div className="flex items-start gap-3">
+        <span className="text-3xl">✍️</span>
+
+        <div>
+          <h3 className="text-lg font-black text-green-950">
+            Mark Your Ball
+          </h3>
+
+          <p className="mt-1 text-sm leading-6 text-slate-700">
+            All balls must be clearly marked so there is no confusion over
+            whose ball is whose during either round.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+      <div className="flex items-start gap-3">
+        <span className="text-3xl">🃏</span>
+
+        <div>
+          <p className="text-xs font-black uppercase tracking-wide text-amber-700">
+            Taz Wildcard
+          </p>
+
+          <h3 className="text-lg font-black text-green-950">
+            One Borrowed Drive
+          </h3>
+
+          <p className="mt-1 text-sm leading-6 text-slate-700">
+            Taz may choose to use his partner&apos;s drive on any hole
+            both days.
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 </section>
+
+<section className="mb-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+  <p className="text-sm font-bold text-green-700">
+    Food & Drink
+  </p>
+
+  <h2 className="mb-4 text-2xl font-black text-green-950">
+    🍽️ Dining & Bars
+  </h2>
+
+  <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+    <div className="flex items-center gap-3">
+      <span className="text-3xl">🍴</span>
+
+      <div>
+        <p className="text-xs font-black uppercase tracking-wide text-red-700">
+          Restaurant
+        </p>
+
+        <h3 className="text-lg font-black text-green-950">
+          Redmond's Restaurant
+        </h3>
+      </div>
+    </div>
+
+    <div className="mt-4 space-y-3">
+      <div className="flex justify-between rounded-xl bg-white px-3 py-2">
+        <span className="font-bold">🥐 Breakfast</span>
+        <span className="font-black text-green-900">
+          7:00am – 10:00am
+        </span>
+      </div>
+
+      <div className="flex justify-between rounded-xl bg-white px-3 py-2">
+        <span className="font-bold">🍽️ Dinner</span>
+        <span className="font-black text-green-900">
+          From 6:00pm
+        </span>
+      </div>
+
+      
+    </div>
+  </div>
+</section>
+
+<section className="mb-4 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm">
+  <p className="text-sm font-bold text-green-700">
+    Hotel Information
+  </p>
+
+  <h2 className="mb-4 text-2xl font-black text-green-950">
+    🏊 Leisure Club
+  </h2>
+
+  <div className="grid gap-3 md:grid-cols-2">
+    <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+      <p className="text-xs font-black uppercase tracking-wide text-blue-700">
+        Available Facilities
+      </p>
+
+      <ul className="mt-3 space-y-2 text-sm font-medium text-slate-700">
+        <li>🏊 20m Swimming Pool</li>
+        <li>🔥 Sauna</li>
+        <li>💨 Steam Room</li>
+        <li>💦 Hydrotherapy Pool</li>
+        <li>🏋️ Gym & Fitness Studios</li>
+      </ul>
+    </div>
+
+    <div className="rounded-2xl border border-green-200 bg-green-50 p-4">
+      <p className="text-xs font-black uppercase tracking-wide text-green-700">
+        Opening Times
+      </p>
+
+      <div className="mt-3 space-y-3">
+        <div className="flex justify-between rounded-xl bg-white px-3 py-2">
+          <span className="font-bold">Mon – Fri</span>
+          <span className="font-black text-green-900">
+            6:30am – 9:00pm
+          </span>
+        </div>
+
+        <div className="flex justify-between rounded-xl bg-white px-3 py-2">
+          <span className="font-bold">Sat – Sun</span>
+          <span className="font-black text-green-900">
+            7:00am – 8:00pm
+          </span>
+        </div>
+
         
+      </div>
+    </div>
+  </div>
+</section>
+
 <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm mb-4">
   <p className="text-sm font-bold text-green-700">Carden Cup</p>
 
