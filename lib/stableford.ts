@@ -6,8 +6,10 @@ export function calculateStablefordPoints(
 ) {
   if (!grossScore || grossScore <= 0) return 0;
 
-  const baseShots = Math.floor(handicap / 18);
-  const extraShots = handicap % 18;
+  const playingHandicap = Math.round(handicap);
+
+  const baseShots = Math.floor(playingHandicap / 18);
+  const extraShots = playingHandicap % 18;
 
   const shotsReceived =
     baseShots + (strokeIndex <= extraShots ? 1 : 0);

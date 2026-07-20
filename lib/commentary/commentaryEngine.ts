@@ -1,4 +1,8 @@
-import { PLAYER_PROFILES } from "./playerProfiles";
+import {
+  getPlayerProfile,
+  type PersonalityPhraseType,
+} from "./playerProfiles";
+
 import type {
   CommentaryEvent,
   CommentaryMoment,
@@ -31,13 +35,7 @@ function selectTemplate(
   return templates[index];
 }
 
-function possessive(name: string) {
-  return name.endsWith("s") ? `${name}'` : `${name}'s`;
-}
 
-function getPlayerProfile(playerName: string) {
-  return PLAYER_PROFILES[playerName];
-}
 
 const birdieTemplates: CommentaryTemplate[] = [
   {
@@ -344,79 +342,360 @@ function getTemplatesForEvent(event: CommentaryEvent) {
   }
 }
 
+function getPersonalityPhraseType(
+  event: CommentaryEvent
+): PersonalityPhraseType | null {
+  switch (event.eventType) {
+    case "birdie":
+      return "birdie";
+
+    case "eagle":
+      return "eagle";
+
+    case "par":
+      return "par";
+
+    case "bogey":
+      return "bogey";
+
+    case "double_bogey_or_worse":
+      return "disaster";
+
+    case "bonus_win":
+      return "rare";
+
+    default:
+      return null;
+  }
+}
+
+function selectPlayerPhrase(
+  event: CommentaryEvent,
+  phraseType: PersonalityPhraseType
+): string | null {
+  const profile = getPlayerProfile(event.playerName);
+
+  if (!profile) {
+    return null;
+  }
+
+  const phrases = profile.phrases[phraseType];
+
+  if (!phrases?.length) {
+    return null;
+  }
+
+  const phraseNumber = deterministicNumber(
+    `${event.eventKey}-${profile.key}-${phraseType}-phrase`
+  );
+
+  return phrases[phraseNumber % phrases.length];
+}
+
+function selectRunningJoke(event: CommentaryEvent): string | null {
+  const profile = getPlayerProfile(event.playerName);
+
+  if (!profile?.runningJokes.length) {
+    return null;
+  }
+
+  const jokeNumber = deterministicNumber(
+    `${event.eventKey}-${profile.key}-running-joke`
+  );
+
+  return profile.runningJokes[jokeNumber % profile.runningJokes.length];
+}
+
+function applyLeaderboardContext(
+  event: CommentaryEvent,
+  moment: CommentaryMoment
+): CommentaryMoment {
+  
+  
+   const profile = getPlayerProfile(event.playerName);
+
+if (!profile) return moment;
+
+const activeProfile = profile;
+
+function choosePhrase(
+  phraseType:
+    | "leading"
+    | "chasing"
+    | "pressure"
+    | "comeback"
+) {
+  const phrases = activeProfile.phrases[phraseType];
+
+  if (!phrases?.length) return null;
+
+  const phraseNumber = deterministicNumber(
+    `${event.eventKey}-${activeProfile.key}-${phraseType}-context`
+  );
+
+  return phrases[phraseNumber % phrases.length];
+}
+
+  /*
+    New outright leader takes highest priority.
+  */
+  if (event.isNewLeader && !event.isJointLeader) {
+    const phrase = choosePhrase("leading");
+
+    return {
+      ...moment,
+      icon: "👑",
+      title: "New Leader",
+      text:
+        phrase ??
+        `${event.playerName} moves into the outright lead.`,
+      tier: "major",
+      templateId: `${moment.templateId}-${activeProfile.key}-new-leader`,
+      storylineId: `${activeProfile.key}-lead`,
+    };
+  }
+
+  /*
+    Player has joined a tie at the top.
+  */
+  if (
+    event.isJointLeader &&
+    typeof event.positionBefore === "number" &&
+    event.positionBefore > 1
+  ) {
+    const phrase = choosePhrase("leading");
+
+    return {
+      ...moment,
+      icon: "⚔️",
+      title: "Tied at the Top",
+      text:
+        phrase ??
+        `${event.playerName} joins the leaders at the top of the table.`,
+      tier: "major",
+      templateId: `${moment.templateId}-${activeProfile.key}-joint-leader`,
+      storylineId: `${activeProfile.key}-lead`,
+    };
+  }
+
+  /*
+    A meaningful rise through the leaderboard.
+  */
+  if ((event.placesMoved ?? 0) >= 2) {
+    const phrase = choosePhrase("comeback");
+
+    return {
+      ...moment,
+      icon: "🔥",
+      title:
+        (event.placesMoved ?? 0) >= 4
+          ? "Flying Up the Table"
+          : "On the Move",
+      text:
+        phrase ??
+        `${event.playerName} climbs ${
+          event.placesMoved
+        } places on the leaderboard.`,
+      tier:
+        (event.placesMoved ?? 0) >= 4
+          ? "major"
+          : "notable",
+      templateId: `${moment.templateId}-${activeProfile.key}-comeback`,
+      storylineId: `${activeProfile.key}-charge`,
+    };
+  }
+
+  /*
+    Close enough to put pressure on the leader.
+  */
+  if (
+    event.positionAfter !== undefined &&
+    event.positionAfter > 1 &&
+    event.positionAfter <= 3 &&
+    event.leaderGap !== undefined &&
+    event.leaderGap <= 2
+  ) {
+    const phrase = choosePhrase("chasing");
+
+    return {
+      ...moment,
+      icon: "🎯",
+      title: "Closing In",
+      text: phrase
+        ? `${phrase} ${
+            event.leaderGap === 0
+              ? "They are level at the top."
+              : `${event.leaderGap} point${
+                  event.leaderGap === 1 ? "" : "s"
+                } separate them from the lead.`
+          }`
+        : `${event.playerName} is now within ${event.leaderGap} point${
+            event.leaderGap === 1 ? "" : "s"
+          } of the lead.`,
+      tier: "notable",
+      templateId: `${moment.templateId}-${activeProfile.key}-chasing`,
+      storylineId: `${activeProfile.key}-chase`,
+    };
+  }
+
+  /*
+    Closing-hole pressure for players still in contention.
+  */
+  if (
+    ["closing", "final_hole"].includes(event.tournamentStage) &&
+    event.positionAfter !== undefined &&
+    event.positionAfter <= 3
+  ) {
+    const phrase = choosePhrase("pressure");
+
+    return {
+      ...moment,
+      icon: "⏳",
+      title:
+        event.tournamentStage === "final_hole"
+          ? "Final-Hole Pressure"
+          : "Pressure Building",
+      text:
+        phrase ??
+        `${event.playerName} remains firmly involved as the closing holes arrive.`,
+      tier:
+        event.tournamentStage === "final_hole"
+          ? "major"
+          : "notable",
+      templateId: `${moment.templateId}-${activeProfile.key}-pressure`,
+      storylineId: `${activeProfile.key}-pressure`,
+    };
+  }
+
+  /*
+    The current leader extends or protects the advantage.
+  */
+  if (
+    event.positionAfter === 1 &&
+    !event.isJointLeader &&
+    ["birdie", "eagle"].includes(event.eventType)
+  ) {
+    const phrase = choosePhrase("leading");
+
+    return {
+      ...moment,
+      icon: "👑",
+      title: "Lead Strengthened",
+      text:
+        phrase ??
+        `${event.playerName} strengthens the position at the top.`,
+      tier:
+        event.eventType === "eagle"
+          ? "major"
+          : "notable",
+      templateId: `${moment.templateId}-${activeProfile.key}-leading`,
+      storylineId: `${activeProfile.key}-lead`,
+    };
+  }
+
+  return moment;
+}
+
 function applyPlayerPersonality(
   event: CommentaryEvent,
   moment: CommentaryMoment
 ): CommentaryMoment {
   const profile = getPlayerProfile(event.playerName);
 
-  if (!profile) return moment;
-
-  const personalityNumber = deterministicNumber(
-    `${event.eventKey}-${profile.key}-personality`
-  );
-
-  // Personality appears occasionally rather than in every comment.
-  if (personalityNumber % 4 !== 0) return moment;
-
-  if (
-    profile.jokeKeys.includes("organiser") &&
-    event.eventType === "birdie"
-  ) {
-    return {
-      ...moment,
-      text: `${moment.text} The organiser appears to have scheduled himself a birdie.`,
-      templateId: `${moment.templateId}-organiser`,
-    };
+  if (!profile) {
+    return moment;
   }
 
-  if (
-    profile.jokeKeys.includes("equipment") &&
-    event.eventType === "birdie"
-  ) {
-    return {
-      ...moment,
-      text: `${moment.text} The latest equipment adjustment has officially been declared a success.`,
-      templateId: `${moment.templateId}-equipment`,
-    };
-  }
+const isContextualMoment = Boolean(moment.storylineId);
 
-  if (
-    profile.jokeKeys.includes("309") &&
-    ["birdie", "eagle"].includes(event.eventType)
-  ) {
-    return {
-      ...moment,
-      text: `${moment.text} No confirmation yet whether the drive travelled 309 yards.`,
-      templateId: `${moment.templateId}-309`,
-    };
-  }
+if (isContextualMoment) {
+  const jokeNumber =
+    deterministicNumber(
+      `${event.eventKey}-${profile.key}-context-joke`
+    ) % 100;
 
-  if (
-    profile.jokeKeys.includes("birthday") &&
-    ["birdie", "eagle"].includes(event.eventType)
-  ) {
-    return {
-      ...moment,
-      text: `${moment.text} ${possessive(
-        event.playerName
-      )} birthday celebrations may have started early.`,
-      templateId: `${moment.templateId}-birthday`,
-    };
-  }
+  if (jokeNumber < 15) {
+    const runningJoke = selectRunningJoke(event);
 
-  if (
-    profile.jokeKeys.includes("flight22") &&
-    event.eventType === "birdie"
-  ) {
-    return {
-      ...moment,
-      text: `${moment.text} Flight 22 has been temporarily delayed while this is celebrated.`,
-      templateId: `${moment.templateId}-flight22`,
-    };
+    if (runningJoke) {
+      return {
+        ...moment,
+        text: `${moment.text} ${runningJoke}`,
+        templateId: `${moment.templateId}-running-joke`,
+      };
+    }
   }
 
   return moment;
+}
+
+  const phraseType = getPersonalityPhraseType(event);
+
+  if (!phraseType) {
+    return moment;
+  }
+
+  const personalityNumber =
+    deterministicNumber(
+      `${event.eventKey}-${profile.key}-personality-style`
+    ) % 100;
+
+  /*
+    Commentary mix:
+
+    0–59   = normal commentary          60%
+    60–84  = player personality         25%
+    85–94  = normal + running joke      10%
+    95–99  = rare player commentary      5%
+  */
+
+  if (personalityNumber < 60) {
+    return moment;
+  }
+
+  if (personalityNumber < 85) {
+    const personalityPhrase = selectPlayerPhrase(event, phraseType);
+
+    if (!personalityPhrase) {
+      return moment;
+    }
+
+    return {
+      ...moment,
+      text: personalityPhrase,
+      templateId: `${moment.templateId}-${profile.key}-${phraseType}`,
+    };
+  }
+
+  if (personalityNumber < 95) {
+    const runningJoke = selectRunningJoke(event);
+
+    if (!runningJoke) {
+      return moment;
+    }
+
+    return {
+      ...moment,
+      text: `${moment.text} ${runningJoke}`,
+      templateId: `${moment.templateId}-${profile.key}-running-joke`,
+    };
+  }
+
+  const rarePhrase = selectPlayerPhrase(event, "rare");
+
+  if (!rarePhrase) {
+    return moment;
+  }
+
+  return {
+    ...moment,
+    text: rarePhrase,
+    tier:
+      moment.tier === "major"
+        ? "major"
+        : "notable",
+    templateId: `${moment.templateId}-${profile.key}-rare`,
+  };
 }
 
 export function buildCommentary(
@@ -433,5 +712,32 @@ export function buildCommentary(
     templateId: template.id,
   };
 
-  return applyPlayerPersonality(event, moment);
+  const contextualMoment = applyLeaderboardContext(
+  event,
+  moment
+);
+
+return applyPlayerPersonality(
+  event,
+  contextualMoment
+);
+}
+
+export function getRunningJokeForPlayer(
+  playerName: string,
+  eventKey: string
+): string | null {
+  const profile = getPlayerProfile(playerName);
+
+  if (!profile?.runningJokes.length) {
+    return null;
+  }
+
+  const jokeNumber = deterministicNumber(
+    `${eventKey}-${profile.key}-scramble-running-joke`
+  );
+
+  return profile.runningJokes[
+    jokeNumber % profile.runningJokes.length
+  ];
 }

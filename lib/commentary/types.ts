@@ -51,6 +51,16 @@ export interface CommentaryEvent {
   positionAfter?: number;
 
   placesMoved?: number;
+
+  leaderGap?: number;
+
+  isNewLeader?: boolean;
+
+  isJointLeader?: boolean;
+
+  holesCompleted?: number;
+
+  holesRemaining?: number;
 }
 
 export interface CommentaryMoment {
