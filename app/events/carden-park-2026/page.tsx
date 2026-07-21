@@ -11,7 +11,7 @@ const players = [
     handicap: 20,
     trips: 4,
     
-    bio: "One of the stronger contenders on paper if the scorecard reflects the talk and experience. The most likely to seen examining the scorecards.",
+    bio: "One of the stronger contenders on paper if the scorecard reflects the talk and experience. The most likely to seen taking a selfie.",
   },
    {
     name: "Stu",
@@ -29,7 +29,7 @@ const players = [
     handicap: 24,
     trips: 5,
     
-    bio: "Chief organiser of Swift Tees. Quietly climbing the golfing ranks while making sure everyone else gets there on time.",
+    bio: "Chief organiser of Swift Tees. Slowly climbing the golfing ranks while making sure everyone else gets there on time.",
   },
   {
     name: "Wrighty",
@@ -38,7 +38,7 @@ const players = [
     handicap: 24,
     trips: 4,
   
-    bio: "While others obsess over handicaps and leaderboards, Wrighty is simply enjoying the ride. Usually from a suspiciously smelling buggy.",
+    bio: "While others obsess over handicaps and leaderboards, Wrighty is simply enjoying the ride. Usually from a fragrantly smelling buggy.",
   },
   {
     name: "Carl",
@@ -66,7 +66,7 @@ const players = [
     handicap: 20,
     trips: 2,
     
-    bio: "One of the society's genuine contenders. Quietly goes about his business while everyone else creates the drama.",
+    bio: "One of the society's genuine contenders. Quietly goes about his business while everyone else creates the drama. Loves a Birkdale tag.",
   },
   {
     name: "Liam",
@@ -92,11 +92,11 @@ const players = [
   {
     name: "Painy",
     team: "Green",
-    nickname: "The Options Trader",
+    nickname: "The Old Man Swing",
     handicap: 20,
     trips: 4,
     
-    bio: "Once the undisputed man to beat. Stil a solid golfer with a dangerous consistency... loves a backup plan.",
+    bio: "Once the undisputed man to beat. Still a solid golfer with a dangerous consistency... swings slow and steady.",
   },
   
   {
