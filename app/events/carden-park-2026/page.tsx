@@ -11,7 +11,7 @@ const players = [
     handicap: 20,
     trips: 4,
     
-    bio: "One of the stronger contenders on paper if the scorecard reflects the talk and experience. The most likely to seen taking a selfie.",
+    bio: "One of the stronger contenders on paper if the scorecard reflects the talk and experience. The most likely to seen calculating stableford points",
   },
    {
     name: "Stu",
