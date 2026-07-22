@@ -1070,7 +1070,7 @@ if (isContextualMoment) {
       `${event.eventKey}-${profile.key}-context-joke`
     ) % 100;
 
-  if (jokeNumber < 15) {
+  if (jokeNumber < 22) {
     const runningJoke = selectRunningJoke(event);
 
     if (runningJoke) {
@@ -1099,14 +1099,29 @@ if (isContextualMoment) {
   /*
     Commentary mix:
 
-    0–59   = normal commentary          60%
-    60–84  = player personality         25%
-    85–94  = normal + running joke      10%
-    95–99  = rare player commentary      5%
+    0–29   = broadcast commentary                 30%
+    30–64  = full player personality              35%
+    65–84  = commentary plus player personality   20%
+    85–94  = commentary plus running joke         10%
+    95–99  = rare player commentary                5%
   */
 
-  if (personalityNumber < 60) {
+  if (personalityNumber < 30) {
     return moment;
+  }
+
+  if (personalityNumber < 65) {
+    const personalityPhrase = selectPlayerPhrase(event, phraseType);
+
+    if (!personalityPhrase) {
+      return moment;
+    }
+
+    return {
+      ...moment,
+      text: personalityPhrase,
+      templateId: `${moment.templateId}-${profile.key}-${phraseType}`,
+    };
   }
 
   if (personalityNumber < 85) {
@@ -1118,8 +1133,8 @@ if (isContextualMoment) {
 
     return {
       ...moment,
-      text: personalityPhrase,
-      templateId: `${moment.templateId}-${profile.key}-${phraseType}`,
+      text: `${moment.text} ${personalityPhrase}`,
+      templateId: `${moment.templateId}-${profile.key}-personality-colour`,
     };
   }
 
@@ -1154,6 +1169,373 @@ if (isContextualMoment) {
   };
 }
 
+
+type CommentaryTemperature =
+  | "calm"
+  | "building"
+  | "hot"
+  | "pressure"
+  | "crisis";
+
+type CommentaryIntelligence = {
+  winningChance: number;
+  momentum: number;
+  pressure: number;
+  confidence: number;
+  temperature: CommentaryTemperature;
+};
+
+const clubhouseRumours = [
+  "Rumour has it the group chat is already typing.",
+  "Unofficial reports suggest this will be mentioned again over dinner.",
+  "Witnesses claim the celebration was considerably larger than the putt.",
+  "Early clubhouse reports describe the confidence levels as deeply concerning.",
+  "Sources close to the buggy say the story is already improving with every retelling.",
+  "The facts remain under review, but the bragging rights have already been claimed.",
+  "A committee statement is expected once everyone has finished arguing about it.",
+  "The clubhouse rumour mill has moved faster than the live leaderboard.",
+  "Unconfirmed reports suggest at least one playing partner is claiming partial credit.",
+  "The official version and the bar version of events may differ significantly.",
+];
+
+const crowdReactions = [
+  "Heads are turning around the course.",
+  "The clubhouse has noticed.",
+  "Phones are coming out now.",
+  "That has earned a proper reaction from the group.",
+  "There is suddenly a little more noise around this match.",
+  "Even the neighbouring group has looked across.",
+  "That one has travelled quickly through the WhatsApp group.",
+  "The reaction suggests everyone understands what that could mean.",
+  "A few scorecards are being checked with renewed interest.",
+  "The mood around the course has shifted.",
+];
+
+const golfCliches = [
+  "One shot at a time.",
+  "Never up, never in.",
+  "Take your medicine and move on.",
+  "Momentum is a funny thing.",
+  "The scorecard does not ask how.",
+  "There are no pictures on the scorecard.",
+  "Drive for show, points for dough.",
+  "Golf has a habit of finding you out.",
+  "The next shot is the only one that matters.",
+  "That is golf.",
+];
+
+const groupCommentary = [
+  "This group has suddenly become compulsory viewing.",
+  "The atmosphere in this group has changed completely.",
+  "There will be plenty of conversation on the walk to the next tee.",
+  "The rest of the group now has something to think about.",
+  "This particular fourball is producing more content than expected.",
+  "Nobody in the group is pretending not to care about the leaderboard now.",
+  "The walk to the next tee may be slightly quieter than usual.",
+  "The group dynamic has just become much more interesting.",
+];
+
+const meaningLines = {
+  positive: [
+    "What it means: the leaders have another problem to solve.",
+    "What it means: the pressure has moved elsewhere.",
+    "What it means: this challenge is very much alive.",
+    "What it means: the leaderboard is tightening at exactly the wrong time for everyone else.",
+    "What it means: confidence is growing and the gap is becoming relevant.",
+    "What it means: this is no longer a quiet round.",
+  ],
+  neutral: [
+    "What it means: position protected and no unnecessary damage.",
+    "What it means: the round keeps moving without handing anyone a gift.",
+    "What it means: steady enough, but the next opportunity matters.",
+    "What it means: no change in the story, which may be exactly the aim.",
+  ],
+  negative: [
+    "What it means: the door has opened slightly for the players behind.",
+    "What it means: the next hole has suddenly become more important.",
+    "What it means: momentum has been handed back to the field.",
+    "What it means: there is now work to do before this becomes a trend.",
+    "What it means: the pressure level has gone up a notch.",
+  ],
+};
+
+const closingExclamations = [
+  "HE HAS MADE IT!",
+  "THAT IS ENORMOUS!",
+  "WHAT A TIME TO PRODUCE THAT!",
+  "THE TOURNAMENT HAS JUST CHANGED!",
+  "NOW THEN!",
+  "THIS IS GETTING SERIOUS!",
+  "THE PRESSURE IS VERY REAL NOW!",
+  "THAT COULD BE THE MOMENT!",
+];
+
+const holeSummaryLines = {
+  positive: [
+    "Hole summary: advantage gained, message delivered.",
+    "Hole summary: one chance, fully converted.",
+    "Hole summary: that hole belongs to the scorer.",
+    "Hole summary: the card improves and the story gathers pace.",
+  ],
+  neutral: [
+    "Hole summary: no drama, no damage, onto the next.",
+    "Hole summary: position held and business completed.",
+    "Hole summary: steady work in a round that still has plenty left in it.",
+  ],
+  negative: [
+    "Hole summary: the course wins that exchange.",
+    "Hole summary: damage done, response required.",
+    "Hole summary: one to leave behind on the walk to the next tee.",
+    "Hole summary: the card has taken a hit and the recovery starts now.",
+  ],
+};
+
+function clamp(value: number, minimum: number, maximum: number) {
+  return Math.min(maximum, Math.max(minimum, value));
+}
+
+function getCommentaryIntelligence(
+  event: CommentaryEvent
+): CommentaryIntelligence {
+  const position = Number(event.positionAfter ?? 8);
+  const gap = Number(event.leaderGap ?? 8);
+  const moved = Number(event.placesMoved ?? 0);
+  const late = ["closing", "final_hole", "complete"].includes(
+    event.tournamentStage ?? ""
+  );
+
+  const positive = ["birdie", "eagle", "scramble_birdie", "scramble_eagle"].includes(
+    event.eventType
+  );
+  const negative = ["bogey", "double_bogey_or_worse"].includes(
+    event.eventType
+  );
+
+  const winningChance = clamp(
+    74 - (position - 1) * 11 - gap * 5 + (late ? 8 : 0),
+    2,
+    96
+  );
+
+  const momentum = clamp(
+    50 + (positive ? 26 : 0) - (negative ? 22 : 0) + moved * 8,
+    4,
+    98
+  );
+
+  const pressure = clamp(
+    20 + (late ? 35 : 0) + (position <= 3 ? 20 : 0) + (gap <= 2 ? 18 : 0),
+    5,
+    99
+  );
+
+  const confidence = clamp(
+    48 + (positive ? 25 : 0) - (negative ? 20 : 0) + moved * 5,
+    5,
+    98
+  );
+
+  let temperature: CommentaryTemperature = "calm";
+
+  if (negative && pressure >= 70) temperature = "crisis";
+  else if (pressure >= 75) temperature = "pressure";
+  else if (momentum >= 75) temperature = "hot";
+  else if (momentum >= 58 || pressure >= 55) temperature = "building";
+
+  return {
+    winningChance,
+    momentum,
+    pressure,
+    confidence,
+    temperature,
+  };
+}
+
+function isPositiveEvent(event: CommentaryEvent) {
+  return ["birdie", "eagle", "scramble_birdie", "scramble_eagle", "bonus_win"].includes(
+    event.eventType
+  );
+}
+
+function isNegativeEvent(event: CommentaryEvent) {
+  return ["bogey", "double_bogey_or_worse"].includes(event.eventType);
+}
+
+function eventMood(event: CommentaryEvent): "positive" | "neutral" | "negative" {
+  if (isPositiveEvent(event)) return "positive";
+  if (isNegativeEvent(event)) return "negative";
+  return "neutral";
+}
+
+function addTournamentMeaning(
+  event: CommentaryEvent,
+  moment: CommentaryMoment,
+  intelligence: CommentaryIntelligence
+): CommentaryMoment {
+  const roll = deterministicNumber(`${event.eventKey}-what-it-means`) % 100;
+
+  if (roll >= 44 && !moment.storylineId) return moment;
+
+  const mood = eventMood(event);
+  const line = selectTemplateLine(
+    `${event.eventKey}-meaning-${intelligence.temperature}`,
+    meaningLines[mood]
+  );
+
+  return {
+    ...moment,
+    text: `${moment.text} ${line}`,
+    templateId: `${moment.templateId}-meaning`,
+  };
+}
+
+function addClosingExcitement(
+  event: CommentaryEvent,
+  moment: CommentaryMoment,
+  intelligence: CommentaryIntelligence
+): CommentaryMoment {
+  const isLate = ["closing", "final_hole", "complete"].includes(
+    event.tournamentStage ?? ""
+  );
+
+  if (!isLate || !isPositiveEvent(event) || intelligence.pressure < 60) {
+    return moment;
+  }
+
+  const opening = selectTemplateLine(
+    `${event.eventKey}-closing-exclamation`,
+    closingExclamations
+  );
+
+  return {
+    ...moment,
+    icon: moment.icon === "🐦" ? "🔥" : moment.icon,
+    title:
+      event.tournamentStage === "final_hole"
+        ? "Final-Hole Drama"
+        : moment.title,
+    text: `${opening} ${moment.text}`,
+    tier: "major",
+    templateId: `${moment.templateId}-closing-excitement`,
+  };
+}
+
+function addCrowdReaction(
+  event: CommentaryEvent,
+  moment: CommentaryMoment
+): CommentaryMoment {
+  const roll = deterministicNumber(`${event.eventKey}-crowd`) % 100;
+
+  if (roll >= 24 || (!isPositiveEvent(event) && !moment.storylineId)) {
+    return moment;
+  }
+
+  return {
+    ...moment,
+    text: `${moment.text} ${selectTemplateLine(
+      `${event.eventKey}-crowd-line`,
+      crowdReactions
+    )}`,
+    templateId: `${moment.templateId}-crowd`,
+  };
+}
+
+function addGroupCommentary(
+  event: CommentaryEvent,
+  moment: CommentaryMoment
+): CommentaryMoment {
+  const roll = deterministicNumber(`${event.eventKey}-group-commentary`) % 100;
+
+  if (roll >= 18) return moment;
+
+  return {
+    ...moment,
+    text: `${moment.text} ${selectTemplateLine(
+      `${event.eventKey}-group-line`,
+      groupCommentary
+    )}`,
+    templateId: `${moment.templateId}-group`,
+  };
+}
+
+function addClubhouseRumour(
+  event: CommentaryEvent,
+  moment: CommentaryMoment
+): CommentaryMoment {
+  const roll = deterministicNumber(`${event.eventKey}-clubhouse-rumour`) % 100;
+
+  if (roll >= 8) return moment;
+
+  return {
+    ...moment,
+    icon: roll < 3 ? "🗣️" : moment.icon,
+    text: `${moment.text} ${selectTemplateLine(
+      `${event.eventKey}-rumour-line`,
+      clubhouseRumours
+    )}`,
+    templateId: `${moment.templateId}-rumour`,
+  };
+}
+
+function addGolfCliche(
+  event: CommentaryEvent,
+  moment: CommentaryMoment
+): CommentaryMoment {
+  const roll = deterministicNumber(`${event.eventKey}-cliche`) % 100;
+
+  if (roll >= 13) return moment;
+
+  return {
+    ...moment,
+    text: `${moment.text} ${selectTemplateLine(
+      `${event.eventKey}-cliche-line`,
+      golfCliches
+    )}`,
+    templateId: `${moment.templateId}-cliche`,
+  };
+}
+
+function addHoleSummary(
+  event: CommentaryEvent,
+  moment: CommentaryMoment
+): CommentaryMoment {
+  const roll = deterministicNumber(`${event.eventKey}-hole-summary`) % 100;
+
+  if (roll >= 18) return moment;
+
+  const mood = eventMood(event);
+
+  return {
+    ...moment,
+    text: `${moment.text} ${selectTemplateLine(
+      `${event.eventKey}-summary-line`,
+      holeSummaryLines[mood]
+    )}`,
+    templateId: `${moment.templateId}-summary`,
+  };
+}
+
+function selectTemplateLine(key: string, lines: string[]) {
+  return lines[deterministicNumber(key) % lines.length];
+}
+
+function applyCommentaryDirector(
+  event: CommentaryEvent,
+  moment: CommentaryMoment
+): CommentaryMoment {
+  const intelligence = getCommentaryIntelligence(event);
+
+  let directedMoment = addClosingExcitement(event, moment, intelligence);
+  directedMoment = addTournamentMeaning(event, directedMoment, intelligence);
+  directedMoment = addCrowdReaction(event, directedMoment);
+  directedMoment = addGroupCommentary(event, directedMoment);
+  directedMoment = addClubhouseRumour(event, directedMoment);
+  directedMoment = addGolfCliche(event, directedMoment);
+  directedMoment = addHoleSummary(event, directedMoment);
+
+  return directedMoment;
+}
+
 export function buildCommentary(
   event: CommentaryEvent
 ): CommentaryMoment {
@@ -1169,14 +1551,19 @@ export function buildCommentary(
   };
 
   const contextualMoment = applyLeaderboardContext(
-  event,
-  moment
-);
+    event,
+    moment
+  );
 
-return applyPlayerPersonality(
-  event,
-  contextualMoment
-);
+  const personalityMoment = applyPlayerPersonality(
+    event,
+    contextualMoment
+  );
+
+  return applyCommentaryDirector(
+    event,
+    personalityMoment
+  );
 }
 
 export function getRunningJokeForPlayer(
