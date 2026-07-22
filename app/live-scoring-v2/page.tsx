@@ -14,11 +14,13 @@ import { calculateStablefordPoints } from "@/lib/stableford";
 import { supabase } from "@/lib/supabase";
 import { useActiveTournament } from "../hooks/useActiveTournament";
 
+type ViewMode = "entry" | "scorecard";
 
 function teamDot(team: string) {
   if (team === "Blue") return "bg-blue-500";
   if (team === "Green") return "bg-green-500";
   if (team === "White") return "bg-white border border-slate-400";
+  if (team === "Red") return "bg-red-500";
   return "bg-slate-300 border border-slate-400";
 }
 
@@ -30,182 +32,223 @@ function getBonusType(bonus: any) {
   return bonus.type ?? bonus.bonusType ?? bonus.bonus_type ?? "Bonus";
 }
 
+function scoreCellClass(gross: number, par: number) {
+  if (!gross) {
+    return "border-slate-200 bg-white text-slate-300";
+  }
+
+  const relative = gross - par;
+
+  if (relative <= -2) {
+    return "border-amber-300 bg-amber-100 text-amber-950 ring-2 ring-amber-300";
+  }
+
+  if (relative === -1) {
+    return "border-emerald-300 bg-emerald-100 text-emerald-950";
+  }
+
+  if (relative === 0) {
+    return "border-slate-300 bg-slate-100 text-slate-900";
+  }
+
+  if (relative === 1) {
+    return "border-orange-300 bg-orange-100 text-orange-950";
+  }
+
+  return "border-red-300 bg-red-100 text-red-950";
+}
+
+function scoreCellLabel(gross: number, par: number) {
+  if (!gross) return "";
+  const relative = gross - par;
+
+  if (relative <= -2) return "Eagle or better";
+  if (relative === -1) return "Birdie";
+  if (relative === 0) return "Par";
+  if (relative === 1) return "Bogey";
+  return "Double bogey or worse";
+}
+
 export default function LiveScoringPage() {
   const [tournamentSetup, setTournamentSetup] = useState<any>(null);
-  const [roundId, setRoundId] = useState<number | null>(null);
-  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [roundId, setRoundId] = useState<number | string | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | string | null>(
+    null
+  );
   const [hole, setHole] = useState(1);
   const [scores, setScores] = useState<Record<string, number>>({});
   const [bonusWinners, setBonusWinners] = useState<Record<string, string>>({});
   const [savedMessage, setSavedMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-const { tournament, loading } = useActiveTournament();
-const EVENT_SLUG = tournament?.slug ?? "";
+  const [viewMode, setViewMode] = useState<ViewMode>("entry");
+
+  const { tournament, loading } = useActiveTournament();
+  const EVENT_SLUG = tournament?.slug ?? "";
+
   const loadScoringPageData = useCallback(async () => {
     try {
       if (!tournament) return;
-console.log("ACTIVE TOURNAMENT PLAYERS:", tournament.players);
 
-const setup = {
-  ...tournament,
+      const setup = {
+        ...tournament,
 
-  rounds: tournament.rounds?.map(
-    (round: any, roundIndex: number) => ({
-      ...round,
-
-      id:
-        round.roundNumber ??
-        round.id ??
-        roundIndex + 1,
-
-      roundNumber:
-        round.roundNumber ??
-        round.id ??
-        roundIndex + 1,
-
-      day:
-        round.day ??
-        `Round ${
-          round.roundNumber ??
-          round.id ??
-          roundIndex + 1
-        }`,
-
-      course:
-        round.course ??
-        round.courseName ??
-        "Course",
-
-      format:
-        round.format === "scramble" ||
-        round.format === "scramblePairs"
-          ? "scramblePairs"
-          : "stableford",
-
-      groups:
-        round.groups?.map(
-          (group: any, groupIndex: number) => ({
-            ...group,
+        rounds: tournament.rounds?.map(
+          (round: any, roundIndex: number) => ({
+            ...round,
 
             id:
-              group.id ??
-              group.groupNumber ??
-              groupIndex + 1,
+              round.roundNumber ??
+              round.id ??
+              roundIndex + 1,
 
-            groupNumber:
-              group.groupNumber ??
-              group.id ??
-              groupIndex + 1,
+            roundNumber:
+              round.roundNumber ??
+              round.id ??
+              roundIndex + 1,
 
-            name:
-              group.name ??
-              `Group ${groupIndex + 1}`,
+            day:
+              round.day ??
+              `Round ${
+                round.roundNumber ??
+                round.id ??
+                roundIndex + 1
+              }`,
 
-            teeTime:
-              group.teeTime ?? "",
+            course:
+              round.course ??
+              round.courseName ??
+              "Course",
 
-            players:
-              group.players?.length
-                ? group.players
-                : tournament.players?.map(
-                    (player: any) => ({
-                      player_id: player.id,
-                      name: player.name,
-                      team:
-                        player.eventTeam ?? "",
-                      eventHandicap:
-                        player.stablefordHandicap ??
-                        player.eventHandicap ??
-                        0,
-                      stablefordHandicap:
-                        player.stablefordHandicap ??
-                        player.eventHandicap ??
-                        0,
-                      scrambleHandicap:
-                        player.scrambleHandicap ??
-                        0,
-                    })
-                  ) ?? [],
+            format:
+              round.format === "scramble" ||
+              round.format === "scramblePairs"
+                ? "scramblePairs"
+                : "stableford",
 
-            pairs:
-              group.pairs?.map(
-                (pair: any, pairIndex: number) => {
-                  const player1 =
-                    tournament.players?.find(
-                      (player: any) =>
-                        Number(player.id) ===
-                        Number(pair.player1_id)
-                    );
+            groups:
+              round.groups?.map(
+                (group: any, groupIndex: number) => ({
+                  ...group,
 
-                  const player2 =
-                    tournament.players?.find(
-                      (player: any) =>
-                        Number(player.id) ===
-                        Number(pair.player2_id)
-                    );
+                  id:
+                    group.id ??
+                    group.groupNumber ??
+                    groupIndex + 1,
 
-                  return {
-                    ...pair,
+                  groupNumber:
+                    group.groupNumber ??
+                    group.id ??
+                    groupIndex + 1,
 
-                    id:
-                      pair.id ??
-                      `${
-                        round.roundNumber ??
-                        roundIndex + 1
-                      }-${
-                        group.groupNumber ??
-                        groupIndex + 1
-                      }-${
-                        pair.pairNumber ??
-                        pairIndex + 1
-                      }`,
+                  name:
+                    group.name ??
+                    `Group ${groupIndex + 1}`,
 
-                    pairNumber:
-                      pair.pairNumber ??
-                      pairIndex + 1,
+                  teeTime:
+                    group.teeTime ?? "",
 
-                    player1_id:
-                      pair.player1_id ??
-                      null,
+                  players:
+                    group.players?.length
+                      ? group.players
+                      : tournament.players?.map(
+                          (player: any) => ({
+                            player_id: player.id,
+                            name: player.name,
+                            team:
+                              player.eventTeam ?? "",
+                            eventHandicap:
+                              player.stablefordHandicap ??
+                              player.eventHandicap ??
+                              0,
+                            stablefordHandicap:
+                              player.stablefordHandicap ??
+                              player.eventHandicap ??
+                              0,
+                            scrambleHandicap:
+                              player.scrambleHandicap ??
+                              0,
+                          })
+                        ) ?? [],
 
-                    player2_id:
-                      pair.player2_id ??
-                      null,
+                  pairs:
+                    group.pairs?.map(
+                      (pair: any, pairIndex: number) => {
+                        const player1 =
+                          tournament.players?.find(
+                            (player: any) =>
+                              Number(player.id) ===
+                              Number(pair.player1_id)
+                          );
 
-                    player1:
-                      pair.player1 ??
-                      player1?.name ??
-                      "",
+                        const player2 =
+                          tournament.players?.find(
+                            (player: any) =>
+                              Number(player.id) ===
+                              Number(pair.player2_id)
+                          );
 
-                    player2:
-                      pair.player2 ??
-                      player2?.name ??
-                      "",
+                        return {
+                          ...pair,
 
-                    finalHandicap:
-                      pair.finalHandicap ??
-                      pair.calculatedHandicap ??
-                      0,
-                  };
-                }
+                          id:
+                            pair.id ??
+                            `${
+                              round.roundNumber ??
+                              roundIndex + 1
+                            }-${
+                              group.groupNumber ??
+                              groupIndex + 1
+                            }-${
+                              pair.pairNumber ??
+                              pairIndex + 1
+                            }`,
+
+                          pairNumber:
+                            pair.pairNumber ??
+                            pairIndex + 1,
+
+                          player1_id:
+                            pair.player1_id ??
+                            null,
+
+                          player2_id:
+                            pair.player2_id ??
+                            null,
+
+                          player1:
+                            pair.player1 ??
+                            player1?.name ??
+                            "",
+
+                          player2:
+                            pair.player2 ??
+                            player2?.name ??
+                            "",
+
+                          finalHandicap:
+                            pair.finalHandicap ??
+                            pair.calculatedHandicap ??
+                            0,
+                        };
+                      }
+                    ) ?? [],
+                })
               ) ?? [],
           })
         ) ?? [],
-    })
-  ),
-};
+      };
 
       setTournamentSetup(setup);
 
       const firstRound = setup.rounds?.[0];
 
-if (firstRound && !roundId) {
-  setRoundId(firstRound.id);
-}
+      setRoundId((currentRoundId) =>
+        currentRoundId ?? firstRound?.id ?? null
+      );
 
-if (firstRound && !selectedGroupId) {
-  setSelectedGroupId(firstRound.groups?.[0]?.id ?? 1);
-}
+      setSelectedGroupId((currentGroupId) =>
+        currentGroupId ?? firstRound?.groups?.[0]?.id ?? null
+      );
 
       const savedScores = await getScores(EVENT_SLUG);
       const savedScrambleScores = await getScrambleScores(EVENT_SLUG);
@@ -215,55 +258,69 @@ if (firstRound && !selectedGroupId) {
 
       savedScores.forEach((row: any) => {
         const round = setup.rounds.find(
-          (r: any) => Number(r.roundNumber ?? r.id) === Number(row.round_number)
+          (item: any) =>
+            Number(item.roundNumber ?? item.id) ===
+            Number(row.round_number)
         );
 
         if (!round) return;
 
         const group = round.groups.find(
-          (g: any) => Number(g.groupNumber ?? g.id) === Number(row.group_number)
+          (item: any) =>
+            Number(item.groupNumber ?? item.id) ===
+            Number(row.group_number)
         );
 
         if (!group) return;
 
         const player = group.players?.find(
-          (p: any) => Number(p.player_id) === Number(row.player_id)
+          (item: any) =>
+            Number(item.player_id) === Number(row.player_id)
         );
 
         if (!player) return;
 
-        loadedScores[`${round.id}-${group.id}-${row.hole_number}-${player.name}`] =
-          row.gross_score;
+        loadedScores[
+          `${round.id}-${group.id}-${row.hole_number}-${player.name}`
+        ] = row.gross_score;
       });
 
       savedScrambleScores.forEach((row: any) => {
         const round = setup.rounds.find(
-          (r: any) => Number(r.roundNumber ?? r.id) === Number(row.round_number)
+          (item: any) =>
+            Number(item.roundNumber ?? item.id) ===
+            Number(row.round_number)
         );
 
         if (!round) return;
 
         const group = round.groups.find(
-          (g: any) => Number(g.groupNumber ?? g.id) === Number(row.group_number)
+          (item: any) =>
+            Number(item.groupNumber ?? item.id) ===
+            Number(row.group_number)
         );
 
         if (!group) return;
 
         const pair = group.pairs?.find(
-          (p: any) => Number(p.pairNumber) === Number(row.pair_number)
+          (item: any) =>
+            Number(item.pairNumber) === Number(row.pair_number)
         );
 
         if (!pair) return;
 
-        loadedScores[`${round.id}-${group.id}-${row.hole_number}-${pair.id}`] =
-          row.gross_score;
+        loadedScores[
+          `${round.id}-${group.id}-${row.hole_number}-${pair.id}`
+        ] = row.gross_score;
       });
 
       const loadedBonuses: Record<string, string> = {};
 
       savedBonuses.forEach((row: any) => {
         const round = setup.rounds.find(
-          (r: any) => Number(r.roundNumber ?? r.id) === Number(row.round_number)
+          (item: any) =>
+            Number(item.roundNumber ?? item.id) ===
+            Number(row.round_number)
         );
 
         if (!round) return;
@@ -291,13 +348,13 @@ if (firstRound && !selectedGroupId) {
     } catch (error) {
       console.error("Could not load scoring page data:", error);
     }
-}, [tournament, EVENT_SLUG]);
+  }, [tournament, EVENT_SLUG]);
 
   useEffect(() => {
-  if (!loading && tournament) {
-    loadScoringPageData();
-  }
-}, [loading, tournament, loadScoringPageData]);
+    if (!loading && tournament) {
+      loadScoringPageData();
+    }
+  }, [loading, tournament, loadScoringPageData]);
 
   useEffect(() => {
     const channel = supabase
@@ -325,39 +382,51 @@ if (firstRound && !selectedGroupId) {
   }, [loadScoringPageData]);
 
   if (loading) {
-  return (
-    <main className="min-h-screen bg-slate-100 p-4 text-slate-900">
-      Loading active tournament...
-    </main>
-  );
-}
+    return (
+      <main className="min-h-screen bg-slate-100 p-4 text-slate-900">
+        Loading active tournament...
+      </main>
+    );
+  }
 
-if (!tournament) {
-  return (
-    <main className="min-h-screen bg-slate-100 p-4 text-slate-900">
-      No active tournament selected. Go to Setup V2 and set one active.
-    </main>
-  );
-}
+  if (!tournament) {
+    return (
+      <main className="min-h-screen bg-slate-100 p-4 text-slate-900">
+        No active tournament selected. Go to Setup V2 and set one active.
+      </main>
+    );
+  }
 
-if (!tournamentSetup || !roundId || !selectedGroupId) {
-  return (
-    <main className="min-h-screen bg-slate-100 p-4 text-slate-900">
-      Loading tournament setup...
-    </main>
-  );
-}
+  if (!tournamentSetup || !roundId || !selectedGroupId) {
+    return (
+      <main className="min-h-screen bg-slate-100 p-4 text-slate-900">
+        Loading tournament setup...
+      </main>
+    );
+  }
 
   const currentRound = tournamentSetup.rounds.find(
-    (round: any) => round.id === roundId
+    (round: any) => String(round.id) === String(roundId)
   );
 
-  const selectedGroup = currentRound.groups.find(
-    (group: any) => group.id === selectedGroupId
-  );
+  if (!currentRound) {
+    return (
+      <main className="min-h-screen bg-slate-100 p-4 text-slate-900">
+        Round not found.
+      </main>
+    );
+  }
+
+  const selectedGroup =
+    currentRound.groups.find(
+      (group: any) => String(group.id) === String(selectedGroupId)
+    ) ?? currentRound.groups[0];
 
   const isScramble = currentRound.format === "scramblePairs";
-  const currentHole = currentRound.holes.find((item: any) => item.hole === hole);
+
+  const currentHole =
+    currentRound.holes.find((item: any) => Number(item.hole) === Number(hole)) ??
+    currentRound.holes[0];
 
   const roundBonusHoles =
     currentRound.bonusHoles ??
@@ -375,24 +444,39 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
 
   const uniqueRoundPlayers = Array.from(
     new Map(
-      allRoundPlayers.map((player: any) => [String(player.player_id), player])
+      allRoundPlayers.map((player: any) => [
+        String(player.player_id),
+        player,
+      ])
     ).values()
   );
 
   function getPlayerNameById(playerId: string) {
     const foundPlayer = uniqueRoundPlayers.find(
-      (player: any) => String(player.player_id) === String(playerId)
+      (player: any) =>
+        String(player.player_id) === String(playerId)
     ) as any;
 
     return foundPlayer?.name ?? "";
   }
 
   function validPlayerId(playerId: any) {
-    return Number.isInteger(Number(playerId)) && String(playerId) !== "undefined";
+    return (
+      Number.isInteger(Number(playerId)) &&
+      String(playerId) !== "undefined"
+    );
+  }
+
+  function scoreKeyFor(
+    groupId: string | number,
+    id: string,
+    holeNumber: number
+  ) {
+    return `${roundId}-${groupId}-${holeNumber}-${id}`;
   }
 
   function scoreKey(id: string, holeNumber = hole) {
-    return `${roundId}-${selectedGroupId}-${holeNumber}-${id}`;
+    return scoreKeyFor(selectedGroup.id, id, holeNumber);
   }
 
   function bonusKey(holeNumber = hole) {
@@ -455,7 +539,7 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
 
     try {
       let rowsToSave: any[] = [];
-      let rowsToDelete: any[] = [];
+      const rowsToDelete: any[] = [];
 
       if (isScramble) {
         rowsToSave =
@@ -466,9 +550,11 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
               if (!grossScore) {
                 rowsToDelete.push({
                   event_slug: EVENT_SLUG,
-                  round_number: currentRound.roundNumber ?? currentRound.id,
+                  round_number:
+                    currentRound.roundNumber ?? currentRound.id,
                   hole_number: hole,
-                  group_number: selectedGroup.groupNumber ?? selectedGroup.id,
+                  group_number:
+                    selectedGroup.groupNumber ?? selectedGroup.id,
                   pair_number: pair.pairNumber,
                 });
 
@@ -477,11 +563,13 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
 
               return {
                 event_slug: EVENT_SLUG,
-                round_number: currentRound.roundNumber ?? currentRound.id,
+                round_number:
+                  currentRound.roundNumber ?? currentRound.id,
                 player_id: null,
                 hole_number: hole,
                 gross_score: grossScore,
-                group_number: selectedGroup.groupNumber ?? selectedGroup.id,
+                group_number:
+                  selectedGroup.groupNumber ?? selectedGroup.id,
                 pair_number: pair.pairNumber,
                 score_type: "scramblePairs",
                 points: calculateStablefordPoints(
@@ -503,7 +591,8 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
               if (validPlayerId(player.player_id)) {
                 rowsToDelete.push({
                   event_slug: EVENT_SLUG,
-                  round_number: currentRound.roundNumber ?? currentRound.id,
+                  round_number:
+                    currentRound.roundNumber ?? currentRound.id,
                   player_id: player.player_id,
                   hole_number: hole,
                 });
@@ -516,11 +605,13 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
 
             return {
               event_slug: EVENT_SLUG,
-              round_number: currentRound.roundNumber ?? currentRound.id,
+              round_number:
+                currentRound.roundNumber ?? currentRound.id,
               player_id: player.player_id,
               hole_number: hole,
               gross_score: grossScore,
-              group_number: selectedGroup.groupNumber ?? selectedGroup.id,
+              group_number:
+                selectedGroup.groupNumber ?? selectedGroup.id,
               pair_number: null,
               score_type: "stableford",
               points: calculateStablefordPoints(
@@ -546,20 +637,27 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
       if (bonusHole && getBonusWinner()) {
         await saveBonusWinner({
           event_slug: EVENT_SLUG,
-          round_number: currentRound.roundNumber ?? currentRound.id,
+          round_number:
+            currentRound.roundNumber ?? currentRound.id,
           hole,
           bonus_type: getBonusType(bonusHole),
-          winner_player_name: getPlayerNameById(getBonusWinner()),
+          winner_player_name: getPlayerNameById(
+            getBonusWinner()
+          ),
           points: bonusHole.points ?? 0,
         });
       }
 
       const bonusMessage =
         bonusHole && getBonusWinner()
-          ? ` Bonus winner: ${getPlayerNameById(getBonusWinner())}.`
+          ? ` Bonus winner: ${getPlayerNameById(
+              getBonusWinner()
+            )}.`
           : "";
 
-      const formatMessage = isScramble ? "scramble scores" : "scorecards";
+      const formatMessage = isScramble
+        ? "scramble scores"
+        : "scorecards";
 
       setSavedMessage(
         `${currentRound.day} ${currentRound.course} — Hole ${hole} ${formatMessage} saved.${bonusMessage}`
@@ -573,8 +671,11 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
       }
     } catch (error: any) {
       console.error(error);
+
       setSavedMessage(
-        `❌ Could not save hole ${hole}. ${error.message || "Please try again."}`
+        `❌ Could not save hole ${hole}. ${
+          error.message || "Please try again."
+        }`
       );
     } finally {
       setIsSaving(false);
@@ -584,316 +685,931 @@ if (!tournamentSetup || !roundId || !selectedGroupId) {
   function holeHasScores(holeNumber: number) {
     if (isScramble) {
       return selectedGroup.pairs?.some(
-        (pair: any) => scores[scoreKey(pair.id, holeNumber)]
+        (pair: any) =>
+          scores[
+            scoreKeyFor(
+              selectedGroup.id,
+              pair.id,
+              holeNumber
+            )
+          ]
       );
     }
 
     return selectedGroup.players.some(
-      (player: any) => scores[scoreKey(player.name, holeNumber)]
+      (player: any) =>
+        scores[
+          scoreKeyFor(
+            selectedGroup.id,
+            player.name,
+            holeNumber
+          )
+        ]
     );
   }
 
+  const scorecardRows = (() => {
+    const holes = currentRound.holes ?? [];
+
+    if (isScramble) {
+      return currentRound.groups.flatMap((group: any) =>
+        (group.pairs ?? []).map((pair: any) => {
+          const holeScores = holes.map((holeItem: any) => {
+            const gross =
+              scores[
+                scoreKeyFor(
+                  group.id,
+                  pair.id,
+                  Number(holeItem.hole)
+                )
+              ] ?? 0;
+
+            const points = gross
+              ? calculateStablefordPoints(
+                  gross,
+                  holeItem.par,
+                  holeItem.strokeIndex,
+                  pair.finalHandicap
+                )
+              : 0;
+
+            return {
+              hole: Number(holeItem.hole),
+              par: Number(holeItem.par),
+              strokeIndex: Number(holeItem.strokeIndex),
+              gross,
+              points,
+            };
+          });
+
+          const completed = holeScores.filter(
+            (item: any) => item.gross > 0
+          ).length;
+
+          return {
+            id: `${group.id}-${pair.id}`,
+            groupId: group.id,
+            groupName: group.name,
+            label: `${pair.player1} + ${pair.player2}`,
+            shortLabel: `Pair ${pair.pairNumber}`,
+            team: "",
+            handicap: pair.finalHandicap ?? 0,
+            holeScores,
+            completed,
+            grossTotal: holeScores.reduce(
+              (total: number, item: any) =>
+                total + (item.gross || 0),
+              0
+            ),
+            pointsTotal: holeScores.reduce(
+              (total: number, item: any) =>
+                total + (item.points || 0),
+              0
+            ),
+          };
+        })
+      );
+    }
+
+    const seenPlayers = new Set<string>();
+
+    return currentRound.groups.flatMap((group: any) =>
+      (group.players ?? [])
+        .filter((player: any) => {
+          const id = String(player.player_id ?? player.name);
+          if (seenPlayers.has(id)) return false;
+          seenPlayers.add(id);
+          return true;
+        })
+        .map((player: any) => {
+          const holeScores = holes.map((holeItem: any) => {
+            const gross =
+              scores[
+                scoreKeyFor(
+                  group.id,
+                  player.name,
+                  Number(holeItem.hole)
+                )
+              ] ?? 0;
+
+            const handicap =
+              player.eventHandicap ??
+              player.stablefordHandicap ??
+              0;
+
+            const points = gross
+              ? calculateStablefordPoints(
+                  gross,
+                  holeItem.par,
+                  holeItem.strokeIndex,
+                  handicap
+                )
+              : 0;
+
+            return {
+              hole: Number(holeItem.hole),
+              par: Number(holeItem.par),
+              strokeIndex: Number(holeItem.strokeIndex),
+              gross,
+              points,
+            };
+          });
+
+          const completed = holeScores.filter(
+            (item: any) => item.gross > 0
+          ).length;
+
+          return {
+            id: String(player.player_id ?? player.name),
+            groupId: group.id,
+            groupName: group.name,
+            label: player.name,
+            shortLabel: player.team || group.name,
+            team: player.team ?? "",
+            handicap:
+              player.eventHandicap ??
+              player.stablefordHandicap ??
+              0,
+            holeScores,
+            completed,
+            grossTotal: holeScores.reduce(
+              (total: number, item: any) =>
+                total + (item.gross || 0),
+              0
+            ),
+            pointsTotal: holeScores.reduce(
+              (total: number, item: any) =>
+                total + (item.points || 0),
+              0
+            ),
+          };
+        })
+    );
+  })();
+
+  const rankedScorecardRows = [...scorecardRows].sort((a, b) => {
+  if (b.pointsTotal !== a.pointsTotal) {
+    return b.pointsTotal - a.pointsTotal;
+  }
+
+  if (b.completed !== a.completed) {
+    return b.completed - a.completed;
+  }
+
+  return a.grossTotal - b.grossTotal;
+});
+
+  const totalPar = (currentRound.holes ?? []).reduce(
+    (total: number, item: any) =>
+      total + Number(item.par ?? 0),
+    0
+  );
+
+  const frontNinePar = (currentRound.holes ?? [])
+    .filter((item: any) => Number(item.hole) <= 9)
+    .reduce(
+      (total: number, item: any) =>
+        total + Number(item.par ?? 0),
+      0
+    );
+
+  const backNinePar = (currentRound.holes ?? [])
+    .filter((item: any) => Number(item.hole) >= 10)
+    .reduce(
+      (total: number, item: any) =>
+        total + Number(item.par ?? 0),
+      0
+    );
+
   return (
     <main className="min-h-screen bg-slate-100 p-3 pb-64 text-slate-900 md:p-8 md:pb-16">
-      <div className="mx-auto max-w-3xl">
-       
-       
-       <div className="mb-4 text-center">
-  <p className="text-xs font-black uppercase tracking-[0.2em] text-green-700">
-    ⛳ Live Scoring
-  </p>
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-4 text-center">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-green-700">
+            ⛳ Swift Tees
+          </p>
 
-  <h1 className="mt-1 text-3xl font-black text-green-950">
-    {tournament.name}
-  </h1>
+          <h1 className="mt-1 text-3xl font-black text-green-950">
+            {tournament.name}
+          </h1>
 
-  {currentRound.groups.length > 1 && (
-  <p className="mt-1 text-sm font-semibold text-slate-500">
-    {selectedGroup.name}
-  </p>
-)}
-</div>
+          <p className="mt-1 text-sm font-semibold text-slate-500">
+            {currentRound.day} • {currentRound.course} •{" "}
+            {isScramble ? "Scramble Pairs" : "Stableford"}
+          </p>
+        </div>
+
+        <div className="mb-3 grid grid-cols-2 rounded-2xl border border-slate-200 bg-white p-1 shadow-sm">
+          <button
+            onClick={() => setViewMode("entry")}
+            className={`rounded-xl px-3 py-2.5 text-sm font-black transition ${
+              viewMode === "entry"
+                ? "bg-green-950 text-white"
+                : "text-slate-500"
+            }`}
+          >
+            Enter Scores
+          </button>
+
+          <button
+            onClick={() => setViewMode("scorecard")}
+            className={`rounded-xl px-3 py-2.5 text-sm font-black transition ${
+              viewMode === "scorecard"
+                ? "bg-green-950 text-white"
+                : "text-slate-500"
+            }`}
+          >
+            Round Scorecard
+          </button>
+        </div>
 
         <div className="mb-3 space-y-2">
           {tournamentSetup.rounds.length > 1 && (
-  <div
-  className="grid w-full gap-2"
-  style={{
-    gridTemplateColumns: `repeat(${tournamentSetup.rounds.length}, minmax(0, 1fr))`,
-  }}
->
-  {tournamentSetup.rounds.map((round: any) => (
-              <button
-                key={round.id}
-                onClick={() => {
-                  setRoundId(round.id);
-                  setSelectedGroupId(round.groups?.[0]?.id ?? null);
-                  setHole(1);
-                  setSavedMessage("");
-                }}
-                className={`min-w-0 w-full rounded-2xl border p-2 text-center font-black ${
-                  roundId === round.id
-                    ? "border-green-900 bg-green-950 text-white"
-                    : "border-slate-200 bg-white text-green-950"
-                }`}
-              >
-                <span className="block text-sm">{round.course}</span>
-                <span className="mt-1 block text-[11px] opacity-80">
-                  {round.day} •{" "}
-                  {round.format === "scramblePairs"
-                    ? "Scramble"
-                    : "Stableford"}
-                </span>
-              </button>
-                       ))}
-          </div>
-)}
-
-          {currentRound.groups.length > 1 && (
             <div
-  className="grid w-full gap-2"
-  style={{
-    gridTemplateColumns: `repeat(${currentRound.groups.length}, minmax(0, 1fr))`,
-  }}
->
-  {currentRound.groups.map((group: any) => (
-              <button
-                key={group.id}
-                onClick={() => {
-                  setSelectedGroupId(group.id);
-                  setSavedMessage("");
-                }}
-                className={`min-w-0 w-full rounded-2xl border p-2 text-center font-black ${
-                  selectedGroupId === group.id
-                    ? "border-green-900 bg-green-950 text-white"
-                    : "border-slate-200 bg-white text-green-950"
-                }`}
-              >
-                <span className="block text-sm">{group.name}</span>
-                <span className="mt-1 block text-[11px] opacity-80">
-                  {group.teeTime}
-                </span>
-              </button>
-                      ))}
-          </div>
-          )}
-        </div>
+              className="grid w-full gap-2"
+              style={{
+                gridTemplateColumns: `repeat(${tournamentSetup.rounds.length}, minmax(0, 1fr))`,
+              }}
+            >
+              {tournamentSetup.rounds.map((round: any) => (
+                <button
+                  key={round.id}
+                  onClick={() => {
+                    setRoundId(round.id);
+                    setSelectedGroupId(
+                      round.groups?.[0]?.id ?? null
+                    );
+                    setHole(1);
+                    setSavedMessage("");
+                  }}
+                  className={`min-w-0 w-full rounded-2xl border p-2 text-center font-black ${
+                    String(roundId) === String(round.id)
+                      ? "border-green-900 bg-green-950 text-white"
+                      : "border-slate-200 bg-white text-green-950"
+                  }`}
+                >
+                  <span className="block text-sm">
+                    {round.course}
+                  </span>
 
-        <section className="rounded-3xl border border-green-900 bg-green-950 p-3 text-white shadow-sm">
-          <div className="mb-3 text-center">
-            <h2 className="text-4xl font-black leading-none">
-              {currentRound.course.replace(" Course", "")} - Hole {hole}
-            </h2>
-
-            <div className="mt-2 flex flex-wrap justify-center gap-2 text-sm font-bold">
-              <span className="rounded-full bg-white/10 px-3 py-1">
-                Par {currentHole.par}
-              </span>
-
-              <span className="rounded-full bg-white/10 px-3 py-1">
-                SI {currentHole.strokeIndex}
-              </span>
-
-              <span className="rounded-full bg-white/10 px-3 py-1">
-                {currentHole.yards} yds
-              </span>
+                  <span className="mt-1 block text-[11px] opacity-80">
+                    {round.day} •{" "}
+                    {round.format === "scramblePairs"
+                      ? "Scramble"
+                      : "Stableford"}
+                  </span>
+                </button>
+              ))}
             </div>
+          )}
 
-            <div className="mt-3 grid grid-cols-9 gap-1.5">
-              {currentRound.holes.map((item: any) => {
-                const holeNumber = item.hole;
-                const hasScores = holeHasScores(holeNumber);
-                const hasBonus = roundBonusHoles.some(
-                  (bonus: any) => getBonusHoleNumber(bonus) === holeNumber
-                );
-
-                return (
+          {viewMode === "entry" &&
+            currentRound.groups.length > 1 && (
+              <div
+                className="grid w-full gap-2"
+                style={{
+                  gridTemplateColumns: `repeat(${currentRound.groups.length}, minmax(0, 1fr))`,
+                }}
+              >
+                {currentRound.groups.map((group: any) => (
                   <button
-                    key={holeNumber}
+                    key={group.id}
                     onClick={() => {
-                      setHole(holeNumber);
+                      setSelectedGroupId(group.id);
                       setSavedMessage("");
                     }}
-                    className={`relative rounded-lg border py-2 text-sm font-black ${
-                      hole === holeNumber
-                        ? "border-white bg-white text-green-950"
-                        : hasScores
-                        ? "border-green-400 bg-green-500 text-white"
-                        : "border-white/20 bg-white/10 text-white"
+                    className={`min-w-0 w-full rounded-2xl border p-2 text-center font-black ${
+                      String(selectedGroupId) ===
+                      String(group.id)
+                        ? "border-green-900 bg-green-950 text-white"
+                        : "border-slate-200 bg-white text-green-950"
                     }`}
                   >
-                    <span>{holeNumber}</span>
+                    <span className="block text-sm">
+                      {group.name}
+                    </span>
 
-                    {hasBonus && (
-                      <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-yellow-300 text-[9px] font-black text-green-950 ring-1 ring-white">
-                        ⭐
-                      </span>
-                    )}
+                    <span className="mt-1 block text-[11px] opacity-80">
+                      {group.teeTime}
+                    </span>
                   </button>
-                );
-              })}
-            </div>
-
-            {bonusHole && (
-              <div className="mt-3 rounded-2xl bg-yellow-300 px-3 py-2 text-sm font-black text-green-950">
-                <p>
-                  ⭐ Bonus Hole • {getBonusType(bonusHole)}
-                  {bonusHole.points ? ` • ${bonusHole.points} pts` : ""}
-                </p>
-
-                <select
-                  value={getBonusWinner()}
-                  onChange={(e) => setBonusWinner(e.target.value)}
-                  className="mt-2 w-full rounded-xl border border-yellow-500 bg-white px-3 py-2 font-black text-green-950"
-                >
-                  <option value="">Select bonus winner</option>
-
-                  {uniqueRoundPlayers.map((player: any) => (
-                    <option key={player.player_id} value={String(player.player_id)}>
-                      {player.name}
-                    </option>
-                  ))}
-                </select>
+                ))}
               </div>
             )}
-          </div>
+        </div>
 
-          <div className="space-y-2">
-            {!isScramble &&
-              selectedGroup.players.map((player: any) => (
-                <div
-                  key={player.name}
-                  className="flex items-center justify-between gap-2 rounded-2xl bg-white p-2.5 text-green-950"
+        {viewMode === "entry" && (
+          <>
+            <section className="rounded-3xl border border-green-900 bg-green-950 p-3 text-white shadow-sm">
+              <div className="mb-3 text-center">
+                <h2 className="text-4xl font-black leading-none">
+                  {currentRound.course.replace(
+                    " Course",
+                    ""
+                  )}{" "}
+                  - Hole {hole}
+                </h2>
+
+                <div className="mt-2 flex flex-wrap justify-center gap-2 text-sm font-bold">
+                  <span className="rounded-full bg-white/10 px-3 py-1">
+                    Par {currentHole.par}
+                  </span>
+
+                  <span className="rounded-full bg-white/10 px-3 py-1">
+                    SI {currentHole.strokeIndex}
+                  </span>
+
+                  {currentHole.yards ? (
+                    <span className="rounded-full bg-white/10 px-3 py-1">
+                      {currentHole.yards} yds
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="mt-3 grid grid-cols-9 gap-1.5">
+                  {currentRound.holes.map((item: any) => {
+                    const holeNumber = Number(item.hole);
+                    const hasScores =
+                      holeHasScores(holeNumber);
+
+                    const hasBonus =
+                      roundBonusHoles.some(
+                        (bonus: any) =>
+                          getBonusHoleNumber(bonus) ===
+                          holeNumber
+                      );
+
+                    return (
+                      <button
+                        key={holeNumber}
+                        onClick={() => {
+                          setHole(holeNumber);
+                          setSavedMessage("");
+                        }}
+                        className={`relative rounded-lg border py-2 text-sm font-black ${
+                          hole === holeNumber
+                            ? "border-white bg-white text-green-950"
+                            : hasScores
+                            ? "border-green-400 bg-green-500 text-white"
+                            : "border-white/20 bg-white/10 text-white"
+                        }`}
+                      >
+                        <span>{holeNumber}</span>
+
+                        {hasBonus && (
+                          <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-yellow-300 text-[9px] font-black text-green-950 ring-1 ring-white">
+                            ⭐
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {bonusHole && (
+                  <div className="mt-3 rounded-2xl bg-yellow-300 px-3 py-2 text-sm font-black text-green-950">
+                    <p>
+                      ⭐ Bonus Hole •{" "}
+                      {getBonusType(bonusHole)}
+                      {bonusHole.points
+                        ? ` • ${bonusHole.points} pts`
+                        : ""}
+                    </p>
+
+                    <select
+                      value={getBonusWinner()}
+                      onChange={(event) =>
+                        setBonusWinner(event.target.value)
+                      }
+                      className="mt-2 w-full rounded-xl border border-yellow-500 bg-white px-3 py-2 font-black text-green-950"
+                    >
+                      <option value="">
+                        Select bonus winner
+                      </option>
+
+                      {uniqueRoundPlayers.map(
+                        (player: any) => (
+                          <option
+                            key={player.player_id}
+                            value={String(
+                              player.player_id
+                            )}
+                          >
+                            {player.name}
+                          </option>
+                        )
+                      )}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                {!isScramble &&
+                  selectedGroup.players.map(
+                    (player: any) => (
+                      <div
+                        key={player.name}
+                        className="flex items-center justify-between gap-2 rounded-2xl bg-white p-2.5 text-green-950"
+                      >
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span
+                            className={`h-3 w-3 shrink-0 rounded-full ${teamDot(
+                              player.team
+                            )}`}
+                          />
+
+                          <div className="min-w-0">
+                            <label className="block truncate text-lg font-black">
+                              {player.name}
+                            </label>
+
+                            <p className="text-xs font-bold text-slate-500">
+                              {player.team
+                                ? `${player.team} • `
+                                : ""}
+                              HCP {player.eventHandicap}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex shrink-0 items-center gap-1.5">
+                          <button
+                            onClick={() =>
+                              changeScore(
+                                player.name,
+                                -1
+                              )
+                            }
+                            className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 text-xl font-black"
+                          >
+                            −
+                          </button>
+
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min="0"
+                            value={
+                              getScore(player.name) || ""
+                            }
+                            onChange={(event) =>
+                              setScore(
+                                player.name,
+                                event.target.value
+                              )
+                            }
+                            className="w-14 rounded-xl border border-slate-300 px-2 py-1.5 text-center text-2xl font-black"
+                            placeholder="-"
+                          />
+
+                          <button
+                            onClick={() =>
+                              changeScore(player.name, 1)
+                            }
+                            className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 text-xl font-black"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  )}
+
+                {isScramble &&
+                  selectedGroup.pairs?.map(
+                    (pair: any) => (
+                      <div
+                        key={pair.id}
+                        className="rounded-2xl bg-white p-2.5 text-green-950"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="text-xs font-black text-green-700">
+                              👥 Pair {pair.pairNumber}
+                            </p>
+
+                            <p className="truncate text-lg font-black text-green-950">
+                              {pair.player1} +{" "}
+                              {pair.player2}
+                            </p>
+
+                            <p className="mt-1 text-xs font-bold text-slate-500">
+                              {pair.finalHandicap} HCP
+                            </p>
+                          </div>
+
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <button
+                              onClick={() =>
+                                changeScore(pair.id, -1)
+                              }
+                              className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 text-xl font-black"
+                            >
+                              −
+                            </button>
+
+                            <input
+                              type="number"
+                              inputMode="numeric"
+                              min="0"
+                              value={
+                                getScore(pair.id) || ""
+                              }
+                              onChange={(event) =>
+                                setScore(
+                                  pair.id,
+                                  event.target.value
+                                )
+                              }
+                              className="w-14 rounded-xl border border-slate-300 px-2 py-1.5 text-center text-2xl font-black"
+                              placeholder="-"
+                            />
+
+                            <button
+                              onClick={() =>
+                                changeScore(pair.id, 1)
+                              }
+                              className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 text-xl font-black"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  )}
+              </div>
+
+              {savedMessage && (
+                <p className="mt-3 rounded-xl bg-green-600 px-3 py-2 text-center text-sm font-bold">
+                  {savedMessage.startsWith("❌")
+                    ? savedMessage
+                    : `✅ ${savedMessage}`}
+                </p>
+              )}
+            </section>
+
+            <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+              <button
+                onClick={saveHole}
+                disabled={isSaving}
+                className="w-full rounded-2xl bg-green-700 px-5 py-3.5 text-lg font-black text-white shadow-sm disabled:opacity-60"
+              >
+                {isSaving
+                  ? "Saving..."
+                  : isScramble
+                  ? `Save Hole ${hole} Scramble Scores`
+                  : `Save Hole ${hole} Scorecards`}
+              </button>
+
+              <div className="mt-2 grid grid-cols-1 gap-2">
+                <a
+                  href="/live-centre"
+                  className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-black text-green-950 shadow-sm transition hover:border-green-700"
                 >
-                  <div className="flex min-w-0 items-center gap-2">
-                    <span
-                      className={`h-3 w-3 shrink-0 rounded-full ${teamDot(
-                        player.team
-                      )}`}
-                    />
+                  🏆 Leaderboard
+                </a>
+              </div>
+            </section>
+          </>
+        )}
 
-                    <div className="min-w-0">
-                      <label className="block truncate text-lg font-black">
-                        {player.name}
-                      </label>
+        {viewMode === "scorecard" && (
+          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+            <div className="bg-green-950 p-4 text-white md:p-5">
+              <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-green-300">
+                    Official round scorecard
+                  </p>
 
-                      <p className="text-xs font-bold text-slate-500">
-  {player.team ? `${player.team} • ` : ""}
-  HCP {player.eventHandicap}
-</p>
-                    </div>
+                  <h2 className="mt-1 text-2xl font-black md:text-3xl">
+                    {currentRound.course}
+                  </h2>
+
+                  <p className="mt-1 text-sm font-bold text-white/70">
+                    {currentRound.day} •{" "}
+                    {isScramble
+                      ? "Scramble Pairs"
+                      : "Stableford"}{" "}
+                    • Par {totalPar}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-2xl bg-white/10 px-3 py-2 text-center">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-white/60">
+                      Players
+                    </p>
+                    <p className="text-xl font-black">
+                      {rankedScorecardRows.length}
+                    </p>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <button
-                      onClick={() => changeScore(player.name, -1)}
-                      className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 text-xl font-black"
-                    >
-                      −
-                    </button>
+                  <div className="rounded-2xl bg-white/10 px-3 py-2 text-center">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-white/60">
+                      Front
+                    </p>
+                    <p className="text-xl font-black">
+                      {frontNinePar}
+                    </p>
+                  </div>
 
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min="0"
-                      value={getScore(player.name) || ""}
-                      onChange={(e) => setScore(player.name, e.target.value)}
-                      className="w-14 rounded-xl border border-slate-300 px-2 py-1.5 text-center text-2xl font-black"
-                      placeholder="-"
-                    />
-
-                    <button
-                      onClick={() => changeScore(player.name, 1)}
-                      className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 text-xl font-black"
-                    >
-                      +
-                    </button>
+                  <div className="rounded-2xl bg-white/10 px-3 py-2 text-center">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-white/60">
+                      Back
+                    </p>
+                    <p className="text-xl font-black">
+                      {backNinePar}
+                    </p>
                   </div>
                 </div>
-              ))}
+              </div>
+            </div>
 
-            {isScramble &&
-              selectedGroup.pairs?.map((pair: any) => (
-                <div
-                  key={pair.id}
-                  className="rounded-2xl bg-white p-2.5 text-green-950"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-xs font-black text-green-700">
-                        👥 Pair {pair.pairNumber}
+            <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="flex flex-wrap gap-2 text-[11px] font-black">
+                <span className="rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-amber-950">
+                  Eagle
+                </span>
+                <span className="rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-emerald-950">
+                  Birdie
+                </span>
+                <span className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-slate-900">
+                  Par
+                </span>
+                <span className="rounded-full border border-orange-300 bg-orange-100 px-2.5 py-1 text-orange-950">
+                  Bogey
+                </span>
+                <span className="rounded-full border border-red-300 bg-red-100 px-2.5 py-1 text-red-950">
+                  Double+
+                </span>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto overscroll-x-contain">
+              <div className="min-w-max">
+                <div className="sticky top-0 z-30 flex border-b border-slate-200 bg-slate-50">
+                  <div className="sticky left-0 z-40 flex w-[176px] shrink-0 border-r border-slate-200 bg-slate-50 px-3 py-3 shadow-[4px_0_8px_rgba(15,23,42,0.08)]">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                        Position
                       </p>
-
-                      <p className="truncate text-lg font-black text-green-950">
-                        {pair.player1} + {pair.player2}
+                      <p className="text-sm font-black text-green-950">
+                        {isScramble ? "Pair" : "Player"}
                       </p>
-
-                      <p className="mt-1 text-xs font-bold text-slate-500">
-                        {pair.finalHandicap} HCP
-                      </p>
-                    </div>
-
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <button
-                        onClick={() => changeScore(pair.id, -1)}
-                        className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 text-xl font-black"
-                      >
-                        −
-                      </button>
-
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        min="0"
-                        value={getScore(pair.id) || ""}
-                        onChange={(e) => setScore(pair.id, e.target.value)}
-                        className="w-14 rounded-xl border border-slate-300 px-2 py-1.5 text-center text-2xl font-black"
-                        placeholder="-"
-                      />
-
-                      <button
-                        onClick={() => changeScore(pair.id, 1)}
-                        className="h-9 w-9 rounded-xl border border-slate-200 bg-slate-100 text-xl font-black"
-                      >
-                        +
-                      </button>
                     </div>
                   </div>
+
+                  {currentRound.holes.map(
+                    (holeItem: any) => {
+                      const hasBonus =
+                        roundBonusHoles.some(
+                          (bonus: any) =>
+                            getBonusHoleNumber(
+                              bonus
+                            ) ===
+                            Number(holeItem.hole)
+                        );
+
+                      return (
+                        <div
+                          key={holeItem.hole}
+                          className={`w-[64px] shrink-0 border-r border-slate-200 px-1 py-2 text-center ${
+                            hasBonus
+                              ? "bg-amber-50"
+                              : "bg-slate-50"
+                          }`}
+                        >
+                          <div className="flex items-center justify-center gap-1">
+                            <span className="text-sm font-black text-green-950">
+                              {holeItem.hole}
+                            </span>
+                            {hasBonus ? (
+                              <span className="text-[10px]">
+                                ⭐
+                              </span>
+                            ) : null}
+                          </div>
+
+                          <p className="mt-1 text-[10px] font-bold text-slate-500">
+                            Par {holeItem.par}
+                          </p>
+                          <p className="text-[9px] font-bold text-slate-400">
+                            SI {holeItem.strokeIndex}
+                          </p>
+                        </div>
+                      );
+                    }
+                  )}
+
+                  <div className="w-[70px] shrink-0 border-r border-slate-200 bg-slate-100 px-1 py-2 text-center">
+                    <p className="text-xs font-black text-green-950">
+                      OUT
+                    </p>
+                    <p className="mt-1 text-[10px] font-bold text-slate-500">
+                      Par {frontNinePar}
+                    </p>
+                  </div>
+
+                  <div className="w-[70px] shrink-0 border-r border-slate-200 bg-slate-100 px-1 py-2 text-center">
+                    <p className="text-xs font-black text-green-950">
+                      IN
+                    </p>
+                    <p className="mt-1 text-[10px] font-bold text-slate-500">
+                      Par {backNinePar}
+                    </p>
+                  </div>
+
+                  <div className="w-[78px] shrink-0 border-r border-slate-200 bg-green-50 px-1 py-2 text-center">
+                    <p className="text-xs font-black text-green-950">
+                      GROSS
+                    </p>
+                    <p className="mt-1 text-[10px] font-bold text-slate-500">
+                      Total
+                    </p>
+                  </div>
+
+                  <div className="w-[70px] shrink-0 border-r border-slate-200 bg-green-50 px-1 py-2 text-center">
+                    <p className="text-xs font-black text-green-950">
+                      HCP
+                    </p>
+                  </div>
+
+                  <div className="w-[78px] shrink-0 bg-green-100 px-1 py-2 text-center">
+                    <p className="text-xs font-black text-green-950">
+                      PTS
+                    </p>
+                    <p className="mt-1 text-[10px] font-bold text-green-700">
+                      Stableford
+                    </p>
+                  </div>
                 </div>
-              ))}
-          </div>
 
-          {savedMessage && (
-            <p className="mt-3 rounded-xl bg-green-600 px-3 py-2 text-center text-sm font-bold">
-              {savedMessage.startsWith("❌")
-                ? savedMessage
-                : `✅ ${savedMessage}`}
-            </p>
-          )}
-        </section>
+                {rankedScorecardRows.map(
+                  (row: any, index: number) => {
+                    const frontGross =
+                      row.holeScores
+                        .filter(
+                          (item: any) =>
+                            item.hole <= 9
+                        )
+                        .reduce(
+                          (
+                            total: number,
+                            item: any
+                          ) =>
+                            total +
+                            (item.gross || 0),
+                          0
+                        );
 
-        <section className="mt-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-          <button
-            onClick={saveHole}
-            disabled={isSaving}
-            className="w-full rounded-2xl bg-green-700 px-5 py-3.5 text-lg font-black text-white shadow-sm disabled:opacity-60"
-          >
-            {isSaving
-              ? "Saving..."
-              : isScramble
-              ? `Save Hole ${hole} Scramble Scores`
-              : `Save Hole ${hole} Scorecards`}
-          </button>
+                    const backGross =
+                      row.holeScores
+                        .filter(
+                          (item: any) =>
+                            item.hole >= 10
+                        )
+                        .reduce(
+                          (
+                            total: number,
+                            item: any
+                          ) =>
+                            total +
+                            (item.gross || 0),
+                          0
+                        );
 
-          <div className="mt-2 grid grid-cols-1 gap-2">
-            <a
-              href="/live-centre"
-              className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-black text-green-950 shadow-sm transition hover:border-green-700"
-            >
-              🏆 Leaderboard
-            </a>
-          </div>
-        </section>
+                    const position =
+                      row.completed > 0
+                        ? index + 1
+                        : "—";
+
+                    return (
+                      <div
+                        key={row.id}
+                        className="flex border-b border-slate-200 last:border-b-0"
+                      >
+                        <div className="sticky left-0 z-20 flex w-[176px] shrink-0 items-center gap-2 border-r border-slate-200 bg-white px-3 py-3 shadow-[4px_0_8px_rgba(15,23,42,0.08)]">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-950 text-sm font-black text-white">
+                            {position}
+                          </div>
+
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              {!isScramble && row.team ? (
+                                <span
+                                  className={`h-2.5 w-2.5 shrink-0 rounded-full ${teamDot(
+                                    row.team
+                                  )}`}
+                                />
+                              ) : null}
+
+                              <p className="truncate text-sm font-black text-green-950">
+                                {row.label}
+                              </p>
+                            </div>
+
+                            <p className="mt-0.5 truncate text-[10px] font-bold text-slate-500">
+                              {row.shortLabel} • HCP{" "}
+                              {row.handicap}
+                            </p>
+
+                            <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-green-700">
+                              {row.completed === 18
+                                ? "Complete"
+                                : `Through ${row.completed}`}
+                            </p>
+                          </div>
+                        </div>
+
+                        {row.holeScores.map(
+                          (item: any) => {
+                            const hasBonus =
+                              roundBonusHoles.some(
+                                (bonus: any) =>
+                                  getBonusHoleNumber(
+                                    bonus
+                                  ) === item.hole
+                              );
+
+                            return (
+                              <div
+                                key={item.hole}
+                                className={`flex w-[64px] shrink-0 items-center justify-center border-r border-slate-200 px-1 py-2 ${
+                                  hasBonus
+                                    ? "bg-amber-50/50"
+                                    : "bg-white"
+                                }`}
+                              >
+                                <div
+                                  title={scoreCellLabel(
+                                    item.gross,
+                                    item.par
+                                  )}
+                                  className={`flex h-10 w-10 items-center justify-center rounded-xl border text-base font-black ${scoreCellClass(
+                                    item.gross,
+                                    item.par
+                                  )}`}
+                                >
+                                  {item.gross || "–"}
+                                </div>
+                              </div>
+                            );
+                          }
+                        )}
+
+                        <div className="flex w-[70px] shrink-0 items-center justify-center border-r border-slate-200 bg-slate-50 px-1 py-2 text-base font-black text-slate-900">
+                          {frontGross || "–"}
+                        </div>
+
+                        <div className="flex w-[70px] shrink-0 items-center justify-center border-r border-slate-200 bg-slate-50 px-1 py-2 text-base font-black text-slate-900">
+                          {backGross || "–"}
+                        </div>
+
+                        <div className="flex w-[78px] shrink-0 items-center justify-center border-r border-slate-200 bg-green-50 px-1 py-2 text-lg font-black text-green-950">
+                          {row.grossTotal || "–"}
+                        </div>
+
+                        <div className="flex w-[70px] shrink-0 items-center justify-center border-r border-slate-200 bg-green-50 px-1 py-2 text-base font-black text-green-950">
+                          {row.handicap}
+                        </div>
+
+                        <div className="flex w-[78px] shrink-0 items-center justify-center bg-green-100 px-1 py-2 text-xl font-black text-green-950">
+                          {row.pointsTotal}
+                        </div>
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+            </div>
+
+            <div className="border-t border-slate-200 bg-slate-50 p-4">
+              <p className="text-center text-xs font-bold text-slate-500">
+                Swipe left to view every hole and the full round totals.
+                The player or pair column stays fixed.
+              </p>
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setViewMode("entry")}
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-green-950"
+                >
+                  Edit Scores
+                </button>
+
+                <a
+                  href="/live-centre"
+                  className="flex items-center justify-center rounded-2xl bg-green-700 px-4 py-3 text-center text-sm font-black text-white"
+                >
+                  View Leaderboard
+                </a>
+              </div>
+            </div>
+          </section>
+        )}
       </div>
     </main>
   );
