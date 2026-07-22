@@ -3,7 +3,7 @@ import PageContainer from "@/components/PageContainer";
 import PageHeader from "@/components/PageHeader";
 
 const moreLinks = [
-   {
+  {
     title: "Past Events",
     description: "Browse previous Swift Tees weekends.",
     href: "/events",
@@ -16,13 +16,13 @@ const moreLinks = [
     icon: "🏆",
   },
  
+ 
   {
     title: "Hall of Fame",
     description: "Past winners, legends and questionable achievements.",
     href: "/hall-of-fame",
     icon: "🏅",
   },
-  
   {
     title: "Tournament Setup",
     description: "Create and manage tournaments, players, rounds and handicaps.",
@@ -30,8 +30,6 @@ const moreLinks = [
     icon: "⚙️",
   },
 ];
-
-
 
 export default function MorePage() {
   return (
@@ -57,6 +55,7 @@ export default function MorePage() {
               <h2 className="text-lg font-black text-green-950">
                 {item.title}
               </h2>
+
               <p className="mt-1 text-sm leading-5 text-slate-600">
                 {item.description}
               </p>
