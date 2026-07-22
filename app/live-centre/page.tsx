@@ -12,9 +12,9 @@ import {
 } from "@/lib/scores";
 
 import {
-  buildCommentary,
   getRunningJokeForPlayer,
 } from "@/lib/commentary/commentaryEngine";
+import { buildBroadcastCommentary } from "@/lib/commentary/teamCommentaryEngine";
 
 import { supabase } from "@/lib/supabase";
 import { getLiveMoments, saveLiveMoment } from "@/lib/liveMoments";
@@ -95,6 +95,7 @@ type TeamStanding = {
   points: number;
   through: number;
   icon: string;
+  pos?: number;
 };
 
 type Moment = {
@@ -669,8 +670,49 @@ function buildTeams(rows: LeaderboardRow[]) {
     .sort((a, b) => b.points - a.points)
     .map((team, index) => ({
       ...team,
+      pos: index + 1,
       icon: index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉",
     }));
+}
+
+/**
+ * Rebuilds the team standings as they were immediately before the latest
+ * Stableford score was added.
+ *
+ * This is derived from the actual score data rather than localStorage, so
+ * commentary remains consistent after refreshes and across different devices.
+ */
+function buildPreviousTeamStandingsFromLatestScore(
+  currentRows: LeaderboardRow[],
+  latestStablefordScore: any
+): Record<string, { pos: number; points: number }> {
+  if (!latestStablefordScore?.player_id) return {};
+
+  const latestPlayerId = Number(latestStablefordScore.player_id);
+  const latestPoints = Number(latestStablefordScore.points ?? 0);
+
+  const rowsBeforeLatestScore = currentRows.map((row) => {
+    if (Number(row.id) !== latestPlayerId) {
+      return row;
+    }
+
+    return {
+      ...row,
+      points: Math.max(0, Number(row.points) - latestPoints),
+    };
+  });
+
+  const previousTeams = buildTeams(rowsBeforeLatestScore);
+
+  return Object.fromEntries(
+    previousTeams.map((team, index) => [
+      team.team,
+      {
+        pos: team.pos ?? index + 1,
+        points: team.points,
+      },
+    ])
+  );
 }
 
 function commentaryTierToRarity(
@@ -816,13 +858,129 @@ ${playerLines}
 ${teamLines}`;
 }
 
+function buildTeamCommentaryContext(
+  teamName: string,
+  currentStandings: TeamStanding[],
+  previousStandings: Record<string, { pos: number; points: number }>
+) {
+  const current = currentStandings.find((team) => team.team === teamName);
+  const previous = previousStandings[teamName];
+
+  const currentLeader = currentStandings[0];
+  const currentJointLeaders = currentLeader
+    ? currentStandings.filter((team) => team.points === currentLeader.points)
+    : [];
+
+  const previousRows = Object.entries(previousStandings)
+    .map(([team, standing]) => ({
+      team,
+      pos: Number(standing.pos ?? 0),
+      points: Number(standing.points ?? 0),
+    }))
+    .sort((a, b) => b.points - a.points || a.pos - b.pos);
+
+  const previousLeader = previousRows[0];
+  const previousJointLeaders = previousLeader
+    ? previousRows.filter((team) => team.points === previousLeader.points)
+    : [];
+
+  const teamPositionBefore = previous?.pos;
+  const teamPositionAfter = current?.pos;
+  const teamPointsBefore = previous?.points;
+  const teamPointsAfter = current?.points;
+
+  const teamGapBefore =
+    previous && previousLeader
+      ? Math.max(0, previousLeader.points - previous.points)
+      : undefined;
+
+  const teamGapAfter =
+    current && currentLeader
+      ? current.pos === 1
+        ? Math.max(
+            0,
+            current.points -
+              Number(
+                currentStandings.find((team) => team.team !== current.team)
+                  ?.points ?? current.points
+              )
+          )
+        : Math.max(0, currentLeader.points - current.points)
+      : undefined;
+
+  const teamPlacesMoved =
+    typeof teamPositionBefore === "number" &&
+    typeof teamPositionAfter === "number"
+      ? teamPositionBefore - teamPositionAfter
+      : 0;
+
+  const wasOutrightLeader =
+    previous?.pos === 1 &&
+    previousJointLeaders.length === 1 &&
+    previousLeader?.team === teamName;
+
+  const isOutrightLeader =
+    current?.pos === 1 &&
+    currentJointLeaders.length === 1 &&
+    currentLeader?.team === teamName;
+
+  const isJointTeamLeader =
+    current?.pos === 1 &&
+    currentJointLeaders.length > 1 &&
+    previous?.pos !== 1;
+
+  return {
+    teamPositionBefore,
+    teamPointsBefore,
+    teamLeaderBefore: previousLeader?.team,
+    teamLeaderPointsBefore: previousLeader?.points,
+    teamGapBefore,
+
+    teamPositionAfter,
+    teamPointsAfter,
+    teamLeaderAfter: currentLeader?.team,
+    teamLeaderPointsAfter: currentLeader?.points,
+    teamGapAfter,
+
+    teamPlacesMoved,
+    isNewTeamLeader:
+      Boolean(previous) &&
+      !wasOutrightLeader &&
+      isOutrightLeader,
+    isJointTeamLeader,
+    teamExtendedLead:
+      wasOutrightLeader &&
+      isOutrightLeader &&
+      typeof teamGapBefore === "number" &&
+      typeof teamGapAfter === "number" &&
+      teamGapAfter > teamGapBefore,
+    teamReducedGap:
+      Boolean(previous) &&
+      !isOutrightLeader &&
+      typeof teamGapBefore === "number" &&
+      typeof teamGapAfter === "number" &&
+      teamGapAfter < teamGapBefore,
+    teamLostLead:
+      wasOutrightLeader &&
+      !isOutrightLeader,
+    teamDroppedPosition:
+      Boolean(previous) &&
+      typeof teamPositionBefore === "number" &&
+      typeof teamPositionAfter === "number" &&
+      teamPositionAfter > teamPositionBefore,
+  };
+}
+
 function buildLatestStablefordMoment(
   latestStablefordScore: any,
   players: any[],
   currentRound: any,
   leaderboard: LeaderboardRow[],
   previousPositions: Record<string, number>,
-  scoreStateChanged: boolean
+  scoreStateChanged: boolean,
+  isTeamEvent: boolean,
+  teamStandings: TeamStanding[],
+  previousTeamStandings: Record<string, { pos: number; points: number }>
 ): LiveMomentRow | null {
   if (!latestStablefordScore) return null;
 
@@ -909,6 +1067,15 @@ function buildLatestStablefordMoment(
     tournamentStage = "closing";
   }
 
+  const teamContext =
+    isTeamEvent && leaderboardRow.team
+      ? buildTeamCommentaryContext(
+          leaderboardRow.team,
+          teamStandings,
+          previousTeamStandings
+        )
+      : {};
+
   const contextualEvent: CommentaryEvent = {
     ...commentaryEvent,
 
@@ -921,9 +1088,43 @@ function buildLatestStablefordMoment(
     tournamentStage,
     holesCompleted,
     holesRemaining,
+
+    isTeamEvent,
+    ...teamContext,
   };
 
-  const commentary = buildCommentary(contextualEvent);
+  const commentary = buildBroadcastCommentary(contextualEvent);
+
+  /*
+   * Broadcast producer:
+   * In team events, routine scores update the leaderboard silently.
+   * Publish only moments that materially affect the team race, feature a
+   * standout score, or occur during the closing stretch.
+   */
+  if (isTeamEvent) {
+    const changedTeamRace =
+      contextualEvent.isNewTeamLeader ||
+      contextualEvent.isJointTeamLeader ||
+      contextualEvent.teamExtendedLead ||
+      contextualEvent.teamReducedGap ||
+      contextualEvent.teamLostLead ||
+      contextualEvent.teamDroppedPosition ||
+      Number(contextualEvent.teamPlacesMoved ?? 0) !== 0;
+
+    const standoutScore =
+      contextualEvent.eventType === "birdie" ||
+      contextualEvent.eventType === "eagle" ||
+      Number(contextualEvent.stablefordPoints ?? 0) >= 4;
+
+    const closingStage =
+      contextualEvent.tournamentStage === "closing" ||
+      contextualEvent.tournamentStage === "final_hole" ||
+      contextualEvent.tournamentStage === "complete";
+
+    if (!changedTeamRace && !standoutScore && !closingStage) {
+      return null;
+    }
+  }
 
   const roundNumber = contextualEvent.roundNumber;
   const holeNumber = contextualEvent.holeNumber;
@@ -1017,7 +1218,7 @@ const personalityEvent: CommentaryEvent = {
   playerName: personalityName ?? commentaryEvent.playerName,
 };
 
-const commentary = buildCommentary(personalityEvent);
+const commentary = buildBroadcastCommentary(personalityEvent);
 
   const pairKey = latestScrambleInfo.playerIds
     .slice()
@@ -1752,6 +1953,14 @@ const rowsWithPositions = rows.map((player, index) => {
 
 const sortedTeams = hasTeams ? buildTeams(finalRows) : [];
 
+const previousTeamStandings =
+  hasTeams && latestStablefordScore
+    ? buildPreviousTeamStandingsFromLatestScore(
+        finalRows,
+        latestStablefordScore
+      )
+    : {};
+
 const primaryStoryline = scoreStateChanged
   ? getPrimaryStoryline({
       eventSlug,
@@ -1824,7 +2033,10 @@ const generatedMoments = hasScoringActivity
         currentRoundInfo.round,
         finalRows,
         previousPositions,
-        scoreStateChanged
+        scoreStateChanged,
+        hasTeams,
+        sortedTeams,
+        previousTeamStandings
       ),
 
       buildLatestScrambleMoment(
