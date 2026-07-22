@@ -14,8 +14,6 @@ import { calculateStablefordPoints } from "@/lib/stableford";
 import { supabase } from "@/lib/supabase";
 import { useActiveTournament } from "../hooks/useActiveTournament";
 
-type ViewMode = "entry" | "scorecard";
-
 function teamDot(team: string) {
   if (team === "Blue") return "bg-blue-500";
   if (team === "Green") return "bg-green-500";
@@ -32,43 +30,6 @@ function getBonusType(bonus: any) {
   return bonus.type ?? bonus.bonusType ?? bonus.bonus_type ?? "Bonus";
 }
 
-function scoreCellClass(gross: number, par: number) {
-  if (!gross) {
-    return "border-slate-200 bg-white text-slate-300";
-  }
-
-  const relative = gross - par;
-
-  if (relative <= -2) {
-    return "border-amber-300 bg-amber-100 text-amber-950 ring-2 ring-amber-300";
-  }
-
-  if (relative === -1) {
-    return "border-emerald-300 bg-emerald-100 text-emerald-950";
-  }
-
-  if (relative === 0) {
-    return "border-slate-300 bg-slate-100 text-slate-900";
-  }
-
-  if (relative === 1) {
-    return "border-orange-300 bg-orange-100 text-orange-950";
-  }
-
-  return "border-red-300 bg-red-100 text-red-950";
-}
-
-function scoreCellLabel(gross: number, par: number) {
-  if (!gross) return "";
-  const relative = gross - par;
-
-  if (relative <= -2) return "Eagle or better";
-  if (relative === -1) return "Birdie";
-  if (relative === 0) return "Par";
-  if (relative === 1) return "Bogey";
-  return "Double bogey or worse";
-}
-
 export default function LiveScoringPage() {
   const [tournamentSetup, setTournamentSetup] = useState<any>(null);
   const [roundId, setRoundId] = useState<number | string | null>(null);
@@ -80,7 +41,6 @@ export default function LiveScoringPage() {
   const [bonusWinners, setBonusWinners] = useState<Record<string, string>>({});
   const [savedMessage, setSavedMessage] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("entry");
 
   const { tournament, loading } = useActiveTournament();
   const EVENT_SLUG = tournament?.slug ?? "";
@@ -708,179 +668,6 @@ export default function LiveScoringPage() {
     );
   }
 
-  const scorecardRows = (() => {
-    const holes = currentRound.holes ?? [];
-
-    if (isScramble) {
-      return currentRound.groups.flatMap((group: any) =>
-        (group.pairs ?? []).map((pair: any) => {
-          const holeScores = holes.map((holeItem: any) => {
-            const gross =
-              scores[
-                scoreKeyFor(
-                  group.id,
-                  pair.id,
-                  Number(holeItem.hole)
-                )
-              ] ?? 0;
-
-            const points = gross
-              ? calculateStablefordPoints(
-                  gross,
-                  holeItem.par,
-                  holeItem.strokeIndex,
-                  pair.finalHandicap
-                )
-              : 0;
-
-            return {
-              hole: Number(holeItem.hole),
-              par: Number(holeItem.par),
-              strokeIndex: Number(holeItem.strokeIndex),
-              gross,
-              points,
-            };
-          });
-
-          const completed = holeScores.filter(
-            (item: any) => item.gross > 0
-          ).length;
-
-          return {
-            id: `${group.id}-${pair.id}`,
-            groupId: group.id,
-            groupName: group.name,
-            label: `${pair.player1} + ${pair.player2}`,
-            shortLabel: `Pair ${pair.pairNumber}`,
-            team: "",
-            handicap: pair.finalHandicap ?? 0,
-            holeScores,
-            completed,
-            grossTotal: holeScores.reduce(
-              (total: number, item: any) =>
-                total + (item.gross || 0),
-              0
-            ),
-            pointsTotal: holeScores.reduce(
-              (total: number, item: any) =>
-                total + (item.points || 0),
-              0
-            ),
-          };
-        })
-      );
-    }
-
-    const seenPlayers = new Set<string>();
-
-    return currentRound.groups.flatMap((group: any) =>
-      (group.players ?? [])
-        .filter((player: any) => {
-          const id = String(player.player_id ?? player.name);
-          if (seenPlayers.has(id)) return false;
-          seenPlayers.add(id);
-          return true;
-        })
-        .map((player: any) => {
-          const holeScores = holes.map((holeItem: any) => {
-            const gross =
-              scores[
-                scoreKeyFor(
-                  group.id,
-                  player.name,
-                  Number(holeItem.hole)
-                )
-              ] ?? 0;
-
-            const handicap =
-              player.eventHandicap ??
-              player.stablefordHandicap ??
-              0;
-
-            const points = gross
-              ? calculateStablefordPoints(
-                  gross,
-                  holeItem.par,
-                  holeItem.strokeIndex,
-                  handicap
-                )
-              : 0;
-
-            return {
-              hole: Number(holeItem.hole),
-              par: Number(holeItem.par),
-              strokeIndex: Number(holeItem.strokeIndex),
-              gross,
-              points,
-            };
-          });
-
-          const completed = holeScores.filter(
-            (item: any) => item.gross > 0
-          ).length;
-
-          return {
-            id: String(player.player_id ?? player.name),
-            groupId: group.id,
-            groupName: group.name,
-            label: player.name,
-            shortLabel: player.team || group.name,
-            team: player.team ?? "",
-            handicap:
-              player.eventHandicap ??
-              player.stablefordHandicap ??
-              0,
-            holeScores,
-            completed,
-            grossTotal: holeScores.reduce(
-              (total: number, item: any) =>
-                total + (item.gross || 0),
-              0
-            ),
-            pointsTotal: holeScores.reduce(
-              (total: number, item: any) =>
-                total + (item.points || 0),
-              0
-            ),
-          };
-        })
-    );
-  })();
-
-  const rankedScorecardRows = [...scorecardRows].sort((a, b) => {
-  if (b.pointsTotal !== a.pointsTotal) {
-    return b.pointsTotal - a.pointsTotal;
-  }
-
-  if (b.completed !== a.completed) {
-    return b.completed - a.completed;
-  }
-
-  return a.grossTotal - b.grossTotal;
-});
-
-  const totalPar = (currentRound.holes ?? []).reduce(
-    (total: number, item: any) =>
-      total + Number(item.par ?? 0),
-    0
-  );
-
-  const frontNinePar = (currentRound.holes ?? [])
-    .filter((item: any) => Number(item.hole) <= 9)
-    .reduce(
-      (total: number, item: any) =>
-        total + Number(item.par ?? 0),
-      0
-    );
-
-  const backNinePar = (currentRound.holes ?? [])
-    .filter((item: any) => Number(item.hole) >= 10)
-    .reduce(
-      (total: number, item: any) =>
-        total + Number(item.par ?? 0),
-      0
-    );
-
   return (
     <main className="min-h-screen bg-slate-100 p-3 pb-64 text-slate-900 md:p-8 md:pb-16">
       <div className="mx-auto max-w-6xl">
@@ -897,30 +684,6 @@ export default function LiveScoringPage() {
             {currentRound.day} • {currentRound.course} •{" "}
             {isScramble ? "Scramble Pairs" : "Stableford"}
           </p>
-        </div>
-
-        <div className="mb-3 grid grid-cols-2 rounded-2xl border border-slate-200 bg-white p-1 shadow-sm">
-          <button
-            onClick={() => setViewMode("entry")}
-            className={`rounded-xl px-3 py-2.5 text-sm font-black transition ${
-              viewMode === "entry"
-                ? "bg-green-950 text-white"
-                : "text-slate-500"
-            }`}
-          >
-            Enter Scores
-          </button>
-
-          <button
-            onClick={() => setViewMode("scorecard")}
-            className={`rounded-xl px-3 py-2.5 text-sm font-black transition ${
-              viewMode === "scorecard"
-                ? "bg-green-950 text-white"
-                : "text-slate-500"
-            }`}
-          >
-            Round Scorecard
-          </button>
         </div>
 
         <div className="mb-3 space-y-2">
@@ -963,8 +726,7 @@ export default function LiveScoringPage() {
             </div>
           )}
 
-          {viewMode === "entry" &&
-            currentRound.groups.length > 1 && (
+          {currentRound.groups.length > 1 && (
               <div
                 className="grid w-full gap-2"
                 style={{
@@ -998,8 +760,6 @@ export default function LiveScoringPage() {
             )}
         </div>
 
-        {viewMode === "entry" && (
-          <>
             <section className="rounded-3xl border border-green-900 bg-green-950 p-3 text-white shadow-sm">
               <div className="mb-3 text-center">
                 <h2 className="text-4xl font-black leading-none">
@@ -1254,7 +1014,7 @@ export default function LiveScoringPage() {
               <button
                 onClick={saveHole}
                 disabled={isSaving}
-                className="w-full rounded-2xl bg-green-700 px-5 py-3.5 text-lg font-black text-white shadow-sm disabled:opacity-60"
+                className="w-full rounded-2xl bg-green-800 px-5 py-4 text-lg font-black text-white shadow-sm transition hover:bg-green-00 disabled:opacity-60"
               >
                 {isSaving
                   ? "Saving..."
@@ -1263,353 +1023,36 @@ export default function LiveScoringPage() {
                   : `Save Hole ${hole} Scorecards`}
               </button>
 
-              <div className="mt-2 grid grid-cols-1 gap-2">
-                <a
-                  href="/live-centre"
-                  className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-black text-green-950 shadow-sm transition hover:border-green-700"
-                >
-                  🏆 Leaderboard
-                </a>
-              </div>
+            <div className="mt-5 border-t border-slate-200 pt-5">
+  <p className="mb-3 text-center text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+    Navigation
+  </p>
+
+  <div className="grid grid-cols-2 gap-3">
+    <a
+      href="/live-centre"
+      className="flex items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-center text-sm font-black text-emerald-800 shadow-sm transition hover:bg-emerald-100"
+    >
+      🏆 Leaderboard
+    </a>
+
+    <a
+      href="/full-scorecard"
+      className="flex items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 px-3 py-3 text-center text-sm font-black text-blue-800 shadow-sm transition hover:bg-blue-100"
+    >
+      📊 Full Scorecard
+    </a>
+
+    <a
+      href="/setup-v2"
+      className="col-span-2 flex items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-center text-sm font-black text-amber-800 shadow-sm transition hover:bg-amber-100"
+    >
+      ⚙️ Tournament Setup
+    </a>
+  </div>
+</div>
             </section>
-          </>
-        )}
 
-        {viewMode === "scorecard" && (
-          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-            <div className="bg-green-950 p-4 text-white md:p-5">
-              <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.22em] text-green-300">
-                    Official round scorecard
-                  </p>
-
-                  <h2 className="mt-1 text-2xl font-black md:text-3xl">
-                    {currentRound.course}
-                  </h2>
-
-                  <p className="mt-1 text-sm font-bold text-white/70">
-                    {currentRound.day} •{" "}
-                    {isScramble
-                      ? "Scramble Pairs"
-                      : "Stableford"}{" "}
-                    • Par {totalPar}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="rounded-2xl bg-white/10 px-3 py-2 text-center">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-white/60">
-                      Players
-                    </p>
-                    <p className="text-xl font-black">
-                      {rankedScorecardRows.length}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl bg-white/10 px-3 py-2 text-center">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-white/60">
-                      Front
-                    </p>
-                    <p className="text-xl font-black">
-                      {frontNinePar}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl bg-white/10 px-3 py-2 text-center">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-white/60">
-                      Back
-                    </p>
-                    <p className="text-xl font-black">
-                      {backNinePar}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
-              <div className="flex flex-wrap gap-2 text-[11px] font-black">
-                <span className="rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-amber-950">
-                  Eagle
-                </span>
-                <span className="rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-emerald-950">
-                  Birdie
-                </span>
-                <span className="rounded-full border border-slate-300 bg-slate-100 px-2.5 py-1 text-slate-900">
-                  Par
-                </span>
-                <span className="rounded-full border border-orange-300 bg-orange-100 px-2.5 py-1 text-orange-950">
-                  Bogey
-                </span>
-                <span className="rounded-full border border-red-300 bg-red-100 px-2.5 py-1 text-red-950">
-                  Double+
-                </span>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto overscroll-x-contain">
-              <div className="min-w-max">
-                <div className="sticky top-0 z-30 flex border-b border-slate-200 bg-slate-50">
-                  <div className="sticky left-0 z-40 flex w-[176px] shrink-0 border-r border-slate-200 bg-slate-50 px-3 py-3 shadow-[4px_0_8px_rgba(15,23,42,0.08)]">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-                        Position
-                      </p>
-                      <p className="text-sm font-black text-green-950">
-                        {isScramble ? "Pair" : "Player"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {currentRound.holes.map(
-                    (holeItem: any) => {
-                      const hasBonus =
-                        roundBonusHoles.some(
-                          (bonus: any) =>
-                            getBonusHoleNumber(
-                              bonus
-                            ) ===
-                            Number(holeItem.hole)
-                        );
-
-                      return (
-                        <div
-                          key={holeItem.hole}
-                          className={`w-[64px] shrink-0 border-r border-slate-200 px-1 py-2 text-center ${
-                            hasBonus
-                              ? "bg-amber-50"
-                              : "bg-slate-50"
-                          }`}
-                        >
-                          <div className="flex items-center justify-center gap-1">
-                            <span className="text-sm font-black text-green-950">
-                              {holeItem.hole}
-                            </span>
-                            {hasBonus ? (
-                              <span className="text-[10px]">
-                                ⭐
-                              </span>
-                            ) : null}
-                          </div>
-
-                          <p className="mt-1 text-[10px] font-bold text-slate-500">
-                            Par {holeItem.par}
-                          </p>
-                          <p className="text-[9px] font-bold text-slate-400">
-                            SI {holeItem.strokeIndex}
-                          </p>
-                        </div>
-                      );
-                    }
-                  )}
-
-                  <div className="w-[70px] shrink-0 border-r border-slate-200 bg-slate-100 px-1 py-2 text-center">
-                    <p className="text-xs font-black text-green-950">
-                      OUT
-                    </p>
-                    <p className="mt-1 text-[10px] font-bold text-slate-500">
-                      Par {frontNinePar}
-                    </p>
-                  </div>
-
-                  <div className="w-[70px] shrink-0 border-r border-slate-200 bg-slate-100 px-1 py-2 text-center">
-                    <p className="text-xs font-black text-green-950">
-                      IN
-                    </p>
-                    <p className="mt-1 text-[10px] font-bold text-slate-500">
-                      Par {backNinePar}
-                    </p>
-                  </div>
-
-                  <div className="w-[78px] shrink-0 border-r border-slate-200 bg-green-50 px-1 py-2 text-center">
-                    <p className="text-xs font-black text-green-950">
-                      GROSS
-                    </p>
-                    <p className="mt-1 text-[10px] font-bold text-slate-500">
-                      Total
-                    </p>
-                  </div>
-
-                  <div className="w-[70px] shrink-0 border-r border-slate-200 bg-green-50 px-1 py-2 text-center">
-                    <p className="text-xs font-black text-green-950">
-                      HCP
-                    </p>
-                  </div>
-
-                  <div className="w-[78px] shrink-0 bg-green-100 px-1 py-2 text-center">
-                    <p className="text-xs font-black text-green-950">
-                      PTS
-                    </p>
-                    <p className="mt-1 text-[10px] font-bold text-green-700">
-                      Stableford
-                    </p>
-                  </div>
-                </div>
-
-                {rankedScorecardRows.map(
-                  (row: any, index: number) => {
-                    const frontGross =
-                      row.holeScores
-                        .filter(
-                          (item: any) =>
-                            item.hole <= 9
-                        )
-                        .reduce(
-                          (
-                            total: number,
-                            item: any
-                          ) =>
-                            total +
-                            (item.gross || 0),
-                          0
-                        );
-
-                    const backGross =
-                      row.holeScores
-                        .filter(
-                          (item: any) =>
-                            item.hole >= 10
-                        )
-                        .reduce(
-                          (
-                            total: number,
-                            item: any
-                          ) =>
-                            total +
-                            (item.gross || 0),
-                          0
-                        );
-
-                    const position =
-                      row.completed > 0
-                        ? index + 1
-                        : "—";
-
-                    return (
-                      <div
-                        key={row.id}
-                        className="flex border-b border-slate-200 last:border-b-0"
-                      >
-                        <div className="sticky left-0 z-20 flex w-[176px] shrink-0 items-center gap-2 border-r border-slate-200 bg-white px-3 py-3 shadow-[4px_0_8px_rgba(15,23,42,0.08)]">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-green-950 text-sm font-black text-white">
-                            {position}
-                          </div>
-
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              {!isScramble && row.team ? (
-                                <span
-                                  className={`h-2.5 w-2.5 shrink-0 rounded-full ${teamDot(
-                                    row.team
-                                  )}`}
-                                />
-                              ) : null}
-
-                              <p className="truncate text-sm font-black text-green-950">
-                                {row.label}
-                              </p>
-                            </div>
-
-                            <p className="mt-0.5 truncate text-[10px] font-bold text-slate-500">
-                              {row.shortLabel} • HCP{" "}
-                              {row.handicap}
-                            </p>
-
-                            <p className="mt-1 text-[10px] font-black uppercase tracking-wider text-green-700">
-                              {row.completed === 18
-                                ? "Complete"
-                                : `Through ${row.completed}`}
-                            </p>
-                          </div>
-                        </div>
-
-                        {row.holeScores.map(
-                          (item: any) => {
-                            const hasBonus =
-                              roundBonusHoles.some(
-                                (bonus: any) =>
-                                  getBonusHoleNumber(
-                                    bonus
-                                  ) === item.hole
-                              );
-
-                            return (
-                              <div
-                                key={item.hole}
-                                className={`flex w-[64px] shrink-0 items-center justify-center border-r border-slate-200 px-1 py-2 ${
-                                  hasBonus
-                                    ? "bg-amber-50/50"
-                                    : "bg-white"
-                                }`}
-                              >
-                                <div
-                                  title={scoreCellLabel(
-                                    item.gross,
-                                    item.par
-                                  )}
-                                  className={`flex h-10 w-10 items-center justify-center rounded-xl border text-base font-black ${scoreCellClass(
-                                    item.gross,
-                                    item.par
-                                  )}`}
-                                >
-                                  {item.gross || "–"}
-                                </div>
-                              </div>
-                            );
-                          }
-                        )}
-
-                        <div className="flex w-[70px] shrink-0 items-center justify-center border-r border-slate-200 bg-slate-50 px-1 py-2 text-base font-black text-slate-900">
-                          {frontGross || "–"}
-                        </div>
-
-                        <div className="flex w-[70px] shrink-0 items-center justify-center border-r border-slate-200 bg-slate-50 px-1 py-2 text-base font-black text-slate-900">
-                          {backGross || "–"}
-                        </div>
-
-                        <div className="flex w-[78px] shrink-0 items-center justify-center border-r border-slate-200 bg-green-50 px-1 py-2 text-lg font-black text-green-950">
-                          {row.grossTotal || "–"}
-                        </div>
-
-                        <div className="flex w-[70px] shrink-0 items-center justify-center border-r border-slate-200 bg-green-50 px-1 py-2 text-base font-black text-green-950">
-                          {row.handicap}
-                        </div>
-
-                        <div className="flex w-[78px] shrink-0 items-center justify-center bg-green-100 px-1 py-2 text-xl font-black text-green-950">
-                          {row.pointsTotal}
-                        </div>
-                      </div>
-                    );
-                  }
-                )}
-              </div>
-            </div>
-
-            <div className="border-t border-slate-200 bg-slate-50 p-4">
-              <p className="text-center text-xs font-bold text-slate-500">
-                Swipe left to view every hole and the full round totals.
-                The player or pair column stays fixed.
-              </p>
-
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => setViewMode("entry")}
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-green-950"
-                >
-                  Edit Scores
-                </button>
-
-                <a
-                  href="/live-centre"
-                  className="flex items-center justify-center rounded-2xl bg-green-700 px-4 py-3 text-center text-sm font-black text-white"
-                >
-                  View Leaderboard
-                </a>
-              </div>
-            </div>
-          </section>
-        )}
       </div>
     </main>
   );

@@ -2222,23 +2222,49 @@ useEffect(() => {
         </div>
       </section>
 
-     <section className="mt-2.5 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-  <div className="flex items-center justify-between gap-3">
-    <div className="min-w-0">
-      <h2 className="text-lg font-black text-green-950">
-        📝 Live Scoring
-      </h2>
+    <section className="mt-5 border-t border-slate-200 pt-5">
+  <p className="mb-3 text-center text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+    Navigation
+  </p>
 
-      <p className="mt-0.5 text-xs text-slate-500">
-        Enter your group&apos;s scores
-      </p>
-    </div>
-
+  <div className="grid grid-cols-2 gap-3">
     <Link
       href="/live-scoring-v2"
-      className="shrink-0 rounded-xl bg-green-700 px-4 py-2.5 text-sm font-black text-white"
+      className="flex min-h-20 flex-col items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-center shadow-sm transition hover:bg-emerald-100"
     >
-      Scorecards →
+      <span className="text-sm font-black text-emerald-800">
+        📝 Enter Scores
+      </span>
+
+      <span className="mt-1 text-[11px] font-semibold text-emerald-700/70">
+        Add live hole scores
+      </span>
+    </Link>
+
+    <Link
+      href="/full-scorecard"
+      className="flex min-h-20 flex-col items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 px-3 py-3 text-center shadow-sm transition hover:bg-blue-100"
+    >
+      <span className="text-sm font-black text-blue-800">
+        📊 Full Scorecard
+      </span>
+
+      <span className="mt-1 text-[11px] font-semibold text-blue-700/70">
+        View player scorecards
+      </span>
+    </Link>
+
+    <Link
+      href="/setup-v2"
+      className="col-span-2 flex min-h-20 flex-col items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-center shadow-sm transition hover:bg-amber-100"
+    >
+      <span className="text-sm font-black text-amber-800">
+        ⚙️ Tournament Setup
+      </span>
+
+      <span className="mt-1 text-[11px] font-semibold text-amber-700/70">
+        Manage players, rounds and settings
+      </span>
     </Link>
   </div>
 </section>
