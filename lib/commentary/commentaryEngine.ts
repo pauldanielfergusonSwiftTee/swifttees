@@ -1536,6 +1536,46 @@ function applyCommentaryDirector(
   return directedMoment;
 }
 
+function ensureHoleNumber(
+  event: CommentaryEvent,
+  moment: CommentaryMoment,
+): CommentaryMoment {
+  const holeNumber = Number(event.holeNumber);
+
+  if (!Number.isFinite(holeNumber) || holeNumber <= 0) {
+    return moment;
+  }
+
+  const text = String(moment.text ?? "").trim();
+
+  /*
+   * Avoid adding the hole again when the selected template or contextual
+   * commentary already mentions it.
+   */
+  const alreadyIncludesHole =
+    new RegExp(`\\bhole\\s+${holeNumber}\\b`, "i").test(text) ||
+    new RegExp(`\\b${holeNumber}(?:st|nd|rd|th)?\\s+hole\\b`, "i").test(text) ||
+    new RegExp(`\\bat\\s+(?:the\\s+)?${holeNumber}\\b`, "i").test(text) ||
+    new RegExp(`\\bon\\s+(?:the\\s+)?${holeNumber}\\b`, "i").test(text);
+
+  if (alreadyIncludesHole) {
+    return moment;
+  }
+
+  const punctuation = /[.!?]$/.test(text)
+    ? text.slice(-1)
+    : ".";
+
+  const textWithoutPunctuation = /[.!?]$/.test(text)
+    ? text.slice(0, -1)
+    : text;
+
+  return {
+    ...moment,
+    text: `${textWithoutPunctuation} on hole ${holeNumber}${punctuation}`,
+  };
+}
+
 export function buildCommentary(
   event: CommentaryEvent
 ): CommentaryMoment {
@@ -1560,10 +1600,15 @@ export function buildCommentary(
     contextualMoment
   );
 
-  return applyCommentaryDirector(
-    event,
-    personalityMoment
-  );
+  const directedMoment = applyCommentaryDirector(
+  event,
+  personalityMoment,
+);
+
+return ensureHoleNumber(
+  event,
+  directedMoment,
+);
 }
 
 export function getRunningJokeForPlayer(

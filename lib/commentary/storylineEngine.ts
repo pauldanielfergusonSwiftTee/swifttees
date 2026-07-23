@@ -47,6 +47,48 @@ export type Storyline = {
   metadata?: Record<string, string | number | boolean | null>;
 };
 
+function deterministicNumber(value: string): number {
+  let hash = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+
+  return hash;
+}
+
+function selectStorylineText(seed: string, lines: string[]): string {
+  return lines[deterministicNumber(seed) % lines.length];
+}
+
+function ensureStorylineHoleNumber(storyline: Storyline): Storyline {
+  const holeNumber = Number(storyline.holeNumber);
+
+  if (!Number.isFinite(holeNumber) || holeNumber <= 0) {
+    return storyline;
+  }
+
+  const text = String(storyline.text ?? "").trim();
+  const alreadyIncludesHole =
+    new RegExp(`\\bhole\\s+${holeNumber}\\b`, "i").test(text) ||
+    new RegExp(`\\bafter\\s+(?:the\\s+)?hole\\s+${holeNumber}\\b`, "i").test(text) ||
+    new RegExp(`\\bthrough\\s+${holeNumber}(?:\\s+holes?)?\\b`, "i").test(text) ||
+    new RegExp(`\\b${holeNumber}(?:st|nd|rd|th)?\\s+hole\\b`, "i").test(text);
+
+  if (alreadyIncludesHole) {
+    return storyline;
+  }
+
+  const hasPunctuation = /[.!?]$/.test(text);
+  const punctuation = hasPunctuation ? text.slice(-1) : ".";
+  const textWithoutPunctuation = hasPunctuation ? text.slice(0, -1) : text;
+
+  return {
+    ...storyline,
+    text: `${textWithoutPunctuation} after hole ${holeNumber}${punctuation}`,
+  };
+}
+
 export type StorylineScoreRow = {
   id?: number | string;
   player_id?: number | string | null;
@@ -398,7 +440,15 @@ function buildPlayerFormStorylines(input: StorylineInput): Storyline[] {
         tier: "major",
         icon: "🔥",
         title: "Back-to-Back Birdies",
-        text: `${name} has gone birdie-birdie and the round is suddenly gathering serious momentum.`,
+        text: selectStorylineText(
+          `${input.eventSlug}-${playerId}-${roundNumber}-${latest.holeNumber}-back-to-back`,
+          [
+            `${name} has gone birdie-birdie and the round is suddenly gathering serious momentum.`,
+            `${name} makes it two birdies in a row. The charge is properly under way.`,
+            `Back-to-back birdies for ${name}. The leaderboard has been given something to think about.`,
+            `${name} follows one birdie with another and is suddenly one of the stories of the round.`,
+          ],
+        ),
         playerId,
         playerName: name,
         team,
@@ -423,7 +473,14 @@ function buildPlayerFormStorylines(input: StorylineInput): Storyline[] {
         tier: "major",
         icon: "🔥",
         title: "Player on a Charge",
-        text: `${name} has produced ${birdiesInFive} birdies or better in the last five holes. That is a proper charge.`,
+        text: selectStorylineText(
+          `${input.eventSlug}-${playerId}-${latest.holeNumber}-three-in-five`,
+          [
+            `${name} has produced ${birdiesInFive} birdies or better in the last five holes. That is a proper charge.`,
+            `${birdiesInFive} birdies or better in five holes for ${name}. This round is catching fire.`,
+            `${name} is tearing through this stretch with ${birdiesInFive} birdies or better in five holes.`,
+          ],
+        ),
         playerId,
         playerName: name,
         team,
@@ -448,7 +505,14 @@ function buildPlayerFormStorylines(input: StorylineInput): Storyline[] {
         tier: "rare",
         icon: "🚀",
         title: "Red-Hot Run",
-        text: `${name} has made ${birdiesInSix} birdies or better in six holes. The course is taking a hiding.`,
+        text: selectStorylineText(
+          `${input.eventSlug}-${playerId}-${latest.holeNumber}-four-in-six`,
+          [
+            `${name} has made ${birdiesInSix} birdies or better in six holes. The course is taking a hiding.`,
+            `${birdiesInSix} birdies or better in six holes from ${name}. This is outrageous form.`,
+            `${name} is on a red-hot run: ${birdiesInSix} birdies or better across six holes.`,
+          ],
+        ),
         playerId,
         playerName: name,
         team,
@@ -478,7 +542,15 @@ function buildPlayerFormStorylines(input: StorylineInput): Storyline[] {
           tier: "rare",
           icon: "🦅",
           title: "Eagle Ignites the Round",
-          text: `${name}'s eagle has transformed the shape of this round.`,
+          text: selectStorylineText(
+            `${input.eventSlug}-${playerId}-${eagle.holeNumber}-eagle-burst`,
+            [
+              `${name}'s eagle on hole ${eagle.holeNumber} has transformed the shape of this round.`,
+              `Eagle for ${name} on hole ${eagle.holeNumber}. The whole tournament picture has shifted.`,
+              `${name} produces an eagle on hole ${eagle.holeNumber}, and suddenly this round looks very different.`,
+              `A huge eagle from ${name} on hole ${eagle.holeNumber}. That could be the moment the round turns.`,
+            ],
+          ),
           playerId,
           playerName: name,
           team,
@@ -506,7 +578,14 @@ function buildPlayerFormStorylines(input: StorylineInput): Storyline[] {
         tier: "notable",
         icon: "📉",
         title: "Momentum Lost",
-        text: `${name} has dropped shots on consecutive holes and needs to stop the slide quickly.`,
+        text: selectStorylineText(
+          `${input.eventSlug}-${playerId}-${latest.holeNumber}-bogey-streak`,
+          [
+            `${name} has dropped shots on consecutive holes and needs to stop the slide quickly.`,
+            `Back-to-back dropped shots for ${name}. The next hole has become very important.`,
+            `${name} is moving in the wrong direction after consecutive dropped shots.`,
+          ],
+        ),
         playerId,
         playerName: name,
         team,
@@ -535,7 +614,14 @@ function buildPlayerFormStorylines(input: StorylineInput): Storyline[] {
         tier: "major",
         icon: "💥",
         title: "Round Unravelling",
-        text: `${name} has found serious trouble twice in the last three holes. This round is threatening to get away.`,
+        text: selectStorylineText(
+          `${input.eventSlug}-${playerId}-${latest.holeNumber}-disaster-run`,
+          [
+            `${name} has found serious trouble twice in the last three holes. This round is threatening to get away.`,
+            `Two major mistakes in three holes for ${name}. The round is beginning to unravel.`,
+            `${name} has hit serious trouble twice in three holes. Damage limitation is now the priority.`,
+          ],
+        ),
         playerId,
         playerName: name,
         team,
@@ -563,7 +649,14 @@ function buildPlayerFormStorylines(input: StorylineInput): Storyline[] {
         tier: "notable",
         icon: "💪",
         title: "Immediate Response",
-        text: `${name} answers the dropped shot with a birdie. That is exactly how to respond.`,
+        text: selectStorylineText(
+          `${input.eventSlug}-${playerId}-${latest.holeNumber}-bounce-back`,
+          [
+            `${name} answers the dropped shot with a birdie. That is exactly how to respond.`,
+            `Immediate response from ${name}: a birdie straight after the setback.`,
+            `${name} wastes no time repairing the damage with a birdie at the very next hole.`,
+          ],
+        ),
         playerId,
         playerName: name,
         team,
@@ -591,7 +684,14 @@ function buildPlayerFormStorylines(input: StorylineInput): Storyline[] {
         tier: history.length >= 12 ? "major" : "notable",
         icon: "🧼",
         title: "Card Still Clean",
-        text: `${name} has completed ${history.length} holes without a dropped shot.`,
+        text: selectStorylineText(
+          `${input.eventSlug}-${playerId}-${latest.holeNumber}-clean-card`,
+          [
+            `${name} has completed ${history.length} holes without a dropped shot.`,
+            `${history.length} holes played and still no dropped shot for ${name}. Very tidy golf.`,
+            `${name}'s card remains spotless through ${history.length} holes.`,
+          ],
+        ),
         playerId,
         playerName: name,
         team,
@@ -624,7 +724,14 @@ function buildPlayerFormStorylines(input: StorylineInput): Storyline[] {
         tier: "major",
         icon: "🏁",
         title: "Finishing Fast",
-        text: `${name} is producing a serious finish when it matters most.`,
+        text: selectStorylineText(
+          `${input.eventSlug}-${playerId}-${latest.holeNumber}-strong-finish`,
+          [
+            `${name} is producing a serious finish when it matters most.`,
+            `${name} has found another gear in the closing stretch.`,
+            `This is a powerful finish from ${name}, exactly when the pressure is highest.`,
+          ],
+        ),
         playerId,
         playerName: name,
         team,
@@ -652,7 +759,14 @@ function buildPlayerFormStorylines(input: StorylineInput): Storyline[] {
         tier: "major",
         icon: "😬",
         title: "Late Trouble",
-        text: `${name} has stumbled badly in the closing stretch. The timing could hardly be worse.`,
+        text: selectStorylineText(
+          `${input.eventSlug}-${playerId}-${latest.holeNumber}-late-collapse`,
+          [
+            `${name} has stumbled badly in the closing stretch. The timing could hardly be worse.`,
+            `Late trouble for ${name}. The round is slipping at the worst possible time.`,
+            `${name} has hit a rough patch in the closing holes, and the leaderboard will punish it.`,
+          ],
+        ),
         playerId,
         playerName: name,
         team,
@@ -700,7 +814,14 @@ function buildLeaderboardStorylines(input: StorylineInput): Storyline[] {
         tier: "major",
         icon: "🏆",
         title: "New Leader",
-        text: `${latestRow.name} has moved to the top of the leaderboard on ${latestRow.points} points.`,
+        text: selectStorylineText(
+          `${input.eventSlug}-${latestRow.id}-${latestRow.through}-new-leader`,
+          [
+            `${latestRow.name} has moved to the top of the leaderboard on ${latestRow.points} points.`,
+            `${latestRow.name} takes over at the summit with ${latestRow.points} points.`,
+            `A new name at the top: ${latestRow.name} now leads on ${latestRow.points} points.`,
+          ],
+        ),
         playerId: latestRow.id,
         playerName: latestRow.name,
         team: latestRow.team,
@@ -724,7 +845,14 @@ function buildLeaderboardStorylines(input: StorylineInput): Storyline[] {
         tier: "major",
         icon: "⚔️",
         title: "Tied at the Top",
-        text: `${latestRow.name} has joined the lead on ${latestRow.points} points.`,
+        text: selectStorylineText(
+          `${input.eventSlug}-${latestRow.id}-${latestRow.through}-joined-lead`,
+          [
+            `${latestRow.name} has joined the lead on ${latestRow.points} points.`,
+            `${latestRow.name} draws level at the top with ${latestRow.points} points.`,
+            `It is tied at the summit as ${latestRow.name} reaches ${latestRow.points} points.`,
+          ],
+        ),
         playerId: latestRow.id,
         playerName: latestRow.name,
         team: latestRow.team,
@@ -746,7 +874,14 @@ function buildLeaderboardStorylines(input: StorylineInput): Storyline[] {
         tier: "major",
         icon: "👀",
         title: "Right on the Leader's Shoulder",
-        text: `${latestRow.name} is now just one point behind ${leader.name}.`,
+        text: selectStorylineText(
+          `${input.eventSlug}-${latestRow.id}-${latestRow.through}-within-one`,
+          [
+            `${latestRow.name} is now just one point behind ${leader.name}.`,
+            `${latestRow.name} closes to within a single point of ${leader.name}.`,
+            `Only one point now separates ${latestRow.name} from leader ${leader.name}.`,
+          ],
+        ),
         playerId: latestRow.id,
         playerName: latestRow.name,
         team: latestRow.team,
@@ -773,7 +908,14 @@ function buildLeaderboardStorylines(input: StorylineInput): Storyline[] {
         tier: "notable",
         icon: "🏆",
         title: "Leader Pulling Clear",
-        text: `${leader.name} has opened a ${leader.points - second.points}-point advantage at the top.`,
+        text: selectStorylineText(
+          `${input.eventSlug}-${leader.id}-${leader.through}-lead-extended`,
+          [
+            `${leader.name} has opened a ${leader.points - second.points}-point advantage at the top.`,
+            `${leader.name} stretches the lead to ${leader.points - second.points} points.`,
+            `The gap is growing: ${leader.name} now leads by ${leader.points - second.points}.`,
+          ],
+        ),
         playerId: leader.id,
         playerName: leader.name,
         team: leader.team,
@@ -803,7 +945,14 @@ function buildLeaderboardStorylines(input: StorylineInput): Storyline[] {
       tier: amount >= 3 ? "major" : "notable",
       icon: "🚀",
       title: "Flying Up the Table",
-      text: `${biggestClimber.name} has climbed ${amount} places into ${formatOrdinal(biggestClimber.pos)}.`,
+      text: selectStorylineText(
+        `${input.eventSlug}-${biggestClimber.id}-${biggestClimber.through}-big-climber`,
+        [
+          `${biggestClimber.name} has climbed ${amount} places into ${formatOrdinal(biggestClimber.pos)}.`,
+          `${biggestClimber.name} surges ${amount} places up the leaderboard into ${formatOrdinal(biggestClimber.pos)}.`,
+          `A major move from ${biggestClimber.name}, up ${amount} places to ${formatOrdinal(biggestClimber.pos)}.`,
+        ],
+      ),
       playerId: biggestClimber.id,
       playerName: biggestClimber.name,
       team: biggestClimber.team,
@@ -832,7 +981,14 @@ function buildLeaderboardStorylines(input: StorylineInput): Storyline[] {
       tier: amount >= 3 ? "major" : "notable",
       icon: "📉",
       title: "Losing Ground",
-      text: `${biggestDrop.name} has fallen ${amount} places to ${formatOrdinal(biggestDrop.pos)}.`,
+      text: selectStorylineText(
+        `${input.eventSlug}-${biggestDrop.id}-${biggestDrop.through}-big-drop`,
+        [
+          `${biggestDrop.name} has fallen ${amount} places to ${formatOrdinal(biggestDrop.pos)}.`,
+          `${biggestDrop.name} drops ${amount} places on the leaderboard to ${formatOrdinal(biggestDrop.pos)}.`,
+          `A costly slide for ${biggestDrop.name}, down ${amount} places into ${formatOrdinal(biggestDrop.pos)}.`,
+        ],
+      ),
       playerId: biggestDrop.id,
       playerName: biggestDrop.name,
       team: biggestDrop.team,
@@ -864,7 +1020,14 @@ function buildTeamStorylines(input: StorylineInput): Storyline[] {
       tier: "major",
       icon: "🥊",
       title: "Team Lead Changes Hands",
-      text: `${leader.team} Team have moved ahead in the team race on ${leader.points} points.`,
+      text: selectStorylineText(
+        `${input.eventSlug}-${leader.team}-${leader.through}-team-lead`,
+        [
+          `${leader.team} Team have moved ahead in the team race on ${leader.points} points.`,
+          `${leader.team} Team take control of the team race with ${leader.points} points.`,
+          `The team lead changes hands: ${leader.team} move top on ${leader.points} points.`,
+        ],
+      ),
       team: leader.team,
       holeNumber: leader.through,
       priority: 96,
@@ -890,8 +1053,22 @@ function buildTeamStorylines(input: StorylineInput): Storyline[] {
       title: "Team Race Tightens",
       text:
         gap === 0
-          ? `${leader.team} and ${second.team} are level in the team race.`
-          : `${leader.team} lead ${second.team} by only ${gap} point${gap === 1 ? "" : "s"}.`,
+          ? selectStorylineText(
+              `${input.eventSlug}-${leader.team}-${second.team}-${leader.through}-team-level`,
+              [
+                `${leader.team} and ${second.team} are level in the team race.`,
+                `Nothing separates ${leader.team} and ${second.team} at the top of the team standings.`,
+                `The team contest is all square between ${leader.team} and ${second.team}.`,
+              ],
+            )
+          : selectStorylineText(
+              `${input.eventSlug}-${leader.team}-${second.team}-${leader.through}-team-pressure`,
+              [
+                `${leader.team} lead ${second.team} by only ${gap} point${gap === 1 ? "" : "s"}.`,
+                `Only ${gap} point${gap === 1 ? "" : "s"} separate ${leader.team} and ${second.team}.`,
+                `${second.team} remain right on ${leader.team}'s heels, just ${gap} point${gap === 1 ? "" : "s"} back.`,
+              ],
+            ),
       team: leader.team,
       holeNumber: Math.min(leader.through, second.through),
       priority: gap <= 1 ? 91 : 79,
@@ -919,7 +1096,14 @@ function buildPairStorylines(input: StorylineInput): Storyline[] {
         tier: "major",
         icon: "🔥",
         title: "Pair Take Control",
-        text: `${pair.pairNames} have surged into the lead on ${pair.points} points.`,
+        text: selectStorylineText(
+          `${input.eventSlug}-${pair.pairKey}-${pair.through}-pair-lead`,
+          [
+            `${pair.pairNames} have surged into the lead on ${pair.points} points.`,
+            `${pair.pairNames} take over at the top with ${pair.points} points.`,
+            `A big move from ${pair.pairNames}, who now lead on ${pair.points} points.`,
+          ],
+        ),
         pairKey: pair.pairKey,
         pairNames: pair.pairNames,
         holeNumber: pair.through,
@@ -937,7 +1121,14 @@ function buildPairStorylines(input: StorylineInput): Storyline[] {
         tier: places >= 3 ? "major" : "notable",
         icon: "🚀",
         title: "Pair on the Move",
-        text: `${pair.pairNames} have climbed ${places} places into ${formatOrdinal(pair.pos)}.`,
+        text: selectStorylineText(
+          `${input.eventSlug}-${pair.pairKey}-${pair.through}-pair-recovery`,
+          [
+            `${pair.pairNames} have climbed ${places} places into ${formatOrdinal(pair.pos)}.`,
+            `${pair.pairNames} jump ${places} places to ${formatOrdinal(pair.pos)}.`,
+            `The pair are flying: ${pair.pairNames} move up ${places} places into ${formatOrdinal(pair.pos)}.`,
+          ],
+        ),
         pairKey: pair.pairKey,
         pairNames: pair.pairNames,
         holeNumber: pair.through,
@@ -958,7 +1149,7 @@ export function buildStorylines(input: StorylineInput): Storyline[] {
     ...buildLeaderboardStorylines(input),
     ...buildTeamStorylines(input),
     ...buildPairStorylines(input),
-  ]);
+  ]).map(ensureStorylineHoleNumber);
 }
 
 export function getPrimaryStoryline(input: StorylineInput): Storyline | null {
