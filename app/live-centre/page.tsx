@@ -15,6 +15,7 @@ import {
   getRunningJokeForPlayer,
 } from "@/lib/commentary/commentaryEngine";
 import { buildBroadcastCommentary } from "@/lib/commentary/teamCommentaryEngine";
+import { enhanceBroadcastMoments } from "@/lib/commentary/broadcastProducer";
 
 import { supabase } from "@/lib/supabase";
 import { getLiveMoments, saveLiveMoment } from "@/lib/liveMoments";
@@ -2067,8 +2068,19 @@ const filteredGeneratedMoments =
     primaryStoryline
   );
 
-if (filteredGeneratedMoments.length > 0) {
-  await saveGeneratedMoments(filteredGeneratedMoments);
+const broadcastProducedMoments = enhanceBroadcastMoments(
+  filteredGeneratedMoments,
+  (savedMoments ?? []).slice(0, 20),
+  finalRows.map((row) => ({
+    name: row.name,
+    pos: row.pos,
+    points: row.points,
+    through: row.through,
+  }))
+);
+
+if (broadcastProducedMoments.length > 0) {
+  await saveGeneratedMoments(broadcastProducedMoments);
 }
 
 if (!hasScoringActivity && typeof window !== "undefined") {
