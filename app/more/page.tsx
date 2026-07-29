@@ -15,13 +15,17 @@ const moreLinks = [
     href: "/overall-leaderboard",
     icon: "🏆",
   },
- 
- 
   {
     title: "Hall of Fame",
     description: "Past winners, legends and questionable achievements.",
     href: "/hall-of-fame",
     icon: "🏅",
+  },
+  {
+    title: "Soundboard",
+    description: "Swift Tees Sounds .",
+    href: "/soundboard",
+    icon: "🔊",
   },
   {
     title: "Tournament Setup",
