@@ -320,27 +320,29 @@ export function buildStablefordEvent(
     return null;
   }
 
-  const playerName = normaliseText(player.name);
-  const playerId = Number(player.id);
-  const holeNumber = toFiniteNumber(
-    latestScore.hole_number,
-    0
-  );
+const playerName = normaliseText(player.name);
+const playerId = Number(player.id);
 
-  const roundNumber = toFiniteNumber(
-    latestScore.round_number,
-    0
-  );
+const holeNumber = toFiniteNumber(
+  latestScore.hole_number,
+  0
+);
 
-  if (
-    !playerName ||
-    playerId === null ||
-    playerId === undefined ||
-    holeNumber <= 0 ||
-    roundNumber <= 0
-  ) {
-    return null;
-  }
+const roundNumber = toFiniteNumber(
+  latestScore.round_number,
+  0
+);
+
+if (
+  !playerName ||
+  !Number.isFinite(playerId) ||
+  playerId <= 0 ||
+  holeNumber <= 0 ||
+  roundNumber <= 0
+) {
+  return null;
+}
+
 
   const grossScore = toOptionalFiniteNumber(
     latestScore.gross_score
