@@ -22,6 +22,7 @@ const PAGE_LABELS: Record<string, string> = {
   gallery: "Gallery",
   photos: "Photos",
   "register-interest": "Register Interest",
+  "weekend-review": "Weekend Review",
 
   // Event names
   "carden-park-2026": "Stu's 50th",
@@ -31,6 +32,8 @@ const PAGE_LABELS: Record<string, string> = {
 
 const EXACT_PAGE_LABELS: Record<string, string> = {
   "/events/carden-park-2026": "Stu's 50th",
+  "/events/carden-park-2026/weekend-review": "Carden Park Review",
+
   "/events/carden-park-2026/live-leaderboard": "Leaderboard",
   "/events/carden-park-2026/live-leaderboard/live-scoring": "Scorecard",
   "/events/carden-park-2026/live-leaderboard/setup":
@@ -95,6 +98,11 @@ const BACK_ROUTES: Record<
     href: "/",
     label: "Home",
   },
+
+  "/events/carden-park-2026/weekend-review": {
+    href: "/events",
+    label: "Events",
+  },
 };
 
 function formatSegment(segment: string) {
@@ -125,6 +133,14 @@ function getPageLabel(
   );
 }
 
+function getBreadcrumbHref(href: string) {
+  if (href === "/events/carden-park-2026") {
+    return "/events/carden-park-2026/weekend-review";
+  }
+
+  return href;
+}
+
 function getBackRoute(pathname: string) {
   if (BACK_ROUTES[pathname]) {
     return BACK_ROUTES[pathname];
@@ -151,7 +167,7 @@ function getBackRoute(pathname: string) {
       .join("/")}`;
 
     return {
-      href: eventPath,
+      href: getBreadcrumbHref(eventPath),
       label:
         EXACT_PAGE_LABELS[eventPath] ??
         PAGE_LABELS[segments[1]] ??
@@ -172,7 +188,7 @@ function getBackRoute(pathname: string) {
     parentSegments[parentSegments.length - 1];
 
   return {
-    href: parentPath,
+    href: getBreadcrumbHref(parentPath),
     label:
       EXACT_PAGE_LABELS[parentPath] ??
       PAGE_LABELS[parentSegment] ??
@@ -204,7 +220,7 @@ export default function AppPageHeader() {
     }
   );
 
-    return (
+  return (
     <header className="sticky top-0 z-[80] border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-md [@media(min-width:1200px)]:hidden">
       <div className="mx-auto flex min-h-12 max-w-6xl items-center gap-3 px-4 py-2">
         <Link
@@ -231,7 +247,9 @@ export default function AppPageHeader() {
                 className="flex shrink-0 items-center gap-1.5"
               >
                 {index > 0 && (
-                  <span className="text-slate-300">›</span>
+                  <span className="text-slate-300">
+                    ›
+                  </span>
                 )}
 
                 {crumb.current ? (
@@ -243,7 +261,7 @@ export default function AppPageHeader() {
                   </span>
                 ) : (
                   <Link
-                    href={crumb.href}
+                    href={getBreadcrumbHref(crumb.href)}
                     className="max-w-[150px] truncate transition hover:text-green-800"
                   >
                     {crumb.label}
