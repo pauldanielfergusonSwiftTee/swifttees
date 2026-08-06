@@ -5,7 +5,7 @@ import Link from "next/link";
 
 const galleryImages = [
   {
-    src: "/images/carden-park-2026/outsideLaugh.jpg",
+    src: "/images/carden-park-2026/outsidelaugh.jpg",
     alt: "Laughs outside at Carden Park",
   },
   {
@@ -39,18 +39,19 @@ export default function CardenParkWeekendReviewPage() {
       <section className="relative overflow-hidden bg-[#07111f] text-white">
         <div className="absolute inset-0 overflow-hidden">
           <video
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            className="h-full w-full object-cover"
-          >
-            <source
-              src="/videos/carden-park-2026/hero-drone.mp4"
-              type="video/mp4"
-            />
-          </video>
+  autoPlay
+  muted
+  loop
+  playsInline
+  preload="auto"
+  disablePictureInPicture
+  className="absolute inset-0 h-full w-full object-cover"
+>
+  <source
+    src="/videos/carden-park-2026/hero-drone.mp4"
+    type="video/mp4"
+  />
+</video>
 
           <div className="absolute inset-0 bg-gradient-to-b from-black/15 via-black/45 to-[#07111f]" />
         </div>
@@ -212,37 +213,52 @@ export default function CardenParkWeekendReviewPage() {
         </div>
       </section>
 
-      {/* SCRAMBLE FEATURE */}
-      <section className="mx-auto max-w-6xl px-5 pb-12 sm:px-8 lg:px-10 lg:pb-16">
-        <div className="grid gap-5 md:grid-cols-2">
-          <div className="relative min-h-[360px] overflow-hidden rounded-[2rem]">
-            <Image
-              src="/images/carden-park-2026/dan.jpg"
-              alt="Dan during the scramble"
-              fill
-              className="object-cover"
-            />
-          </div>
+      {/* FEATURE QUOTE */}
+<section className="mx-auto max-w-6xl px-5 pb-12 sm:px-8 lg:px-10 lg:pb-16">
+  <div className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#0b1728] via-[#12324a] to-[#0f6b52] p-10 text-white shadow-xl sm:p-14 lg:p-20">
 
-          <div className="relative min-h-[360px] overflow-hidden rounded-[2rem]">
-            <Image
-              src="/images/carden-park-2026/carts.jpeg"
-              alt="Golf carts at Carden Park"
-              fill
-              className="object-cover"
-            />
+    <p className="text-xs font-black uppercase tracking-[0.28em] text-lime-300">
+      THE STORY OF THE WEEKEND
+    </p>
 
-            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+    <div className="mt-8 max-w-4xl">
+      <span className="text-7xl font-black leading-none text-lime-300 opacity-40">
+        “
+      </span>
 
-            <div className="absolute bottom-0 left-0 right-0 p-7 sm:p-9">
-              <p className="text-3xl font-black leading-tight text-white">
-                Every time one team threatened to pull away, somebody else dragged
-                them straight back.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <h2 className="mt-2 text-4xl font-black leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+        Every time one team threatened to pull away...
+        <br />
+        somebody else dragged them straight back.
+      </h2>
+
+      <p className="mt-8 max-w-2xl text-lg leading-8 text-slate-200">
+        For two days the leaderboard swung constantly. Every birdie,
+        every bonus hole and every Stableford point mattered, making this
+        one of the closest and most entertaining Swift Tees weekends yet.
+      </p>
+    </div>
+
+    <div className="mt-10 flex flex-wrap gap-3">
+      <div className="rounded-full bg-white/10 px-4 py-2 text-sm font-bold">
+        36 Holes
+      </div>
+
+      <div className="rounded-full bg-white/10 px-4 py-2 text-sm font-bold">
+        12 Players
+      </div>
+
+      <div className="rounded-full bg-white/10 px-4 py-2 text-sm font-bold">
+        Constant Lead Changes
+      </div>
+
+      <div className="rounded-full bg-lime-300 px-4 py-2 text-sm font-black text-slate-900">
+        White Team Champions
+      </div>
+    </div>
+
+  </div>
+</section>
 
       {/* DAY TWO */}
       <section className="bg-[#0b1728] py-14 text-white lg:py-20">
@@ -302,7 +318,7 @@ export default function CardenParkWeekendReviewPage() {
           {/* ACTION IMAGE */}
           <div className="relative mt-10 min-h-[420px] overflow-hidden rounded-[2rem]">
             <Image
-  src="/images/carden-park-2026/outsideLaugh.jpg"
+  src="/images/carden-park-2026/outsidelaugh.jpg"
   alt="Swift Tees at Carden Park"
   fill
   className="object-cover"
@@ -565,43 +581,60 @@ export default function CardenParkWeekendReviewPage() {
         </div>
       </section>
 
-      {/* SOCIAL / END OF WEEKEND PHOTO */}
-      <section className="mx-auto max-w-6xl px-5 py-14 sm:px-8 lg:px-10 lg:py-20">
-        <div className="relative min-h-[460px] overflow-hidden rounded-[2rem]">
-          <Image
-            src="/images/carden-park-2026/beersoutside.jpg"
-            alt="Beers outside after the golf"
-            fill
-            className="object-cover"
-          />
+      {/* LOOKING AHEAD */}
+<section className="px-5 py-16 sm:px-8 lg:py-24">
+  <div className="mx-auto max-w-4xl text-center">
+    <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-700">
+      Looking Ahead
+    </p>
 
-          <div className="absolute inset-0 bg-gradient-to-t from-[#07111f] via-black/20 to-transparent" />
+    <h2 className="mt-4 text-5xl font-black tracking-tight text-slate-950 sm:text-6xl">
+      Roll on the next one.
+    </h2>
 
-          <div className="absolute bottom-0 left-0 max-w-3xl p-8 sm:p-12">
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-lime-300">
-              Looking Ahead
-            </p>
+    <div className="mx-auto mt-8 h-1 w-14 rounded-full bg-emerald-700" />
 
-            <h2 className="mt-3 text-4xl font-black text-white sm:text-6xl">
-              Roll on the next one.
-            </h2>
+    <div className="mx-auto mt-8 max-w-3xl space-y-5 text-lg leading-8 text-slate-600">
+      <p>
+        If this weekend proved one thing, it&apos;s that the competition is
+        getting stronger every year.
+      </p>
 
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-200">
-              Whether this tournament was decided by golfing ability or alcohol
-              consumption will remain a topic of fierce debate.
-            </p>
+      <p>
+        Live scoring, proper handicaps, season-long rankings, richer commentary
+        and bigger prize pots are all now within reach.
+      </p>
 
-            <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-200">
-              Some will argue the handicaps need changing. Others will argue
-              certain players simply need to sober up.
-            </p>
+      <p>
+        Whether this tournament was decided by golfing ability...
+        <br />
+        <span className="font-bold text-slate-900">
+          ...or alcohol consumption...
+        </span>
+        <br />
+        will remain a topic of fierce debate.
+      </p>
 
-            <p className="mt-5 font-black text-white">
-              Another brilliant Swift Tees weekend. Quite possibly the best one yet.
-            </p>
-          </div>
-        </div>
-      </section>
+      <div className="mx-auto my-8 max-w-xl rounded-[1.75rem] bg-white px-6 py-7 shadow-sm ring-1 ring-slate-200/70">
+        <p className="font-semibold text-slate-700">
+          Some will argue the handicaps need changing.
+        </p>
+
+        <p className="mt-2 font-semibold text-slate-700">
+          Others will argue certain players simply need to sober up.
+        </p>
+      </div>
+
+      <p className="text-xl font-black text-slate-950">
+        Another brilliant Swift Tees weekend.
+        <br />
+        <span className="text-emerald-700">
+          Quite possibly the best one yet.
+        </span>
+      </p>
+    </div>
+  </div>
+</section>
 
       {/* FINAL QUOTE */}
       <section className="bg-[#07111f] px-5 py-20 text-center text-white sm:px-8 lg:py-28">

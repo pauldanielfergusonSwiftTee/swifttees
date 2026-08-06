@@ -9,8 +9,8 @@ const navItems = [
     href: "/",
   },
   {
-    label: "Stu's B'day",
-    href: "/events/carden-park-2026",
+    label: "Carden Park",
+    href: "/events/carden-park-2026/weekend-review",
   },
   {
     label: "Leaderboard",
