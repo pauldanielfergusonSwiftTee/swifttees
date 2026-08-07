@@ -82,7 +82,7 @@ const galleryImages = [
   },
 ];
 
-const champions = ["Gav", "Wrighty", "Carl", "Adam"];
+const champions = ["🏆 Gav", "🏆 Wrighty", "🏆 Carl", "🏆 Adam"];
 
 export default function CardenParkWeekendReviewPage() {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
