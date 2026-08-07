@@ -1,38 +1,137 @@
 // app/events/carden-park-2026/weekend-review/page.tsx
 
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 
 const galleryImages = [
-  {
-    src: "/images/carden-park-2026/outsidelaugh.jpg",
-    alt: "Laughs outside at Carden Park",
-  },
   {
     src: "/images/carden-park-2026/beersoutside.jpg",
     alt: "Beers outside after golf",
   },
   {
+    src: "/images/carden-park-2026/buggy.jpg",
+    alt: "Buggy at Carden Park",
+  },
+  {
     src: "/images/carden-park-2026/bunker.jpg",
-    alt: "Golf action from Carden Park",
+    alt: "Golf action from the bunker",
   },
   {
     src: "/images/carden-park-2026/carts.jpeg",
     alt: "Golf carts at Carden Park",
   },
   {
+    src: "/images/carden-park-2026/CheshireScorecard.png",
+    alt: "Cheshire scramble scorecard",
+  },
+  {
     src: "/images/carden-park-2026/dan.jpg",
     alt: "Dan during the Swift Tees weekend",
   },
   {
+    src: "/images/carden-park-2026/grouplandscape.jpg",
+    alt: "Swift Tees group at Carden Park",
+  },
+  {
+    src: "/images/carden-park-2026/individualleaderboard.jpg",
+    alt: "Final individual leaderboard",
+  },
+  {
+    src: "/images/carden-park-2026/lads.JPG",
+    alt: "The lads at Carden Park",
+  },
+  {
+    src: "/images/carden-park-2026/leaderboard.png",
+    alt: "Carden Park leaderboard",
+  },
+  {
+    src: "/images/carden-park-2026/limbo.JPG",
+    alt: "Weekend antics at Carden Park",
+  },
+  {
     src: "/images/carden-park-2026/meal.jpg",
     alt: "Dinner at Carden Park",
+  },
+  {
+    src: "/images/carden-park-2026/NicklausScorecard.png",
+    alt: "Nicklaus Stableford scorecard",
+  },
+  {
+    src: "/images/carden-park-2026/outsidelaugh.jpg",
+    alt: "Laughs outside at Carden Park",
+  },
+  {
+    src: "/images/carden-park-2026/smells.jpeg",
+    alt: "Post-round laughs outside",
+  },
+  {
+    src: "/images/carden-park-2026/smiles.JPG",
+    alt: "Swift Tees smiles",
+  },
+  {
+    src: "/images/carden-park-2026/taz.jpg",
+    alt: "Taz at Carden Park",
+  },
+  {
+    src: "/images/carden-park-2026/Teamleaderboard.jpg",
+    alt: "Final team leaderboard",
+  },
+  {
+    src: "/images/carden-park-2026/winnerswhites.jpg",
+    alt: "White Team champions",
   },
 ];
 
 const champions = ["Gav", "Wrighty", "Carl", "Adam"];
 
 export default function CardenParkWeekendReviewPage() {
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const touchStartX = useRef<number | null>(null);
+
+  const closeLightbox = () => {
+    setLightboxIndex(null);
+  };
+
+  const showPrevious = () => {
+    setLightboxIndex((current) => {
+      if (current === null) return null;
+      return current === 0 ? galleryImages.length - 1 : current - 1;
+    });
+  };
+
+  const showNext = () => {
+    setLightboxIndex((current) => {
+      if (current === null) return null;
+      return current === galleryImages.length - 1 ? 0 : current + 1;
+    });
+  };
+
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        closeLightbox();
+      } else if (event.key === "ArrowLeft") {
+        showPrevious();
+      } else if (event.key === "ArrowRight") {
+        showNext();
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [lightboxIndex]);
+
   return (
     <main className="min-h-screen bg-[#f3f1eb] text-slate-950">
       {/* HERO */}
@@ -123,38 +222,50 @@ export default function CardenParkWeekendReviewPage() {
     </h3>
   </div>
 
-  {/* MAIN STATS */}
-  <div className="grid grid-cols-2 border-y border-white/10">
-    <WeekendStat
-      value="1"
-      label="Eagle"
-      sublabel="EAGLE BABY!"
-      icon="🦅"
-    />
+  {/* WEEKEND TOTALS */}
+<div className="grid grid-cols-2 border-y border-white/10 sm:grid-cols-3">
+  <WeekendStat
+    value="1"
+    label="Eagle"
+    sublabel="EAGLE BABY!"
+    icon="🦅"
+  />
 
-    <WeekendStat
-      value="310"
-      suffix="yds"
-      label="Longest Drive"
-      sublabel="Paul"
-      icon="🚀"
-    />
+  <WeekendStat
+    value="9"
+    label="Birdies"
+    sublabel="Across the weekend"
+    icon="🐦"
+  />
 
-    <WeekendStat
-      value="10"
-      suffix="pts"
-      label="Deficit Overturned"
-      sublabel="Paul's Monday charge"
-      icon="📈"
-    />
+  <WeekendStat
+    value="67"
+    label="Pars"
+    sublabel="Across the weekend"
+    icon="⛳"
+  />
 
-    <WeekendStat
-      value="1"
-      label="Players' Player"
-      sublabel="Taz"
-      icon="🏆"
-    />
-  </div>
+  <WeekendStat
+    value="103"
+    label="Bogeys"
+    sublabel="Things got harder..."
+    icon="😬"
+  />
+
+  <WeekendStat
+    value="62"
+    label="Double Bogeys"
+    sublabel="Things got much harder"
+    icon="💀"
+  />
+
+  <WeekendStat
+    value="40"
+    label="Triple Bogeys"
+    sublabel="We'll leave it there"
+    icon="🫣"
+  />
+</div>
 
   {/* QUICK FACTS */}
 
@@ -312,8 +423,8 @@ export default function CardenParkWeekendReviewPage() {
 
               <p>
                 <strong className="text-white">Gav</strong>... after what appeared
-                to be rather less sleep... somehow still produced when it mattered.
-                Gav turned up looking like the White Team’s biggest threat might actually be the sleeping arrangements..
+                to be rather less sleep... turned up looking like the White Team’s biggest threat might actually be the sleeping arrangements. But somehow still produced when it mattered.
+                
               </p>
 
               <p>
@@ -557,37 +668,60 @@ export default function CardenParkWeekendReviewPage() {
       {/* GALLERY */}
       <section className="bg-white py-14 lg:py-20">
         <div className="mx-auto max-w-6xl px-5 sm:px-8 lg:px-10">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-700">
-              Photos
-            </p>
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-700">
+                The Evidence
+              </p>
 
-            <h2 className="mt-2 text-5xl font-black tracking-tight">
-              Weekend Gallery
-            </h2>
+              <h2 className="mt-2 text-5xl font-black tracking-tight">
+                Weekend Gallery
+              </h2>
+
+              <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-600">
+                Golf, winners, scorecards and several moments that probably
+                shouldn&apos;t have been photographed.
+              </p>
+            </div>
+
+            <p className="text-sm font-bold text-slate-400">
+              Tap any image to view full screen
+            </p>
           </div>
 
-          <div className="mt-10 grid auto-rows-[210px] grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="mt-10 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
             {galleryImages.map((image, index) => {
-              const specialClasses =
-                index === 0
-                  ? "col-span-2 row-span-2"
-                  : index === 3
-                    ? "col-span-2"
-                    : "";
+              const isWide =
+                image.src.includes("Scorecard") ||
+                image.src.includes("leaderboard") ||
+                image.src.includes("grouplandscape");
 
               return (
-                <div
+                <button
                   key={image.src}
-                  className={`group relative overflow-hidden rounded-2xl bg-slate-200 ${specialClasses}`}
+                  type="button"
+                  onClick={() => setLightboxIndex(index)}
+                  className={`group relative overflow-hidden rounded-2xl bg-slate-200 text-left shadow-sm ring-1 ring-slate-200/70 ${
+                    isWide ? "col-span-2 aspect-[16/9]" : "aspect-square"
+                  }`}
+                  aria-label={`Open ${image.alt}`}
                 >
                   <Image
                     src={image.src}
                     alt={image.alt}
                     fill
-                    className="object-cover transition duration-500 group-hover:scale-105"
+                    sizes="(max-width: 768px) 50vw, 25vw"
+                    className={`transition duration-500 group-hover:scale-[1.02] ${
+                      isWide ? "object-contain bg-slate-100" : "object-cover"
+                    }`}
                   />
-                </div>
+
+                  <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/10" />
+
+                  <div className="absolute bottom-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/65 text-sm text-white backdrop-blur">
+                    ⤢
+                  </div>
+                </button>
               );
             })}
           </div>
@@ -666,6 +800,96 @@ export default function CardenParkWeekendReviewPage() {
           </p>
         </div>
       </section>
+
+      {/* FULL-SCREEN LIGHTBOX */}
+      {lightboxIndex !== null && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/95 p-3 backdrop-blur-sm sm:p-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Weekend photo viewer"
+          onClick={closeLightbox}
+          onTouchStart={(event) => {
+            touchStartX.current = event.touches[0]?.clientX ?? null;
+          }}
+          onTouchEnd={(event) => {
+            if (touchStartX.current === null) return;
+
+            const endX = event.changedTouches[0]?.clientX ?? touchStartX.current;
+            const distance = endX - touchStartX.current;
+
+            if (Math.abs(distance) > 60) {
+              if (distance > 0) {
+                showPrevious();
+              } else {
+                showNext();
+              }
+            }
+
+            touchStartX.current = null;
+          }}
+        >
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              closeLightbox();
+            }}
+            aria-label="Close gallery"
+            className="absolute right-4 top-4 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-3xl font-light text-white backdrop-blur transition hover:bg-white/20 sm:right-6 sm:top-6"
+          >
+            ×
+          </button>
+
+          <div className="absolute left-4 top-5 z-30 rounded-full bg-white/10 px-4 py-2 text-xs font-black tracking-wider text-white backdrop-blur sm:left-6 sm:top-6">
+            {lightboxIndex + 1} / {galleryImages.length}
+          </div>
+
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              showPrevious();
+            }}
+            aria-label="Previous image"
+            className="absolute left-3 top-1/2 z-30 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-4xl font-light text-white backdrop-blur transition hover:bg-white/20 sm:left-6 sm:h-14 sm:w-14"
+          >
+            ‹
+          </button>
+
+          <div
+            className="relative h-[82vh] w-full max-w-[1500px]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <Image
+              src={galleryImages[lightboxIndex].src}
+              alt={galleryImages[lightboxIndex].alt}
+              fill
+              priority
+              sizes="100vw"
+              className="object-contain"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              showNext();
+            }}
+            aria-label="Next image"
+            className="absolute right-3 top-1/2 z-30 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-4xl font-light text-white backdrop-blur transition hover:bg-white/20 sm:right-6 sm:h-14 sm:w-14"
+          >
+            ›
+          </button>
+
+          <div className="pointer-events-none absolute bottom-5 left-1/2 z-30 w-[calc(100%-2rem)] max-w-2xl -translate-x-1/2 text-center">
+            <span className="inline-block rounded-full bg-black/65 px-5 py-2 text-sm font-semibold text-white backdrop-blur">
+              {galleryImages[lightboxIndex].alt}
+            </span>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
