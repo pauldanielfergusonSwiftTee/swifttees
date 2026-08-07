@@ -533,25 +533,25 @@ export default function CardenParkWeekendReviewPage() {
   <MomentCard
     icon="🥩"
     title="The Shit Steak"
-    text="The now infamous 'shit steak' had already earned its nickname. Adam's solution was apparently to get rid of it as quickly as possible, attempting to inhale approximately half a cow in one mouthful and very nearly turning dinner into a medical emergency. Thankfully Adam survived. The steak's reputation didn't."
+   text="The now infamous 'Shit Steak' had already earned its name. Adam then decided the best approach was apparently to spend as little time eating it as possible, attempting to inhale it in one mouthful and very nearly bringing the weekend to a dramatic halt. Thankfully, Adam survived. Nobody has forgiven the steak. Especially not Liam"
 />
 
   <MomentCard
     icon="🚀"
     title="Longest Drive"
-    text="Paul claimed it with a monster 310-yard effort. Downhill? Yes. Helping wind? Yes. Counts? Absolutely. Stu also launched an absolute rocket on the 15th."
+    text="Paul claimed it with a monster 309-yard effort. Downhill? Yes. Helping wind? Yes. Counts? Absolutely. Strong competition from a few players coming close too."
   />
 
   <MomentCard
     icon="🎤"
     title="Carpool Karaoke"
-    text="The playlist was questionable. The singing even more so. The commitment was faultless."
+    text="The playlist was questionable. The singing even more so. The commitment was faultless. As was the drinking."
   />
 
   <MomentCard
     icon="👕"
     title="Fashion Report"
-    text="Credit where it's due, everyone made the effort to turn up in their team colours and there were some surprisingly strong looks on display. Taz probably took best dressed with the green tops, while Paul appeared to have come straight from a shift at Asda. Throw in an alarming number of tight shorts, dazzling white ankles and some extremely ambitious outfit choices, and it was another exceptionally strong year for Swift Tees fashion."
+    text="Credit where it's due, everyone made the effort to turn up in their team colours and there were some surprisingly strong looks on display. Taz probably took best dressed with the green tops, while Paul appeared to have come straight from a shift at Asda. Throw in an alarming number of tight shorts, a couple of bright white ankles and some extremely confident belts, and it was another exceptionally strong weekend for Swift Tees."
 />
 </div>
       </section>
@@ -745,8 +745,8 @@ export default function CardenParkWeekendReviewPage() {
       </p>
 
       <p>
-        Live scoring, proper handicaps, season-long rankings, richer commentary
-        and bigger prize pots are all now within reach.
+        Proper handicaps, season-long rankings and better commentary
+        are all now within reach.
       </p>
 
       <p>
