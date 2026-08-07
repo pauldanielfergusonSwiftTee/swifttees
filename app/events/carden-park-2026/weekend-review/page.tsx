@@ -82,7 +82,7 @@ const galleryImages = [
   },
 ];
 
-const champions = ["🏆 Gav", "🏆 Wrighty", "🏆 Carl", "🏆 Adam"];
+const champions = ["Gav", "Wrighty", "Carl", "Adam"];
 
 export default function CardenParkWeekendReviewPage() {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -593,18 +593,18 @@ export default function CardenParkWeekendReviewPage() {
       </div>
 
       {/* NAMES */}
-      <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-2xl bg-white/10 px-5 py-4 text-center">
-        <span className="font-black text-white">Gav</span>
-        <span className="text-lime-300">•</span>
+<div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-2xl bg-white/10 px-5 py-4 text-center">
+  <span className="font-black text-white">🏆 Gav</span>
+  <span className="text-lime-300">•</span>
 
-        <span className="font-black text-white">Wrighty</span>
-        <span className="text-lime-300">•</span>
+  <span className="font-black text-white">🏆 Wrighty</span>
+  <span className="text-lime-300">•</span>
 
-        <span className="font-black text-white">Carl</span>
-        <span className="text-lime-300">•</span>
+  <span className="font-black text-white">🏆 Carl</span>
+  <span className="text-lime-300">•</span>
 
-        <span className="font-black text-white">Adam</span>
-      </div>
+  <span className="font-black text-white">🏆 Adam</span>
+</div>
     </div>
   </div>
 </section>
@@ -662,7 +662,65 @@ export default function CardenParkWeekendReviewPage() {
         </div>
       </section>
 
-      {/* GALLERY */}
+      
+
+      {/* LOOKING AHEAD */}
+<section className="px-5 py-16 sm:px-8 lg:py-24">
+  <div className="mx-auto max-w-4xl text-center">
+    <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-700">
+      Looking Ahead
+    </p>
+
+    <h2 className="mt-4 text-5xl font-black tracking-tight text-slate-950 sm:text-6xl">
+      Roll on the next one.
+    </h2>
+
+    <div className="mx-auto mt-8 h-1 w-14 rounded-full bg-emerald-700" />
+
+    <div className="mx-auto mt-8 max-w-3xl space-y-5 text-lg leading-8 text-slate-600">
+      <p>
+        If this weekend proved one thing, it&apos;s that the competition is
+        getting stronger every year.
+      </p>
+
+      <p>
+        Proper handicaps, season-long rankings and better commentary
+        are all now within reach.
+      </p>
+
+      <p>
+        Whether this tournament was decided by golfing ability...
+        <br />
+        <span className="font-bold text-slate-900">
+          ...or alcohol consumption...
+        </span>
+        <br />
+        will remain a topic of fierce debate.
+      </p>
+
+      <div className="mx-auto my-8 max-w-xl rounded-[1.75rem] bg-white px-6 py-7 shadow-sm ring-1 ring-slate-200/70">
+        <p className="font-semibold text-slate-700">
+          Some will argue the handicaps need changing.
+        </p>
+
+        <p className="mt-2 font-semibold text-slate-700">
+          Others will argue certain players simply need to sober up.
+        </p>
+      </div>
+
+      <p className="text-xl font-black text-slate-950">
+        Another brilliant Swift Tees weekend.
+        <br />
+        <span className="text-emerald-700">
+          Quite possibly the best one yet.
+        </span>
+      </p>
+    </div>
+  </div>
+</section>
+
+     
+{/* GALLERY */}
       <section className="bg-white py-14 lg:py-20">
         <div className="mx-auto max-w-6xl px-5 sm:px-8 lg:px-10">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
@@ -725,62 +783,7 @@ export default function CardenParkWeekendReviewPage() {
         </div>
       </section>
 
-      {/* LOOKING AHEAD */}
-<section className="px-5 py-16 sm:px-8 lg:py-24">
-  <div className="mx-auto max-w-4xl text-center">
-    <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-700">
-      Looking Ahead
-    </p>
-
-    <h2 className="mt-4 text-5xl font-black tracking-tight text-slate-950 sm:text-6xl">
-      Roll on the next one.
-    </h2>
-
-    <div className="mx-auto mt-8 h-1 w-14 rounded-full bg-emerald-700" />
-
-    <div className="mx-auto mt-8 max-w-3xl space-y-5 text-lg leading-8 text-slate-600">
-      <p>
-        If this weekend proved one thing, it&apos;s that the competition is
-        getting stronger every year.
-      </p>
-
-      <p>
-        Proper handicaps, season-long rankings and better commentary
-        are all now within reach.
-      </p>
-
-      <p>
-        Whether this tournament was decided by golfing ability...
-        <br />
-        <span className="font-bold text-slate-900">
-          ...or alcohol consumption...
-        </span>
-        <br />
-        will remain a topic of fierce debate.
-      </p>
-
-      <div className="mx-auto my-8 max-w-xl rounded-[1.75rem] bg-white px-6 py-7 shadow-sm ring-1 ring-slate-200/70">
-        <p className="font-semibold text-slate-700">
-          Some will argue the handicaps need changing.
-        </p>
-
-        <p className="mt-2 font-semibold text-slate-700">
-          Others will argue certain players simply need to sober up.
-        </p>
-      </div>
-
-      <p className="text-xl font-black text-slate-950">
-        Another brilliant Swift Tees weekend.
-        <br />
-        <span className="text-emerald-700">
-          Quite possibly the best one yet.
-        </span>
-      </p>
-    </div>
-  </div>
-</section>
-
-      {/* FINAL QUOTE */}
+ {/* FINAL QUOTE */}
       <section className="bg-[#07111f] px-5 py-20 text-center text-white sm:px-8 lg:py-28">
         <div className="mx-auto max-w-5xl">
           <div className="mx-auto mb-7 h-1 w-16 rounded-full bg-lime-300" />
@@ -797,6 +800,7 @@ export default function CardenParkWeekendReviewPage() {
           </p>
         </div>
       </section>
+
 
       {/* FULL-SCREEN LIGHTBOX */}
       {lightboxIndex !== null && (
