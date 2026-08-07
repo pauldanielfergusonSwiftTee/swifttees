@@ -35,10 +35,7 @@ const galleryImages = [
     src: "/images/carden-park-2026/grouplandscape.jpg",
     alt: "Swift Tees group at Carden Park",
   },
-  {
-    src: "/images/carden-park-2026/individualleaderboard.jpg",
-    alt: "Final individual leaderboard",
-  },
+  
   {
     src: "/images/carden-park-2026/lads.JPG",
     alt: "The lads at Carden Park",
