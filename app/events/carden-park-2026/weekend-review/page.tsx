@@ -71,12 +71,12 @@ export default function CardenParkWeekendReviewPage() {
           </h1>
 
           <p className="mt-7 max-w-3xl text-lg leading-8 text-slate-200 sm:text-xl">
-            Great golf. Questionable golf. Plenty of laughs. The odd disaster.
+            Some great golf. Some questionable golf. Plenty of laughs. The odd disaster.
             And enough stories to keep the WhatsApp group going until the next trip.
           </p>
 
           <div className="mt-8 text-xs font-black uppercase tracking-[0.2em] text-white/70">
-            Carden Park • Cheshire • 2 Days • 36 Holes • 12 Golfers
+            Carden Park • Cheshire • July 26th- 27th 2026 • 36 Holes • 12 Golfers
           </div>
         </div>
       </section>
@@ -87,57 +87,78 @@ export default function CardenParkWeekendReviewPage() {
           <article className="rounded-[2rem] bg-white p-7 shadow-sm sm:p-10">
             <p className="text-xl leading-9 text-slate-700 sm:text-2xl">
               Another Swift Tees weekend has come and gone, and once again
-              Carden Park delivered everything we&apos;ve come to expect.
+              the weekend delivered everything we&apos;ve come to expect.
             </p>
 
             <p className="mt-6 leading-8 text-slate-600">
               A huge thank you to everyone for making it another brilliant weekend,
-              and to everyone who helped with scoring throughout.
+              and to everyone who helped with scoring throughout. 
             </p>
 
             <p className="mt-5 leading-8 text-slate-600">
               This also marked the first full tournament using the new{" "}
               <strong className="text-slate-950">Swift Tees app</strong>.
               Live scoring, live leaderboards and instant updates became a genuine
-              part of the weekend and added another layer to the competition.
+              part of the weekend and hopefully added another layer to the weekends.
             </p>
 
             <p className="mt-5 leading-8 text-slate-600">
-              This is only the start. Proper handicaps, richer live commentary,
-              automatic group updates, season-long rankings and hopefully some
-              decent prize pots are all on the horizon.
+              Am hopefully look at building in proper handicaps, richer live commentary,
+              automatic WhatsApp updates, season-long rankings and hopefully some more
+              decent features.
             </p>
 
-            <div className="mt-8">
-              <Link
-                href="/full-scorecard"
-                className="inline-flex rounded-full bg-[#07111f] px-6 py-3 text-sm font-black text-white transition hover:bg-slate-800"
-              >
-                View Full Scorecards
-              </Link>
-            </div>
+            
           </article>
 
-          <aside className="rounded-[2rem] bg-[#0b1728] p-7 text-white shadow-sm sm:p-8">
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-lime-300">
-              Carden Park 2026
-            </p>
+         <aside className="overflow-hidden rounded-[2rem] bg-[#0b1728] text-white shadow-sm">
+  {/* HEADER */}
+  <div className="p-7 pb-5 sm:p-8 sm:pb-5">
+    <p className="text-xs font-black uppercase tracking-[0.24em] text-lime-300">
+      Weekend by the Numbers
+    </p>
 
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <Stat value="2" label="Days" />
-              <Stat value="12" label="Players" />
-              <Stat value="36" label="Holes" />
-              <Stat value="∞" label="Stories" />
-            </div>
+    <h3 className="mt-2 text-2xl font-black tracking-tight">
+      Carden Park 2026
+    </h3>
+  </div>
 
-            <div className="mt-6 border-t border-white/10 pt-6">
-              <p className="text-sm leading-6 text-slate-300">
-                The golf was competitive.
-                <br />
-                The fashion less so.
-              </p>
-            </div>
-          </aside>
+  {/* MAIN STATS */}
+  <div className="grid grid-cols-2 border-y border-white/10">
+    <WeekendStat
+      value="1"
+      label="Eagle"
+      sublabel="EAGLE BABY!"
+      icon="🦅"
+    />
+
+    <WeekendStat
+      value="310"
+      suffix="yds"
+      label="Longest Drive"
+      sublabel="Paul"
+      icon="🚀"
+    />
+
+    <WeekendStat
+      value="10"
+      suffix="pts"
+      label="Deficit Overturned"
+      sublabel="Paul's Monday charge"
+      icon="📈"
+    />
+
+    <WeekendStat
+      value="1"
+      label="Players' Player"
+      sublabel="Taz"
+      icon="🏆"
+    />
+  </div>
+
+  {/* QUICK FACTS */}
+
+</aside>
         </div>
       </section>
 
@@ -161,16 +182,19 @@ export default function CardenParkWeekendReviewPage() {
           </div>
 
           <article className="p-7 sm:p-10 lg:p-12">
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-emerald-700">
-              Sunday
-            </p>
+            <p className="mb-3 text-2xl font-black uppercase tracking-[0.18em] text-emerald-700 sm:text-3xl">
+  Sunday • Day One
+</p>
 
-            <h2 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">
+
+
+
+            <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">
               White Team Strike First
-            </h2>
+            </h1>
 
             <p className="mt-7 leading-8 text-slate-600">
-              Despite an early panic over whether there would be enough buggies,
+              Despite an early panic over whether there would be any buggies,
               everything was soon sorted and Carden Park was ready for another
               Swift Tees classic.
             </p>
@@ -192,7 +216,7 @@ export default function CardenParkWeekendReviewPage() {
               <strong className="text-slate-950">Dan and Phil</strong> quietly
               put together an excellent scramble of their own, while{" "}
               <strong className="text-slate-950">Paul and Taz</strong> did
-              enough to keep themselves firmly in contention heading into Monday.
+              enough to give themselves a chance heading into Monday.
             </p>
 
             <blockquote className="mt-8 border-l-4 border-lime-400 pl-5">
@@ -205,7 +229,7 @@ export default function CardenParkWeekendReviewPage() {
             </blockquote>
 
             <p className="mt-6 leading-8 text-slate-600">
-              Ian&apos;s eagle was undoubtedly the golfing moment of the weekend.
+              Painy and Ian&apos;s eagle was undoubtedly the golfing moment of the weekend.
               The only disappointment? Nobody managed to capture it on camera.
               The celebration will probably be remembered longer than the shot itself.
             </p>
@@ -239,23 +263,7 @@ export default function CardenParkWeekendReviewPage() {
       </p>
     </div>
 
-    <div className="mt-10 flex flex-wrap gap-3">
-      <div className="rounded-full bg-white/10 px-4 py-2 text-sm font-bold">
-        36 Holes
-      </div>
-
-      <div className="rounded-full bg-white/10 px-4 py-2 text-sm font-bold">
-        12 Players
-      </div>
-
-      <div className="rounded-full bg-white/10 px-4 py-2 text-sm font-bold">
-        Constant Lead Changes
-      </div>
-
-      <div className="rounded-full bg-lime-300 px-4 py-2 text-sm font-black text-slate-900">
-        White Team Champions
-      </div>
-    </div>
+   
 
   </div>
 </section>
@@ -265,9 +273,13 @@ export default function CardenParkWeekendReviewPage() {
         <div className="mx-auto max-w-6xl px-5 sm:px-8 lg:px-10">
           <div className="grid gap-10 lg:grid-cols-[.7fr_1.3fr]">
             <div>
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-lime-300">
-                Monday
-              </p>
+              <p className="mb-3 text-2xl font-black uppercase tracking-[0.18em] text-emerald-700 sm:text-3xl">
+  Monday • Day Two
+</p>
+
+
+
+
 
               <h2 className="mt-3 text-5xl font-black tracking-tight sm:text-6xl">
                 Everything
@@ -294,23 +306,21 @@ export default function CardenParkWeekendReviewPage() {
               <p>
                 <strong className="text-white">Carl</strong>, after what appeared
                 to be an excellent night&apos;s sleep, simply carried on where
-                he&apos;d left off. Calm, consistent and relentlessly scoring,
-                he became one of the biggest reasons White Team stayed in control.
+                he&apos;d left off. The Whites were consistent and relentlessly scoring.
+            
               </p>
 
               <p>
                 <strong className="text-white">Gav</strong>... after what appeared
                 to be rather less sleep... somehow still produced when it mattered.
-                Rumours he spent the night sleeping in a hedge remain unconfirmed,
-                although nobody has completely ruled it out.
+                Gav turned up looking like the White Team’s biggest threat might actually be the sleeping arrangements..
               </p>
 
               <p>
                 As predicted before the weekend,{" "}
                 <strong className="text-white">Liam&apos;s beers</strong>{" "}
                 gradually went from helping to hindering. By Monday, teeing off
-                with a putter probably wasn&apos;t the ideal preparation for a
-                charge up the leaderboard.
+                with a putter probably wasn&apos;t the best way to set a strong scorecard.
               </p>
             </article>
           </div>
@@ -340,7 +350,7 @@ export default function CardenParkWeekendReviewPage() {
             <div className="grid gap-8 lg:grid-cols-[.55fr_1.45fr] lg:items-center">
               <div>
                 <p className="text-7xl font-black tracking-tight text-emerald-700">
-                  -8
+                  -10
                 </p>
                 <p className="mt-1 text-sm font-black uppercase tracking-[0.18em] text-slate-500">
                   Starting deficit
@@ -357,9 +367,8 @@ export default function CardenParkWeekendReviewPage() {
                 </h3>
 
                 <p className="mt-5 leading-8 text-slate-600">
-                  Starting Monday eight points behind overnight leader Wrighty,
-                  Paul slowly chipped away at the deficit. Hole after hole, point
-                  after point, the gap disappeared until he eventually completed
+                  Starting Monday ten points behind overnight leader Wrighty,
+                  Paul slowly chipped away at the deficit. Hole after hole, the gap slwolyl disappeared until he eventually completed
                   the comeback and moved into first place during the closing stages.
                 </p>
               </div>
@@ -373,8 +382,8 @@ export default function CardenParkWeekendReviewPage() {
             />
 
             <StoryCard
-              title="The Shots"
-              text="Stu launched one on the 15th with one of the biggest drives of the weekend, while Wrighty's tee shot across the water and safely onto the 17th green earned its place in the highlights."
+              title="Memorable Shots"
+              text="Stu launched one on the 15th with one of the best drives of the weekend, while Wrighty's great tee shot across the water and safely onto the 17th green earned its place in the highlights."
             />
           </div>
         </div>
@@ -408,16 +417,16 @@ export default function CardenParkWeekendReviewPage() {
     image="/images/carden-park-2026/smells.jpeg"
     icon="💨"
     title="Atmospheric Conditions"
-    text="Wrighty and Phil produced an environmental incident so severe that even standing outside after the golf wasn't enough. Several nearby golfers are expected to make a full recovery."
+    text="Wrighty and Phil both produced environmental incidents so severe that even sitting outside wasn't enough. Several staff members were seen to physically leave."
   />
 </div>
 
 <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
   <MomentCard
     icon="🥩"
-    title="The Steak"
-    text="The steak itself wasn't winning any awards. Adam then very nearly managed to choke himself to death attempting to inhale approximately half a cow in one mouthful. Thankfully he survived. The steak's reputation didn't."
-  />
+    title="The Shit Steak"
+    text="The now infamous 'shit steak' had already earned its nickname. Adam's solution was apparently to get rid of it as quickly as possible, attempting to inhale approximately half a cow in one mouthful and very nearly turning dinner into a medical emergency. Thankfully Adam survived. The steak's reputation didn't."
+/>
 
   <MomentCard
     icon="🚀"
@@ -434,59 +443,63 @@ export default function CardenParkWeekendReviewPage() {
   <MomentCard
     icon="👕"
     title="Fashion Report"
-    text="Taz took best dressed with the green tops. Paul looked like he'd come straight from a shift at Asda. Tight shorts and white ankles completed another strong year for Swift Tees fashion."
-  />
+    text="Credit where it's due, everyone made the effort to turn up in their team colours and there were some surprisingly strong looks on display. Taz probably took best dressed with the green tops, while Paul appeared to have come straight from a shift at Asda. Throw in an alarming number of tight shorts, dazzling white ankles and some extremely ambitious outfit choices, and it was another exceptionally strong year for Swift Tees fashion."
+/>
 </div>
       </section>
 
       {/* CHAMPIONS */}
-      <section className="mx-auto max-w-6xl px-5 pb-14 sm:px-8 lg:px-10 lg:pb-20">
-        <div className="overflow-hidden rounded-[2rem] bg-[#07111f] text-white">
-          <div className="grid lg:grid-cols-[1fr_1fr]">
-            <div className="p-8 sm:p-12 lg:p-14">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-amber-300">
-                2026 Team Champions
-              </p>
+<section className="mx-auto max-w-6xl px-5 pb-14 sm:px-8 lg:px-10 lg:pb-20">
+  <div className="overflow-hidden rounded-[2rem] bg-[#07111f] text-white shadow-lg">
+    <div className="p-8 sm:p-12 lg:p-14">
+      <p className="text-xs font-black uppercase tracking-[0.24em] text-amber-300">
+        2026 Team Champions
+      </p>
 
-              <h2 className="mt-3 text-5xl font-black tracking-tight">
-                White Team
-              </h2>
+      <h2 className="mt-3 text-5xl font-black tracking-tight">
+        White Team
+      </h2>
 
-              <p className="mt-6 max-w-xl text-lg leading-8 text-slate-300">
-                Pre-weekend predictions weren&apos;t far away, but when the
-                final putt dropped there was only one team celebrating.
-              </p>
+      <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-300">
+        Pre-weekend predictions weren&apos;t far away, but when the
+        final putt dropped there was only one team celebrating.
+      </p>
 
-              <p className="mt-5 max-w-xl leading-8 text-slate-300">
-                An outstanding opening scramble combined with consistent
-                Stableford scoring across Monday proved enough to take a
-                thoroughly deserved victory.
-              </p>
+      <p className="mt-5 max-w-3xl leading-8 text-slate-300">
+        A superb opening scramble gave White Team the platform,
+        and their consistency across Monday&apos;s Stableford meant
+        the chasing teams could never quite reel them back in.
+        A thoroughly deserved victory after two days of strong golf.
+      </p>
 
-              <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {champions.map((name) => (
-                  <div
-                    key={name}
-                    className="rounded-2xl bg-white/10 px-4 py-5 text-center"
-                  >
-                    <div className="text-2xl">🏆</div>
-                    <div className="mt-2 font-black">{name}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
+      {/* WINNERS PHOTO - FULL IMAGE */}
+      <div className="mt-8 overflow-hidden rounded-[1.5rem] bg-black/20">
+        <Image
+          src="/images/carden-park-2026/winnerswhites.jpg"
+          alt="White Team champions at Carden Park"
+          width={1600}
+          height={1200}
+          sizes="(max-width: 768px) 100vw, 1100px"
+          className="h-auto w-full"
+        />
+      </div>
 
-            <div className="relative min-h-[420px]">
-              <Image
-                src="/images/carden-park-2026/winnerswhites.jpg"
-                alt="White Team champions"
-                fill
-                className="object-cover"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* NAMES */}
+      <div className="mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-2xl bg-white/10 px-5 py-4 text-center">
+        <span className="font-black text-white">Gav</span>
+        <span className="text-lime-300">•</span>
+
+        <span className="font-black text-white">Wrighty</span>
+        <span className="text-lime-300">•</span>
+
+        <span className="font-black text-white">Carl</span>
+        <span className="text-lime-300">•</span>
+
+        <span className="font-black text-white">Adam</span>
+      </div>
+    </div>
+  </div>
+</section>
 
       {/* PLAYER'S PLAYER */}
       <section className="mx-auto max-w-6xl px-5 pb-14 sm:px-8 lg:px-10 lg:pb-20">
@@ -720,3 +733,46 @@ function HighlightWithImage({
     </div>
   );
 }
+
+function WeekendStat({
+  value,
+  suffix,
+  label,
+  sublabel,
+  icon,
+}: {
+  value: string;
+  suffix?: string;
+  label: string;
+  sublabel: string;
+  icon: string;
+}) {
+  return (
+    <div className="relative border-b border-r border-white/10 p-5 last:border-r-0 sm:p-6">
+      <span className="absolute right-4 top-4 text-xl opacity-70">
+        {icon}
+      </span>
+
+      <div className="flex items-end gap-1">
+        <span className="text-4xl font-black tracking-tight text-lime-300">
+          {value}
+        </span>
+
+        {suffix && (
+          <span className="mb-1 text-sm font-black text-lime-300">
+            {suffix}
+          </span>
+        )}
+      </div>
+
+      <p className="mt-2 text-xs font-black uppercase tracking-[0.12em] text-white">
+        {label}
+      </p>
+
+      <p className="mt-1 text-xs text-slate-400">
+        {sublabel}
+      </p>
+    </div>
+  );
+}
+
