@@ -14,7 +14,7 @@ export default function Home() {
   useEffect(() => {
     // Worsley Park weekend starts Sunday 27 September 2026
     const targetDate = new Date(
-      "2026-09-27T00:00:00+01:00"
+      "2026-09-27T13:00:00+01:00"
     ).getTime();
 
     function updateCountdown() {
@@ -102,7 +102,7 @@ export default function Home() {
             </h1>
 
             <p className="mt-5 max-w-2xl text-xl font-black leading-tight text-white md:text-3xl">
-              Marriott Hotel &amp; Country Club
+              Worsley Marriott Hotel &amp; Country Club
             </p>
 
             <p className="mt-4 max-w-2xl text-base font-semibold leading-7 text-slate-200 md:text-xl md:leading-8">
@@ -157,7 +157,7 @@ export default function Home() {
               </h2>
 
               <p className="mt-2 max-w-2xl text-slate-600">
-                The next chapter of Swift Tees is officially in
+                The next weekend is now officially in
                 the diary.
               </p>
             </div>
@@ -171,7 +171,7 @@ export default function Home() {
               </div>
 
               <h3 className="mt-5 text-3xl font-black leading-tight tracking-tight md:text-4xl">
-                Marriott Hotel
+                Worsley Marriott Hotel
                 <span className="block text-green-800">
                   &amp; Country Club
                 </span>
@@ -301,11 +301,7 @@ export default function Home() {
               Carden Park 2026
             </h2>
 
-            <p className="mt-2 max-w-2xl text-slate-600">
-              Before we start creating new stories at Worsley,
-              there&apos;s still plenty of evidence from the last
-              one.
-            </p>
+            
           </div>
 
           <div className="grid overflow-hidden rounded-[2rem] bg-[#07111f] text-white shadow-lg md:grid-cols-[1.1fr_.9fr]">

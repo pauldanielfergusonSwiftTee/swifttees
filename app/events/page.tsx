@@ -10,7 +10,7 @@ const events = [
     label: "Latest Weekend",
     description:
       "Two days at Carden Park, White Team champions, live scoring, full scorecards and the complete weekend review.",
-    href: "/events/carden-park-2026",
+    href: "/events/carden-park-2026/weekend-review",
     image: "/carden-park.jpg",
     featured: true,
   },
