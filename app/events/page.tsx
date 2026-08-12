@@ -7,15 +7,16 @@ const events = [
   {
     title: "Carden Park 2026",
     date: "July 2026",
-    label: "Next Event",
+    label: "Latest Weekend",
     description:
-      "Cheshire Course, Nicklaus Course, live scoring and the full Swift Tees Match Centre.",
+      "Two days at Carden Park, White Team champions, live scoring, full scorecards and the complete weekend review.",
     href: "/events/carden-park-2026",
     image: "/carden-park.jpg",
     featured: true,
   },
   {
     title: "Mottram Hall 2026",
+    date: "March 2026",
     label: "March 2026",
     href: "/events/mottram-hall-march-2026",
     image: "/images/mottram-march-2026/photo-1.png",
@@ -23,6 +24,7 @@ const events = [
   },
   {
     title: "Shrigley Hall 2025",
+    date: "September 2025",
     label: "September 2025",
     href: "/events/shrigley-hall-september-2025",
     image: "/images/shrigley-25/shrigley-bg.jpg",
@@ -30,6 +32,7 @@ const events = [
   },
   {
     title: "Mottram Hall 2025",
+    date: "June 2025",
     label: "June 2025",
     href: "/events/mottram-hall-june-2025",
     image: "/images/mottram-25/mottram-25-bg.JPG",
@@ -37,6 +40,7 @@ const events = [
   },
   {
     title: "Tarporley 2025",
+    date: "April 2025",
     label: "April 2025",
     href: "/events/tarporley-april-2025",
     image: "/images/portal-25/portal-25-bg.jpg",
@@ -50,7 +54,7 @@ export default function EventsPage() {
       <PageHeader
         eyebrow="Swift Tees"
         title="Past Events"
-        subtitle="Upcoming trips, past weekends and the photographic evidence."
+        subtitle="Past weekends, results, photos and all the photos."
       />
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -106,18 +110,25 @@ export default function EventsPage() {
 
               <h2
                 className={`mt-1 font-black tracking-tight ${
-                  event.featured ? "text-4xl md:text-5xl" : "text-3xl"
+                  event.featured
+                    ? "text-4xl md:text-5xl"
+                    : "text-3xl"
                 }`}
               >
                 {event.title}
               </h2>
 
-              <p className="mt-2 max-w-xl text-sm font-medium leading-6 text-white/85">
-                {event.description}
-              </p>
+              {event.description && (
+                <p className="mt-2 max-w-xl text-sm font-medium leading-6 text-white/85">
+                  {event.description}
+                </p>
+              )}
 
               <div className="mt-4 inline-flex items-center rounded-full bg-white/15 px-4 py-2 text-sm font-black backdrop-blur">
-                {event.featured ? "Open event" : "View weekend"}
+                {event.featured
+                  ? "View latest weekend"
+                  : "View weekend"}
+
                 <span className="ml-2 transition group-hover:translate-x-1">
                   →
                 </span>
