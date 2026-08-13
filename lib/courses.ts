@@ -156,6 +156,36 @@ export const COURSES: CourseDefinition[] = [
       { hole: 18, yards: 407, par: 4, strokeIndex: 10 },
     ],
   },
+
+  {
+  id: "worsley-park",
+  name: "Marriott Worsley Park",
+  shortName: "Worsley Park",
+  club: "Marriott Worsley Park Golf Club",
+  par: 71,
+  yards: 6611,
+  holes: [
+    { hole: 1, yards: 432, par: 4, strokeIndex: 4 },
+    { hole: 2, yards: 371, par: 4, strokeIndex: 14 },
+    { hole: 3, yards: 457, par: 4, strokeIndex: 1 },
+    { hole: 4, yards: 184, par: 3, strokeIndex: 17 },
+    { hole: 5, yards: 551, par: 5, strokeIndex: 9 },
+    { hole: 6, yards: 544, par: 5, strokeIndex: 13 },
+    { hole: 7, yards: 177, par: 3, strokeIndex: 8 },
+    { hole: 8, yards: 422, par: 4, strokeIndex: 3 },
+    { hole: 9, yards: 201, par: 3, strokeIndex: 12 },
+
+    { hole: 10, yards: 410, par: 4, strokeIndex: 6 },
+    { hole: 11, yards: 200, par: 3, strokeIndex: 11 },
+    { hole: 12, yards: 320, par: 4, strokeIndex: 15 },
+    { hole: 13, yards: 543, par: 5, strokeIndex: 2 },
+    { hole: 14, yards: 162, par: 3, strokeIndex: 16 },
+    { hole: 15, yards: 428, par: 4, strokeIndex: 5 },
+    { hole: 16, yards: 407, par: 4, strokeIndex: 7 },
+    { hole: 17, yards: 287, par: 4, strokeIndex: 18 },
+    { hole: 18, yards: 515, par: 5, strokeIndex: 10 },
+  ],
+},
 ];
 
 export function getCourseById(id: string) {
