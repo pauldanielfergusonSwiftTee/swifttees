@@ -10,8 +10,8 @@ const navItems = [
     icon: "🏠",
   },
   {
-    label: "Carden Park",
-    href: "/events/carden-park-2026/weekend-review",
+    label: "Worsley",
+    href: "/events/worsley-park-september-2026",
     icon: "⛳",
   },
   {
