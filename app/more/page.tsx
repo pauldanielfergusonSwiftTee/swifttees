@@ -1,9 +1,11 @@
 import Link from "next/link";
+
 import PageContainer from "@/components/PageContainer";
 import PageHeader from "@/components/PageHeader";
+import EnableNotifications from "@/components/EnableNotifications";
 
 const moreLinks = [
-   {
+  {
     title: "Overall Leaderboard",
     description: "Full standings and detailed results.",
     href: "/overall-leaderboard",
@@ -15,7 +17,6 @@ const moreLinks = [
     href: "/events",
     icon: "📅",
   },
- 
   {
     title: "Hall of Fame",
     description: "Past winners, legends and questionable achievements.",
@@ -24,13 +25,14 @@ const moreLinks = [
   },
   {
     title: "Soundboard",
-    description: "Swift Tees Sounds .",
+    description: "Swift Tees Sounds.",
     href: "/soundboard",
     icon: "🔊",
   },
   {
     title: "Tournament Setup",
-    description: "Create and manage tournaments, players, rounds and handicaps.",
+    description:
+      "Create and manage tournaments, players, rounds and handicaps.",
     href: "/setup-v2",
     icon: "⚙️",
   },
@@ -45,6 +47,18 @@ export default function MorePage() {
         subtitle="Explore Swift Tees beyond the live weekend."
       />
 
+      {/* LIVE NOTIFICATIONS */}
+      <div className="mb-6">
+        <div className="mb-3">
+          <h2 className="text-sm font-black uppercase tracking-wider text-green-900">
+            Notifications
+          </h2>
+        </div>
+
+        <EnableNotifications />
+      </div>
+
+      {/* MORE LINKS */}
       <div className="grid gap-3">
         {moreLinks.map((item) => (
           <Link
@@ -66,7 +80,9 @@ export default function MorePage() {
               </p>
             </div>
 
-            <span className="text-xl font-black text-green-700">→</span>
+            <span className="text-xl font-black text-green-700">
+              →
+            </span>
           </Link>
         ))}
       </div>
