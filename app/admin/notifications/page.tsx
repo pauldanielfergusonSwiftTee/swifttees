@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 export default function NotificationsAdminPage() {
-  const [title, setTitle] = useState("⛳ Swift Tees");
+  const [title, setTitle] = useState("🔥 Live Update");
   const [message, setMessage] = useState("");
   const [url, setUrl] = useState("/");
   const [status, setStatus] = useState("");

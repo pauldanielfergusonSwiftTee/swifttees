@@ -25,9 +25,15 @@ const moreLinks = [
   },
   {
     title: "Soundboard",
-    description: "Swift Tees Sounds.",
+    description: "Swift Tees sounds.",
     href: "/soundboard",
     icon: "🔊",
+  },
+  {
+    title: "Send Notifications",
+    description: "Create and send Swift Tees push notifications.",
+    href: "/admin/notifications",
+    icon: "🔔",
   },
   {
     title: "Tournament Setup",
@@ -47,18 +53,7 @@ export default function MorePage() {
         subtitle="Explore Swift Tees beyond the live weekend."
       />
 
-      {/* LIVE NOTIFICATIONS */}
-      <div className="mb-6">
-        <div className="mb-3">
-          <h2 className="text-sm font-black uppercase tracking-wider text-green-900">
-            Notifications
-          </h2>
-        </div>
-
-        <EnableNotifications />
-      </div>
-
-      {/* MORE LINKS */}
+      {/* MAIN LINKS */}
       <div className="grid gap-3">
         {moreLinks.map((item) => (
           <Link
@@ -85,6 +80,17 @@ export default function MorePage() {
             </span>
           </Link>
         ))}
+      </div>
+
+      {/* DEVICE NOTIFICATIONS */}
+      <div className="mt-8 pb-4">
+        <div className="mb-3 px-1">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+            Your Device
+          </p>
+        </div>
+
+        <EnableNotifications />
       </div>
     </PageContainer>
   );
