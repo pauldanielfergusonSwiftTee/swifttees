@@ -178,7 +178,7 @@ export default function NotificationsAdminPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-8 text-slate-900">
+    <main className="min-h-screen bg-slate-100 px-4 pt-8 pb-32 text-slate-900">
       <div className="mx-auto max-w-xl">
         {/* HEADER */}
         <div className="mb-6">
