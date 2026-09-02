@@ -89,10 +89,7 @@ export default function SoundboardPage() {
             Swift Tees Soundboard
           </p>
 
-          <p className="mt-1 text-sm font-semibold text-white">
-            Best deployed immediately after somebody&apos;s
-            worst shot of the day.
-          </p>
+          
         </div>
       </div>
     </main>
