@@ -66,11 +66,11 @@ const attendanceGroups: AttendanceGroup[] = [
 const closestToPinWinners: ClosestPinWinner[] = [
   {
     player: "Paul",
-    event: "Tarporley 2025 - Day 1 ",
+    event: "Tarporley 2025",
   },
   {
     player: "Wrighty",
-    event: "Tarporley 2025 - Day 2 ",
+    event: "Tarporley 2025",
   },
   {
     player: "Stu",
@@ -103,8 +103,8 @@ const longestDriveRecords = [
     player: "Paul",
     wins: 3,
     events: [
-      "Tarporley 2025",
-      "Tarporley 2025",
+      "Tarporley 2025 — Day 1",
+      "Tarporley 2025 — Day 2",
       "Carden Park 2026",
     ],
   },
@@ -213,53 +213,71 @@ export default function HallOfFamePage() {
           HERO
       ====================================================== */}
 
-      <section className="relative overflow-hidden rounded-[2rem] bg-[#06140f] text-white shadow-xl">
-        <div className="pointer-events-none absolute -right-16 -top-20 h-72 w-72 rounded-full border-[45px] border-white/[0.025]" />
+      <section className="relative min-h-[390px] overflow-hidden rounded-[2rem] bg-[#06140f] text-white shadow-xl md:min-h-[470px]">
+        {/* BACKGROUND IMAGE */}
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage: "url('/carden-park.jpg')",
+          }}
+        />
 
-        <div className="pointer-events-none absolute -bottom-24 left-10 h-60 w-60 rounded-full border-[35px] border-lime-300/[0.025]" />
+        {/* PHOTO TREATMENT */}
+        <div className="absolute inset-0 bg-black/20" />
 
-        <div className="relative p-6 md:p-10">
-          <a
-            href="/"
-            className="text-sm font-black text-lime-300 transition hover:text-lime-200"
-          >
-            ← Back to home
-          </a>
+        <div className="absolute inset-0 bg-gradient-to-r from-[#04110c] via-[#06140f]/88 to-[#06140f]/18" />
 
-          <div className="mt-8 max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-lime-300/20 bg-lime-300/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-lime-300">
+        <div className="absolute inset-0 bg-gradient-to-t from-[#04110c]/90 via-transparent to-black/10" />
+
+        <div className="absolute inset-0 bg-green-950/10 mix-blend-multiply" />
+
+        {/* DECORATIVE DETAIL */}
+        <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full border-[45px] border-white/[0.04]" />
+
+        {/* CONTENT */}
+        <div className="relative z-10 flex min-h-[390px] flex-col justify-between p-6 md:min-h-[470px] md:p-10">
+          <div>
+            <a
+              href="/"
+              className="text-sm font-black text-lime-300 transition hover:text-lime-200"
+            >
+              ← Back to home
+            </a>
+
+            <div className="mt-7 inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/20 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.22em] text-lime-300 backdrop-blur-sm">
               <span>🏛️</span>
               Swift Tees Record Book
             </div>
 
-            <h1 className="mt-5 text-5xl font-black leading-[0.88] tracking-[-0.05em] md:text-8xl">
+            <h1 className="mt-5 text-5xl font-black leading-[0.86] tracking-[-0.055em] drop-shadow-lg md:text-8xl">
               Hall of
               <span className="block text-lime-300">
                 Fame.
               </span>
             </h1>
 
-            <p className="mt-5 max-w-xl text-sm font-semibold leading-6 text-slate-300 md:text-base">
+            <p className="mt-5 max-w-md text-sm font-semibold leading-6 text-white/80 md:text-base">
               The records, winners and milestones that make up
               Swift Tees history.
             </p>
           </div>
 
-          {/* SMALL HISTORY STRIP */}
+          {/* HISTORY STRIP */}
+          <div className="mt-8">
+            <div className="inline-flex items-center gap-3 rounded-2xl border border-white/15 bg-black/30 px-4 py-3 shadow-lg backdrop-blur-md">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-lime-300 text-lg text-green-950">
+                👥
+              </div>
 
-          <div className="mt-7 inline-flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.06] px-4 py-3 backdrop-blur">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-lime-300 text-lg text-green-950">
-              👥
-            </div>
+              <div>
+                <p className="text-sm font-black text-white">
+                  18 players have played
+                </p>
 
-            <div>
-              <p className="text-sm font-black text-white">
-                18 players across the weekends
-              </p>
-
-              <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.15em] text-slate-400">
-                Up to and including Carden Park 2026
-              </p>
+                <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.13em] text-white/55">
+                  Through to Carden Park 2026
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -295,8 +313,6 @@ export default function HallOfFamePage() {
                 </span>
               </div>
 
-              {/* PAUL */}
-
               <div className="mt-7 grid gap-5 sm:grid-cols-[1fr_auto]">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-[0.18em] text-green-300">
@@ -304,27 +320,21 @@ export default function HallOfFamePage() {
                   </p>
 
                   <p className="mt-1 text-4xl font-black tracking-tight md:text-5xl">
-                    Paul
+                    {longestDriveRecords[0].player}
                   </p>
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    <RecordTag>
-                      Tarporley 2025 - Day 1
-                    </RecordTag>
-
-                    <RecordTag>
-                      Tarporley 2025 - Day 2
-                    </RecordTag>
-
-                    <RecordTag>
-                      Carden Park 2026
-                    </RecordTag>
+                    {longestDriveRecords[0].events.map((event) => (
+                      <RecordTag key={event}>
+                        {event}
+                      </RecordTag>
+                    ))}
                   </div>
                 </div>
 
                 <div className="self-end text-left sm:text-right">
                   <p className="text-7xl font-black leading-none text-lime-300">
-                    3
+                    {longestDriveRecords[0].wins}
                   </p>
 
                   <p className="mt-1 text-[9px] font-black uppercase tracking-[0.18em] text-green-200">
@@ -333,22 +343,20 @@ export default function HallOfFamePage() {
                 </div>
               </div>
 
-              {/* WRIGHTY */}
-
               <div className="mt-5 flex items-center justify-between gap-4 border-t border-white/10 pt-4">
                 <div>
                   <p className="font-black text-white">
-                    Wrighty
+                    {longestDriveRecords[1].player}
                   </p>
 
                   <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
-                    Carden Park 2026
+                    {longestDriveRecords[1].events[0]}
                   </p>
                 </div>
 
                 <div className="text-right">
                   <span className="text-2xl font-black text-lime-300">
-                    1
+                    {longestDriveRecords[1].wins}
                   </span>
 
                   <span className="ml-1 text-[8px] font-black uppercase tracking-wider text-green-200">
@@ -374,7 +382,7 @@ export default function HallOfFamePage() {
               <div className="mt-6 flex items-end justify-between">
                 <div>
                   <p className="text-4xl font-black text-green-950">
-                    Paul
+                    {eventWins[0].player}
                   </p>
 
                   <p className="mt-1 text-xs font-semibold text-slate-500">
@@ -383,7 +391,7 @@ export default function HallOfFamePage() {
                 </div>
 
                 <p className="text-6xl font-black leading-none text-green-900">
-                  2
+                  {eventWins[0].wins}
                 </p>
               </div>
 
@@ -515,8 +523,6 @@ export default function HallOfFamePage() {
           description="The ten highest individual Stableford scores recorded in Swift Tees competition."
         />
 
-        {/* RECORD */}
-
         <div className="mb-3 overflow-hidden rounded-[1.8rem] bg-[#07140f] p-5 text-white shadow-lg">
           <div className="flex items-end justify-between gap-4">
             <div>
@@ -572,8 +578,6 @@ export default function HallOfFamePage() {
           </p>
         </div>
       </section>
-
-      {/* MOBILE NAV CLEARANCE */}
 
       <div className="h-52 md:hidden" />
     </PageContainer>
@@ -645,8 +649,6 @@ function AttendanceProgress({
     <div className="overflow-hidden rounded-[1.4rem] bg-white shadow-sm ring-1 ring-slate-200">
       <div className="p-4">
         <div className="flex items-start gap-4">
-          {/* COUNT */}
-
           <div className="flex w-14 shrink-0 flex-col items-center">
             <span className="text-3xl font-black leading-none text-green-950">
               {trips}
@@ -656,8 +658,6 @@ function AttendanceProgress({
               {trips === 1 ? "trip" : "trips"}
             </span>
           </div>
-
-          {/* CONTENT */}
 
           <div className="min-w-0 flex-1">
             <p className="text-sm font-black leading-6 text-green-950">
@@ -673,8 +673,6 @@ function AttendanceProgress({
                 </span>
               ))}
             </p>
-
-            {/* PROGRESS */}
 
             <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-slate-100">
               <div
