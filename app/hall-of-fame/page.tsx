@@ -5,6 +5,7 @@ import PageContainer from "@/components/PageContainer";
 type StablefordRound = {
   name: string;
   points: number;
+  grossScore: number;
   event: string;
   course: string;
 };
@@ -16,6 +17,12 @@ type AttendanceGroup = {
 
 type ClosestPinWinner = {
   player: string;
+  event: string;
+};
+
+type TeamWin = {
+  player: string;
+  wins: number;
   event: string;
 };
 
@@ -98,6 +105,37 @@ const closestToPinWinners: ClosestPinWinner[] = [
   },
 ];
 
+const eventWins = [
+  {
+    player: "Paul",
+    wins: 2,
+    events: ["Tarporley 2025", "Carden Park 2026"],
+  },
+];
+
+const teamWins: TeamWin[] = [
+  {
+    player: "Gav",
+    wins: 1,
+    event: "Carden Park 2026",
+  },
+  {
+    player: "Wrighty",
+    wins: 1,
+    event: "Carden Park 2026",
+  },
+  {
+    player: "Carl",
+    wins: 1,
+    event: "Carden Park 2026",
+  },
+  {
+    player: "Adam",
+    wins: 1,
+    event: "Carden Park 2026",
+  },
+];
+
 const longestDriveRecords = [
   {
     player: "Paul",
@@ -115,14 +153,6 @@ const longestDriveRecords = [
   },
 ];
 
-const eventWins = [
-  {
-    player: "Paul",
-    wins: 2,
-    events: ["Tarporley 2025", "Carden Park 2026"],
-  },
-];
-
 /* ============================================================
    CARDEN PARK STABLEFORD
 ============================================================ */
@@ -131,72 +161,84 @@ const bestStableford: StablefordRound[] = [
   {
     name: "Paul",
     points: 41,
+    grossScore: 91,
     event: "Carden Park 2026",
     course: "Nicklaus",
   },
   {
     name: "Adam",
     points: 38,
+    grossScore: 109,
     event: "Carden Park 2026",
     course: "Nicklaus",
   },
   {
     name: "Stu",
     points: 36,
+    grossScore: 100,
     event: "Carden Park 2026",
     course: "Nicklaus",
   },
   {
     name: "Dan",
     points: 34,
+    grossScore: 94,
     event: "Carden Park 2026",
     course: "Nicklaus",
   },
   {
     name: "Wrighty",
     points: 34,
+    grossScore: 99,
     event: "Carden Park 2026",
     course: "Nicklaus",
   },
   {
     name: "Ian",
     points: 32,
+    grossScore: 105,
     event: "Carden Park 2026",
     course: "Nicklaus",
   },
   {
     name: "Liam",
     points: 32,
+    grossScore: 108,
     event: "Carden Park 2026",
     course: "Nicklaus",
   },
   {
     name: "Painy",
     points: 29,
+    grossScore: 101,
     event: "Carden Park 2026",
     course: "Nicklaus",
   },
   {
     name: "Gav",
     points: 28,
+    grossScore: 100,
     event: "Carden Park 2026",
     course: "Nicklaus",
   },
   {
     name: "Carl",
     points: 27,
+    grossScore: 113,
     event: "Carden Park 2026",
     course: "Nicklaus",
   },
   {
     name: "Phil",
     points: 17,
+    grossScore: 130,
     event: "Carden Park 2026",
     course: "Nicklaus",
   },
   {
     name: "Taz",
     points: 16,
+    grossScore: 150,
     event: "Carden Park 2026",
     course: "Nicklaus",
   },
@@ -262,7 +304,7 @@ export default function HallOfFamePage() {
             </p>
           </div>
 
-          {/* HISTORY STRIP */}
+          {/* PARTICIPANTS STRIP */}
           <div className="mt-8">
             <div className="inline-flex items-center gap-3 rounded-2xl border border-white/15 bg-black/30 px-4 py-3 shadow-lg backdrop-blur-md">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-lime-300 text-lg text-green-950">
@@ -271,7 +313,7 @@ export default function HallOfFamePage() {
 
               <div>
                 <p className="text-sm font-black text-white">
-                  18 players have played
+                  18 Participants so far...
                 </p>
 
                 <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.13em] text-white/55">
@@ -284,42 +326,196 @@ export default function HallOfFamePage() {
       </section>
 
       {/* ======================================================
-          MAIN RECORD HOLDERS
+          MAIN HONOURS
       ====================================================== */}
 
       <section className="mt-8">
         <SectionHeading
-          eyebrow="The Record Holders"
-          title="Names in the book."
-          description="The records everyone else has to chase."
+          eyebrow="The Major Honours"
+          title="Winning matters most."
+          description="The biggest records in Swift Tees history."
         />
 
-        <div className="grid gap-3 md:grid-cols-3">
-          {/* LONGEST DRIVE */}
+        {/* ======================================================
+            EVENT WINS — MAIN FEATURE
+        ====================================================== */}
 
-          <div className="relative overflow-hidden rounded-[1.8rem] bg-[#071b13] p-5 text-white shadow-lg md:col-span-2">
-            <div className="absolute -right-4 -top-10 text-[150px] opacity-[0.055]">
-              🚀
+        <div className="relative overflow-hidden rounded-[2rem] bg-[#06140f] p-6 text-white shadow-xl md:p-8">
+          {/* BACKGROUND DECORATION */}
+          <div className="pointer-events-none absolute -right-10 -top-14 text-[210px] opacity-[0.045]">
+            🏆
+          </div>
+
+          <div className="pointer-events-none absolute bottom-[-90px] left-[30%] h-64 w-64 rounded-full border-[45px] border-white/[0.025]" />
+
+          <div className="relative">
+            <div className="flex items-center justify-between">
+              <span className="rounded-full bg-lime-300 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.2em] text-green-950">
+                🏆 Event Wins
+              </span>
+
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-green-300">
+                Main Honour
+              </span>
             </div>
 
-            <div className="relative">
-              <div className="flex items-center justify-between">
-                <span className="rounded-full bg-lime-300 px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-green-950">
-                  Longest Drive
-                </span>
+            <div className="mt-8 grid gap-6 md:grid-cols-[1fr_auto] md:items-end">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-green-300">
+                  All-time leader
+                </p>
 
-                <span className="text-2xl">
-                  🚀
-                </span>
+                <p className="mt-1 text-5xl font-black tracking-tight md:text-7xl">
+                  {eventWins[0].player}
+                </p>
+
+                <p className="mt-2 text-sm font-semibold text-white/65">
+                  Most individual Swift Tees event victories
+                </p>
+
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {eventWins[0].events.map((event) => (
+                    <span
+                      key={event}
+                      className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.07] px-3 py-2 text-[11px] font-black text-white"
+                    >
+                      <span>🏆</span>
+                      {event}
+                    </span>
+                  ))}
+                </div>
               </div>
 
-              <div className="mt-7 grid gap-5 sm:grid-cols-[1fr_auto]">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-green-300">
+              <div className="text-left md:text-right">
+                <p className="text-8xl font-black leading-none text-lime-300 md:text-9xl">
+                  {eventWins[0].wins}
+                </p>
+
+                <p className="mt-1 text-[10px] font-black uppercase tracking-[0.22em] text-green-200">
+                  Event wins
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ======================================================
+            TEAM WINS — SECOND MAIN FEATURE
+        ====================================================== */}
+
+        <div className="mt-3 overflow-hidden rounded-[2rem] bg-white shadow-sm ring-1 ring-slate-200">
+          <div className="border-b border-slate-100 p-5 md:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">
+                  Team Championships
+                </p>
+
+                <h3 className="mt-1 text-3xl font-black tracking-tight text-green-950 md:text-4xl">
+                  🏆 Team Wins
+                </h3>
+
+                <p className="mt-2 text-xs font-semibold text-slate-500">
+                  Team championship records begin from Carden Park 2026.
+                </p>
+              </div>
+
+              <div className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-green-950 text-2xl md:flex">
+                🏆
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4">
+            {teamWins.map((winner, index) => (
+              <div
+                key={winner.player}
+                className={`relative p-5 md:p-6 ${
+                  index % 2 === 0
+                    ? "border-r border-slate-100"
+                    : ""
+                } border-b border-slate-100 md:border-r md:border-b-0 md:[&:nth-child(4n)]:border-r-0`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-2xl font-black text-green-950">
+                      {winner.player}
+                    </p>
+
+                    <p className="mt-1 text-[10px] font-bold text-slate-400">
+                      {winner.event}
+                    </p>
+                  </div>
+
+                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100 text-sm">
+                    🏆
+                  </span>
+                </div>
+
+                <div className="mt-5 flex items-end gap-1">
+                  <span className="text-4xl font-black leading-none text-green-900">
+                    {winner.wins}
+                  </span>
+
+                  <span className="pb-1 text-[8px] font-black uppercase tracking-[0.16em] text-emerald-700">
+                    team win
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ======================================================
+          SECONDARY RECORDS
+      ====================================================== */}
+
+      <section className="mt-8">
+        <SectionHeading
+          eyebrow="Competition Records"
+          title="More names in the book."
+          description="The side contests and individual records built up across the trips."
+        />
+
+        {/* LONGEST DRIVE */}
+
+        <div className="overflow-hidden rounded-[1.8rem] bg-white shadow-sm ring-1 ring-slate-200">
+          <div className="grid gap-0 md:grid-cols-[1.4fr_1fr]">
+            <div className="relative overflow-hidden bg-[#071b13] p-5 text-white md:p-6">
+              <div className="pointer-events-none absolute -right-5 -top-10 text-[130px] opacity-[0.055]">
+                🚀
+              </div>
+
+              <div className="relative">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-green-300">
+                      Power Records
+                    </p>
+
+                    <h3 className="mt-1 text-2xl font-black">
+                      🚀 Longest Drive
+                    </h3>
+                  </div>
+
+                  <div className="text-right">
+                    <p className="text-5xl font-black leading-none text-lime-300">
+                      {longestDriveRecords[0].wins}
+                    </p>
+
+                    <p className="text-[8px] font-black uppercase tracking-[0.15em] text-green-200">
+                      wins
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5">
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-green-300">
                     All-time leader
                   </p>
 
-                  <p className="mt-1 text-4xl font-black tracking-tight md:text-5xl">
+                  <p className="mt-1 text-4xl font-black">
                     {longestDriveRecords[0].player}
                   </p>
 
@@ -331,85 +527,32 @@ export default function HallOfFamePage() {
                     ))}
                   </div>
                 </div>
-
-                <div className="self-end text-left sm:text-right">
-                  <p className="text-7xl font-black leading-none text-lime-300">
-                    {longestDriveRecords[0].wins}
-                  </p>
-
-                  <p className="mt-1 text-[9px] font-black uppercase tracking-[0.18em] text-green-200">
-                    Long Drive wins
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-5 flex items-center justify-between gap-4 border-t border-white/10 pt-4">
-                <div>
-                  <p className="font-black text-white">
-                    {longestDriveRecords[1].player}
-                  </p>
-
-                  <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
-                    {longestDriveRecords[1].events[0]}
-                  </p>
-                </div>
-
-                <div className="text-right">
-                  <span className="text-2xl font-black text-lime-300">
-                    {longestDriveRecords[1].wins}
-                  </span>
-
-                  <span className="ml-1 text-[8px] font-black uppercase tracking-wider text-green-200">
-                    win
-                  </span>
-                </div>
               </div>
             </div>
-          </div>
 
-          {/* EVENT WINS */}
+            <div className="flex items-center justify-between p-5 md:p-6">
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                  Also on the board
+                </p>
 
-          <div className="relative overflow-hidden rounded-[1.8rem] bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <div className="absolute -right-3 -top-7 text-[120px] opacity-[0.045]">
-              🏆
-            </div>
+                <p className="mt-1 text-3xl font-black text-green-950">
+                  {longestDriveRecords[1].player}
+                </p>
 
-            <div className="relative">
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-700">
-                Event Wins
-              </span>
-
-              <div className="mt-6 flex items-end justify-between">
-                <div>
-                  <p className="text-4xl font-black text-green-950">
-                    {eventWins[0].player}
-                  </p>
-
-                  <p className="mt-1 text-xs font-semibold text-slate-500">
-                    Most event victories
-                  </p>
-                </div>
-
-                <p className="text-6xl font-black leading-none text-green-900">
-                  {eventWins[0].wins}
+                <p className="mt-1 text-[10px] font-semibold text-slate-500">
+                  {longestDriveRecords[1].events[0]}
                 </p>
               </div>
 
-              <div className="mt-5 space-y-2 border-t border-slate-100 pt-4">
-                {eventWins[0].events.map((event) => (
-                  <div
-                    key={event}
-                    className="flex items-center gap-2"
-                  >
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-xs">
-                      🏆
-                    </span>
+              <div className="text-right">
+                <p className="text-5xl font-black leading-none text-green-900">
+                  {longestDriveRecords[1].wins}
+                </p>
 
-                    <span className="text-xs font-black text-slate-700">
-                      {event}
-                    </span>
-                  </div>
-                ))}
+                <p className="mt-1 text-[8px] font-black uppercase tracking-[0.15em] text-emerald-700">
+                  win
+                </p>
               </div>
             </div>
           </div>
@@ -497,19 +640,6 @@ export default function HallOfFamePage() {
             />
           ))}
         </div>
-
-        <div className="mt-3 flex items-center gap-2 px-1">
-          <span className="text-sm">
-            👥
-          </span>
-
-          <p className="text-[10px] font-semibold text-slate-500">
-            <strong className="font-black text-green-950">
-              18 different players
-            </strong>{" "}
-            across five Swift Tees weekends up to and including Carden Park 2026.
-          </p>
-        </div>
       </section>
 
       {/* ======================================================
@@ -522,6 +652,8 @@ export default function HallOfFamePage() {
           title="Top 10 Stableford Scores"
           description="The ten highest individual Stableford scores recorded in Swift Tees competition."
         />
+
+        {/* CURRENT RECORD */}
 
         <div className="mb-3 overflow-hidden rounded-[1.8rem] bg-[#07140f] p-5 text-white shadow-lg">
           <div className="flex items-end justify-between gap-4">
@@ -537,6 +669,10 @@ export default function HallOfFamePage() {
               <p className="mt-1 text-xs font-semibold text-slate-400">
                 Carden Park 2026 · Nicklaus
               </p>
+
+              <p className="mt-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-300">
+                91 shots
+              </p>
             </div>
 
             <div className="text-right">
@@ -545,7 +681,7 @@ export default function HallOfFamePage() {
               </p>
 
               <p className="mt-1 text-[9px] font-black uppercase tracking-[0.18em] text-green-200">
-                points
+                Stableford pts
               </p>
             </div>
           </div>
@@ -700,7 +836,7 @@ function AttendanceProgress({
 }
 
 /* ============================================================
-   STABLEFORD
+   STABLEFORD TOP 10
 ============================================================ */
 
 function StablefordTopTen({
@@ -720,24 +856,29 @@ function StablefordTopTen({
 
   return (
     <div className="overflow-hidden rounded-[1.8rem] bg-white shadow-sm ring-1 ring-slate-200">
-      <div className="grid grid-cols-[34px_1fr_auto] bg-[#07140f] px-4 py-2.5 text-[8px] font-black uppercase tracking-[0.15em] text-slate-400 md:grid-cols-[50px_1fr_220px_80px]">
+      {/* DESKTOP HEADER */}
+
+      <div className="hidden grid-cols-[45px_1fr_190px_80px_70px] bg-[#07140f] px-4 py-2.5 text-[8px] font-black uppercase tracking-[0.15em] text-slate-400 md:grid">
         <div>#</div>
-
         <div>Player</div>
+        <div>Round</div>
+        <div className="text-right">Score</div>
+        <div className="text-right">Pts</div>
+      </div>
 
-        <div className="hidden md:block">
-          Round
-        </div>
+      {/* MOBILE HEADER */}
 
-        <div className="text-right">
-          Pts
-        </div>
+      <div className="grid grid-cols-[32px_1fr_48px_48px] bg-[#07140f] px-3 py-2.5 text-[8px] font-black uppercase tracking-[0.12em] text-slate-400 md:hidden">
+        <div>#</div>
+        <div>Player</div>
+        <div className="text-right">Score</div>
+        <div className="text-right">Pts</div>
       </div>
 
       {topTen.map((round, index) => (
         <div
           key={`${round.name}-${round.event}-${round.course}-${index}`}
-          className={`grid grid-cols-[34px_1fr_auto] items-center gap-2 border-b border-slate-100 px-4 py-2.5 last:border-b-0 md:grid-cols-[50px_1fr_220px_80px] ${
+          className={`border-b border-slate-100 last:border-b-0 ${
             index === 0
               ? "bg-lime-50"
               : index < 3
@@ -745,46 +886,90 @@ function StablefordTopTen({
               : "bg-white"
           }`}
         >
-          <div>
-            <StablefordPosition position={index + 1} />
+          {/* MOBILE */}
+
+          <div className="grid grid-cols-[32px_1fr_48px_48px] items-center gap-1 px-3 py-2.5 md:hidden">
+            <div>
+              <StablefordPosition position={index + 1} />
+            </div>
+
+            <div className="min-w-0">
+              <p className="truncate text-sm font-black text-green-950">
+                {round.name}
+              </p>
+
+              <p className="mt-0.5 truncate text-[8px] font-semibold text-slate-400">
+                {round.event} · {round.course}
+              </p>
+            </div>
+
+            <div className="text-right">
+              <span className="text-sm font-black text-slate-600">
+                {round.grossScore}
+              </span>
+            </div>
+
+            <div className="text-right">
+              <span
+                className={`text-lg font-black ${
+                  index === 0
+                    ? "text-green-950"
+                    : "text-green-800"
+                }`}
+              >
+                {round.points}
+              </span>
+            </div>
           </div>
 
-          <div className="min-w-0">
-            <p className="truncate text-sm font-black text-green-950">
-              {round.name}
-            </p>
+          {/* DESKTOP */}
 
-            <p className="mt-0.5 truncate text-[9px] font-semibold text-slate-400 md:hidden">
-              {round.event} · {round.course}
-            </p>
-          </div>
+          <div className="hidden grid-cols-[45px_1fr_190px_80px_70px] items-center gap-2 px-4 py-2.5 md:grid">
+            <div>
+              <StablefordPosition position={index + 1} />
+            </div>
 
-          <div className="hidden md:block">
-            <p className="text-[11px] font-bold text-slate-600">
-              {round.event}
-            </p>
+            <div>
+              <p className="text-sm font-black text-green-950">
+                {round.name}
+              </p>
+            </div>
 
-            <p className="text-[9px] font-semibold text-slate-400">
-              {round.course}
-            </p>
-          </div>
+            <div>
+              <p className="text-[11px] font-bold text-slate-600">
+                {round.event}
+              </p>
 
-          <div className="text-right">
-            <span
-              className={`text-xl font-black ${
-                index === 0
-                  ? "text-green-950"
-                  : "text-green-800"
-              }`}
-            >
-              {round.points}
-            </span>
+              <p className="text-[9px] font-semibold text-slate-400">
+                {round.course}
+              </p>
+            </div>
+
+            <div className="text-right text-sm font-black text-slate-600">
+              {round.grossScore}
+            </div>
+
+            <div className="text-right">
+              <span
+                className={`text-xl font-black ${
+                  index === 0
+                    ? "text-green-950"
+                    : "text-green-800"
+                }`}
+              >
+                {round.points}
+              </span>
+            </div>
           </div>
         </div>
       ))}
     </div>
   );
 }
+
+/* ============================================================
+   STABLEFORD POSITION
+============================================================ */
 
 function StablefordPosition({
   position,
