@@ -85,6 +85,7 @@ type LeaderboardRow = {
   name: string;
   team: string;
   points: number;
+  teamPoints: number;
   through: number;
   movement: Movement;
   bonusIcons: string[];
@@ -651,7 +652,10 @@ function buildTeams(rows: LeaderboardRow[]) {
       };
     }
 
-    acc[teamName].points += player.points;
+    // Individual leaderboard points can include a scramble score for both
+    // players in a pair. teamPoints only counts that scramble score for
+    // player1, while a single-scramble player still counts normally.
+    acc[teamName].points += player.teamPoints;
 
     return acc;
   }, {});
@@ -700,6 +704,7 @@ function buildPreviousTeamStandingsFromLatestScore(
     return {
       ...row,
       points: Math.max(0, Number(row.points) - latestPoints),
+      teamPoints: Math.max(0, Number(row.teamPoints) - latestPoints),
     };
   });
 
@@ -1745,6 +1750,13 @@ const scramblePairStandings =
   getStoredPairStandings(eventSlug);
  
     const scramblePointsByPlayerId: Record<number, number> = {};
+
+    // Used only for the TEAM leaderboard.
+    // For a 2-player scramble pair, only player1 contributes the pair score
+    // to the team total. Both players still receive the points individually.
+    // For a single-scramble entry there is only player1, so it counts normally.
+    const teamScramblePointsByPlayerId: Record<number, number> = {};
+
     const scrambleThroughByPlayerId: Record<number, number> = {};
     const bonusPointsByPlayerName: Record<string, number> = {};
     const bonusIconsByPlayerName: Record<string, string[]> = {};
@@ -1779,6 +1791,8 @@ const scramblePairStandings =
         players
       );
 
+      // Individual leaderboard:
+      // award the scramble points to every player in the pair.
       pairInfo.playerIds.forEach((playerId: number) => {
         scramblePointsByPlayerId[playerId] =
           (scramblePointsByPlayerId[playerId] ?? 0) + scramblePoints;
@@ -1790,6 +1804,18 @@ const scramblePairStandings =
           );
         }
       });
+
+      // Team leaderboard:
+      // count the scramble score ONCE, using the first listed player.
+      // A single-scramble entry also has its player as the first/only player,
+      // so its points are counted once too.
+      const firstPlayerId = pairInfo.playerIds[0];
+
+      if (firstPlayerId) {
+        teamScramblePointsByPlayerId[firstPlayerId] =
+          (teamScramblePointsByPlayerId[firstPlayerId] ?? 0) +
+          scramblePoints;
+      }
     });
 
     const rows = players
@@ -1818,7 +1844,12 @@ const scramblePairStandings =
             )
           : 0;
 
-      const scramblePoints = scramblePointsByPlayerId[Number(player.id)] ?? 0;
+      const scramblePoints =
+        scramblePointsByPlayerId[Number(player.id)] ?? 0;
+
+      const teamScramblePoints =
+        teamScramblePointsByPlayerId[Number(player.id)] ?? 0;
+
       const bonusPoints = bonusPointsByPlayerName[player.name] ?? 0;
       const scrambleThrough = scrambleThroughByPlayerId[Number(player.id)] ?? 0;
 
@@ -1832,7 +1863,17 @@ const scramblePairStandings =
   )?.eventTeam ??
   player.team ??
   "",
+        // Individual total: both members of a scramble pair receive the
+        // pair's Stableford points.
         points: stablefordPoints + scramblePoints + bonusPoints,
+
+        // Team total: the scramble pair score only counts once (player1).
+        // Individual Stableford and bonus points continue to count normally.
+        teamPoints:
+          stablefordPoints +
+          teamScramblePoints +
+          bonusPoints,
+
         through: Math.max(stablefordThrough, scrambleThrough),
         movement: {
           icon: "➖",
