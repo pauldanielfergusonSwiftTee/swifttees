@@ -38,7 +38,7 @@ const attendanceGroups: AttendanceGroup[] = [
       "Gav",
       "Stu",
       "Wrighty",
-      "John W",
+      "John",
     ],
   },
   {

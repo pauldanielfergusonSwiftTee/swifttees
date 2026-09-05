@@ -52,44 +52,187 @@ export default function WorsleyParkEventPage() {
                 27 – 28 September 2026
               </p>
 
-              <div className="mt-6 grid max-w-2xl grid-cols-2 gap-2 sm:grid-cols-4">
-
-                <div className="rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur-md">
-                  <p className="text-xl">👤</p>
-                  <p className="mt-2 text-2xl font-black">9</p>
-                  <p className="text-[10px] font-black uppercase tracking-wide text-white/70">
-                    Players
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur-md">
-                  <p className="text-xl">⛳</p>
-                  <p className="mt-2 text-2xl font-black">36</p>
-                  <p className="text-[10px] font-black uppercase tracking-wide text-white/70">
-                    Holes
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur-md">
-                  <p className="text-xl">📅</p>
-                  <p className="mt-2 text-2xl font-black">2</p>
-                  <p className="text-[10px] font-black uppercase tracking-wide text-white/70">
-                    Days
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border border-white/15 bg-white/10 p-3 backdrop-blur-md">
-                  <p className="text-xl">🛏️</p>
-                  <p className="mt-2 text-2xl font-black">1</p>
-                  <p className="text-[10px] font-black uppercase tracking-wide text-white/70">
-                    Night
-                  </p>
-                </div>
-
-              </div>
+              
             </div>
           </div>
         </section>
+
+{/* =========================================================
+    TEAM DRAW
+========================================================= */}
+
+<section className="mb-4 overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-sm">
+  {/* Header */}
+  <div className="bg-green-950 px-5 py-5 text-white md:px-7">
+    <p className="text-xs font-black uppercase tracking-[0.18em] text-green-300">
+      🏆 The Draw Is In
+    </p>
+
+    <h2 className="mt-1 text-3xl font-black tracking-tight md:text-4xl">
+      Worsley Teams
+    </h2>
+
+    <p className="mt-2 text-sm text-white/65">
+      Three teams. Three captains. Everything to play for.
+    </p>
+  </div>
+
+  {/* Teams */}
+  <div className="grid gap-3 p-4 md:grid-cols-3 md:p-5">
+
+    {/* WHITES */}
+    <div className="overflow-hidden rounded-3xl border-2 border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-200 bg-slate-100 px-5 py-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+              Team
+            </p>
+
+            <h3 className="text-2xl font-black text-slate-950">
+              ⚪ Whites
+            </h3>
+          </div>
+
+          <span className="text-3xl">⚪</span>
+        </div>
+      </div>
+
+      <div className="space-y-3 p-4">
+        <div className="rounded-2xl bg-slate-100 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-lg font-black text-slate-950">
+                Chris Mc
+              </p>
+              <p className="mt-1 text-xs font-black uppercase tracking-wide text-amber-600">
+                👑 Captain
+              </p>
+            </div>
+
+            <span className="rounded-full bg-white px-3 py-2 text-sm font-black text-slate-900 shadow-sm">
+              20
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between rounded-2xl border border-slate-200 p-4">
+          <p className="font-black text-slate-900">John W</p>
+          <span className="text-sm font-black text-slate-500">24</span>
+        </div>
+
+        <div className="flex items-center justify-between rounded-2xl border border-slate-200 p-4">
+          <p className="font-black text-slate-900">Adam</p>
+          <span className="text-sm font-black text-slate-500">28</span>
+        </div>
+      </div>
+    </div>
+
+    {/* BLUES */}
+    <div className="overflow-hidden rounded-3xl border-2 border-blue-300 bg-white shadow-sm">
+      <div className="border-b border-blue-200 bg-blue-600 px-5 py-4 text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-100">
+              Team
+            </p>
+
+            <h3 className="text-2xl font-black">
+              🔵 Blues
+            </h3>
+          </div>
+
+          <span className="text-3xl">🔵</span>
+        </div>
+      </div>
+
+      <div className="space-y-3 p-4">
+        <div className="rounded-2xl bg-blue-50 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-lg font-black text-blue-950">
+                Carl
+              </p>
+              <p className="mt-1 text-xs font-black uppercase tracking-wide text-amber-600">
+                👑 Captain
+              </p>
+            </div>
+
+            <span className="rounded-full bg-white px-3 py-2 text-sm font-black text-blue-950 shadow-sm">
+              28
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between rounded-2xl border border-blue-100 p-4">
+          <p className="font-black text-blue-950">Paul</p>
+          <span className="text-sm font-black text-blue-600">20</span>
+        </div>
+
+        <div className="flex items-center justify-between rounded-2xl border border-blue-100 p-4">
+          <p className="font-black text-blue-950">Stu</p>
+          <span className="text-sm font-black text-blue-600">24</span>
+        </div>
+      </div>
+    </div>
+
+    {/* GREENS */}
+    <div className="overflow-hidden rounded-3xl border-2 border-green-300 bg-white shadow-sm">
+      <div className="border-b border-green-200 bg-green-700 px-5 py-4 text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.16em] text-green-100">
+              Team
+            </p>
+
+            <h3 className="text-2xl font-black">
+              🟢 Greens
+            </h3>
+          </div>
+
+          <span className="text-3xl">🟢</span>
+        </div>
+      </div>
+
+      <div className="space-y-3 p-4">
+        <div className="rounded-2xl bg-green-50 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-lg font-black text-green-950">
+                Ian
+              </p>
+              <p className="mt-1 text-xs font-black uppercase tracking-wide text-amber-600">
+                👑 Captain
+              </p>
+            </div>
+
+            <span className="rounded-full bg-white px-3 py-2 text-sm font-black text-green-950 shadow-sm">
+              24
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between rounded-2xl border border-green-100 p-4">
+          <p className="font-black text-green-950">Liam</p>
+          <span className="text-sm font-black text-green-700">20</span>
+        </div>
+
+        <div className="flex items-center justify-between rounded-2xl border border-green-100 p-4">
+          <p className="font-black text-green-950">Calp</p>
+          <span className="text-sm font-black text-green-700">28</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {/* Handicap note */}
+  <div className="border-t border-slate-100 bg-slate-50 px-5 py-3 text-center">
+    <p className="text-xs font-bold text-slate-500">
+      Numbers shown are playing handicaps
+    </p>
+  </div>
+</section>
 
         {/* =========================================================
             EVENT SUMMARY
@@ -674,35 +817,7 @@ export default function WorsleyParkEventPage() {
           </div>
         </section>
 
-        {/* =========================================================
-            TEAMS
-        ========================================================= */}
-
-        <section className="mb-4 rounded-3xl border border-dashed border-green-300 bg-gradient-to-br from-green-50 to-white p-5 shadow-sm md:p-6">
-
-          <div className="flex items-start gap-4">
-
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-green-950 text-3xl text-white">
-              👥
-            </span>
-
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.15em] text-green-700">
-                Coming Soon
-              </p>
-
-              <h2 className="mt-1 text-2xl font-black text-green-950">
-                Teams & Groups
-              </h2>
-
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Nine players are confirmed. Teams, groups and pairings
-                will be added once the draw has been sorted.
-              </p>
-            </div>
-
-          </div>
-        </section>
+       
 
         {/* =========================================================
             LIVE
