@@ -5,6 +5,7 @@ import {
   saveHoleScores,
   deleteHoleScores,
   saveBonusWinner,
+  checkTournamentResults,
   getScores,
   getScrambleScores,
   getBonusWinners,
@@ -591,7 +592,9 @@ export default function LiveScoringPage() {
       }
 
       if (rowsToSave.length > 0) {
-        await saveHoleScores(rowsToSave);
+        await saveHoleScores(rowsToSave, {
+          tournament: tournamentSetup,
+        });
       }
 
       if (bonusHole && getBonusWinner()) {
@@ -607,6 +610,8 @@ export default function LiveScoringPage() {
           points: bonusHole.points ?? 0,
         });
       }
+
+      await checkTournamentResults(tournamentSetup);
 
       const bonusMessage =
         bonusHole && getBonusWinner()
@@ -1014,7 +1019,7 @@ export default function LiveScoringPage() {
               <button
                 onClick={saveHole}
                 disabled={isSaving}
-                className="w-full rounded-2xl bg-green-800 px-5 py-4 text-lg font-black text-white shadow-sm transition hover:bg-green-00 disabled:opacity-60"
+                className="w-full rounded-2xl bg-green-700 px-5 py-3.5 text-lg font-black text-white shadow-sm disabled:opacity-60"
               >
                 {isSaving
                   ? "Saving..."
@@ -1023,34 +1028,28 @@ export default function LiveScoringPage() {
                   : `Save Hole ${hole} Scorecards`}
               </button>
 
-            <div className="mt-5 border-t border-slate-200 pt-5">
-  <p className="mb-3 text-center text-xs font-black uppercase tracking-[0.18em] text-slate-500">
-    Navigation
-  </p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <a
+                  href="/live-centre"
+                  className="flex items-center justify-center rounded-2xl bg-green-700 px-3 py-3 text-center text-sm font-black text-white shadow-sm transition hover:bg-green-800"
+                >
+                  🏆 Leaderboard
+                </a>
 
-  <div className="grid grid-cols-2 gap-3">
-    <a
-      href="/live-centre"
-      className="flex items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-center text-sm font-black text-emerald-800 shadow-sm transition hover:bg-emerald-100"
-    >
-      🏆 Leaderboard
-    </a>
+                <a
+                  href="/full-scorecard"
+                  className="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-3 py-3 text-center text-sm font-black text-green-950 shadow-sm transition hover:border-green-700"
+                >
+                  📊 Full Scorecard
+                </a>
 
-    <a
-      href="/full-scorecard"
-      className="flex items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 px-3 py-3 text-center text-sm font-black text-blue-800 shadow-sm transition hover:bg-blue-100"
-    >
-      📊 Full Scorecard
-    </a>
-
-    <a
-      href="/setup-v2"
-      className="col-span-2 flex items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-center text-sm font-black text-amber-800 shadow-sm transition hover:bg-amber-100"
-    >
-      ⚙️ Tournament Setup
-    </a>
-  </div>
-</div>
+                <a
+                  href="/setup-v2"
+                  className="col-span-2 flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-center text-sm font-black text-slate-700 shadow-sm transition hover:border-green-700"
+                >
+                  ⚙️ Tournament Setup
+                </a>
+              </div>
             </section>
 
       </div>
