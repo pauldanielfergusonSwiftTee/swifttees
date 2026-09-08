@@ -1654,9 +1654,7 @@ function shouldSendPush(
 
 
 async function saveMomentAndPush(
-  supabase: ReturnType<
-    typeof createClient
-  >,
+  supabase: any,
   moment: LiveMomentRow
 ) {
   /*
@@ -1670,11 +1668,11 @@ async function saveMomentAndPush(
     data,
     error,
   } =
-    await supabase
-      .from("live_moments")
-      .insert(moment)
-      .select("*")
-      .single();
+   await supabase
+  .from("live_moments")
+  .insert([moment] as any)
+  .select("*")
+  .single();
 
 
   if (

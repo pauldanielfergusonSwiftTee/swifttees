@@ -619,28 +619,6 @@ export default function HallOfFamePage() {
         </div>
       </section>
 
-      {/* ======================================================
-          ATTENDANCE
-      ====================================================== */}
-
-      <section className="mt-8">
-        <SectionHeading
-          eyebrow="The Roll Call"
-          title="Trips attended."
-          description="Every player, grouped by how many Swift Tees weekends they've joined."
-        />
-
-        <div className="space-y-2">
-          {attendanceGroups.map((group) => (
-            <AttendanceProgress
-              key={group.trips}
-              trips={group.trips}
-              players={group.players}
-              maxTrips={5}
-            />
-          ))}
-        </div>
-      </section>
 
       {/* ======================================================
           STABLEFORD TOP 10
@@ -688,6 +666,30 @@ export default function HallOfFamePage() {
         </div>
 
         <StablefordTopTen rows={bestStableford} />
+            {/* ======================================================
+          ATTENDANCE
+      ====================================================== */}
+
+      <section className="mt-8">
+        <SectionHeading
+          eyebrow="The Roll Call"
+          title="Trips attended."
+          description="Every player, grouped by how many Swift Tees weekends they've joined."
+        />
+
+        <div className="space-y-2">
+          {attendanceGroups.map((group) => (
+            <AttendanceProgress
+              key={group.trips}
+              trips={group.trips}
+              players={group.players}
+              maxTrips={5}
+            />
+          ))}
+        </div>
+      </section>
+
+      
       </section>
 
       {/* ======================================================

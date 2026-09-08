@@ -193,6 +193,7 @@ export default function OverallLeaderboardPage() {
       : 0;
 
   const leader = standings[0];
+
   const bestAveragePlayer = standings
     .slice()
     .sort(
@@ -229,6 +230,7 @@ export default function OverallLeaderboardPage() {
       {/* ======================================================
           HEADER
       ====================================================== */}
+
       <section className="overflow-hidden rounded-[2rem] bg-[#07111f] text-white shadow-lg">
         <div className="p-6 md:p-9">
           <Link
@@ -252,13 +254,10 @@ export default function OverallLeaderboardPage() {
 
             <p className="mt-5 max-w-2xl text-base font-semibold leading-7 text-slate-300 md:text-lg">
               Individual Stableford points from Carden Park 2026
-              onwards. Total points decide the standings, with
-              average points showing who&apos;s making the most of
-              every round.
+              onwards. Every round adds to the season total.
             </p>
           </div>
 
-          {/* SUMMARY */}
           <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4">
             <HeaderStat
               value={String(totalPlayers)}
@@ -286,60 +285,61 @@ export default function OverallLeaderboardPage() {
       {/* ======================================================
           QUICK LEADERS
       ====================================================== */}
+
       {standings.length > 0 && (
         <section className="mt-5 grid gap-3 md:grid-cols-2">
-          <div className="rounded-[1.6rem] bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+          <div className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-700">
               Current Leader
             </p>
 
-            <div className="mt-3 flex items-end justify-between gap-3">
-              <div>
-                <p className="text-2xl font-black text-green-950">
+            <div className="mt-3 flex items-end justify-between gap-4">
+              <div className="min-w-0">
+                <p className="truncate text-2xl font-black text-green-950">
                   🥇 {leader.playerName}
                 </p>
 
-                <p className="mt-1 text-sm font-semibold text-slate-500">
+                <p className="mt-1 text-xs font-semibold text-slate-500">
                   {leader.roundsPlayed} round
                   {leader.roundsPlayed === 1 ? "" : "s"} played
                 </p>
               </div>
 
-              <div className="text-right">
+              <div className="shrink-0 text-right">
                 <p className="text-4xl font-black leading-none text-green-900">
                   {leader.totalPoints}
                 </p>
 
-                <p className="mt-1 text-xs font-black uppercase tracking-wider text-slate-400">
+                <p className="mt-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
                   points
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="rounded-[1.6rem] bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+          <div className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-slate-200">
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-700">
               Best Average
             </p>
 
-            <div className="mt-3 flex items-end justify-between gap-3">
-              <div>
-                <p className="text-2xl font-black text-green-950">
+            <div className="mt-3 flex items-end justify-between gap-4">
+              <div className="min-w-0">
+                <p className="truncate text-2xl font-black text-green-950">
                   🎯 {bestAveragePlayer.playerName}
                 </p>
 
-                <p className="mt-1 text-sm font-semibold text-slate-500">
+                <p className="mt-1 text-xs font-semibold text-slate-500">
                   Across {bestAveragePlayer.roundsPlayed} round
                   {bestAveragePlayer.roundsPlayed === 1 ? "" : "s"}
                 </p>
               </div>
 
-              <div className="text-right">
+              <div className="shrink-0 text-right">
                 <p className="text-4xl font-black leading-none text-green-900">
                   {bestAveragePlayer.averagePoints.toFixed(1)}
                 </p>
 
-                <p className="mt-1 text-xs font-black uppercase tracking-wider text-slate-400">
+                <p className="mt-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
                   avg pts
                 </p>
               </div>
@@ -349,27 +349,28 @@ export default function OverallLeaderboardPage() {
       )}
 
       {/* ======================================================
-          OVERALL STANDINGS
+          SEASON STANDINGS
       ====================================================== */}
-      <section className="mt-6">
-        <div className="mb-4 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-700">
-              Season Standings
-            </p>
 
-            <h2 className="mt-1 text-3xl font-black tracking-tight text-green-950">
+      <section className="mt-7">
+        <div className="mb-4">
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-emerald-700">
+            Season Standings
+          </p>
+
+          <div className="mt-1 flex items-end justify-between gap-3">
+            <h2 className="text-3xl font-black tracking-[-0.03em] text-green-950">
               The table
             </h2>
-          </div>
 
-          <p className="hidden text-xs font-semibold text-slate-500 sm:block">
-            Ranked by total Stableford points
-          </p>
+            <p className="pb-1 text-[10px] font-bold text-slate-400">
+              Total Stableford pts
+            </p>
+          </div>
         </div>
 
         {standings.length === 0 ? (
-          <div className="rounded-3xl bg-white p-8 text-center shadow-sm ring-1 ring-slate-200">
+          <div className="rounded-[1.5rem] bg-white p-8 text-center shadow-sm ring-1 ring-slate-200">
             <p className="text-4xl">
               🏌️
             </p>
@@ -379,117 +380,171 @@ export default function OverallLeaderboardPage() {
             </p>
 
             <p className="mt-2 text-sm text-slate-500">
-              Add results to the overall_results table and they&apos;ll
-              appear here automatically.
+              Results will appear here automatically.
             </p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-[2rem] bg-white shadow-sm ring-1 ring-slate-200">
-            {/* DESKTOP HEADER */}
-            <div className="hidden grid-cols-[70px_1.5fr_100px_110px_110px_100px_100px] bg-[#07111f] px-4 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-slate-300 md:grid">
-              <div>Pos</div>
-              <div>Player</div>
-              <div className="text-center">Played</div>
-              <div className="text-center">Total</div>
-              <div className="text-center">Average</div>
-              <div className="text-center">Best</div>
-              <div className="text-center">Events</div>
+          <div className="overflow-hidden rounded-[1.6rem] bg-white shadow-sm ring-1 ring-slate-200">
+            {/* MOBILE TABLE HEADER */}
+
+            <div className="grid grid-cols-[42px_1fr_62px] items-center bg-[#07140f] px-3 py-2.5 md:hidden">
+              <div className="text-[8px] font-black uppercase tracking-[0.15em] text-slate-400">
+                Pos
+              </div>
+
+              <div className="text-[8px] font-black uppercase tracking-[0.15em] text-slate-400">
+                Player
+              </div>
+
+              <div className="text-right text-[8px] font-black uppercase tracking-[0.15em] text-slate-400">
+                Pts
+              </div>
+            </div>
+
+            {/* DESKTOP TABLE HEADER */}
+
+            <div className="hidden grid-cols-[70px_1.4fr_100px_110px_110px_100px_100px] items-center bg-[#07140f] px-5 py-3 md:grid">
+              <div className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                Pos
+              </div>
+
+              <div className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                Player
+              </div>
+
+              <div className="text-center text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                Played
+              </div>
+
+              <div className="text-center text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                Total
+              </div>
+
+              <div className="text-center text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                Average
+              </div>
+
+              <div className="text-center text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                Best
+              </div>
+
+              <div className="text-center text-[9px] font-black uppercase tracking-[0.16em] text-slate-400">
+                Events
+              </div>
             </div>
 
             <div className="divide-y divide-slate-100">
               {standings.map((player) => (
                 <div
                   key={player.playerName}
-                  className={`${
+                  className={
                     player.pos === 1
-                      ? "bg-amber-50/60"
-                      : player.pos <= 3
-                      ? "bg-slate-50/60"
+                      ? "bg-[#fffdf2]"
+                      : player.pos === 2
+                      ? "bg-slate-50/80"
+                      : player.pos === 3
+                      ? "bg-orange-50/30"
                       : "bg-white"
-                  }`}
+                  }
                 >
                   {/* MOBILE */}
-                  <div className="p-4 md:hidden">
-                    <div className="flex items-start gap-3">
-                      <PositionBadge position={player.pos} />
 
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-lg font-black text-green-950">
-                              {player.playerName}
-                            </p>
+                  <div className="md:hidden">
+                    <div className="grid grid-cols-[42px_1fr_62px] items-center px-3 pb-0.5 pt-2.5">
+                      <div>
+                        <TablePosition position={player.pos} />
+                      </div>
 
-                            <p className="mt-1 text-xs font-semibold text-slate-500">
-                              {player.roundsPlayed} played
-                              {" • "}
-                              {player.eventsPlayed} event
-                              {player.eventsPlayed === 1 ? "" : "s"}
-                            </p>
-                          </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-[15px] font-black leading-none text-green-950">
+                          {player.playerName}
+                        </p>
+                      </div>
 
-                          <div className="text-right">
-                            <p className="text-3xl font-black leading-none text-green-900">
-                              {player.totalPoints}
-                            </p>
+                      <div className="text-right">
+                        <p className="text-2xl font-black leading-none tracking-tight text-green-900">
+                          {player.totalPoints}
+                        </p>
+                      </div>
+                    </div>
 
-                            <p className="mt-1 text-[9px] font-black uppercase tracking-wider text-slate-400">
-                              total pts
-                            </p>
-                          </div>
-                        </div>
+                    <div className="grid grid-cols-[42px_1fr_62px] px-3 pb-2">
+                      <div />
 
-                        <div className="mt-3 grid grid-cols-2 gap-2">
-                          <MiniStat
-                            label="Average"
-                            value={player.averagePoints.toFixed(1)}
-                          />
+                      <div className="flex min-w-0 items-center gap-1.5 text-[10px] font-bold text-slate-500">
+                        <span>
+                          {player.roundsPlayed} played
+                        </span>
 
-                          <MiniStat
-                            label="Best Round"
-                            value={`${player.bestRound} pts`}
-                          />
-                        </div>
+                        <span className="text-slate-300">
+                          •
+                        </span>
+
+                        <span>
+                          Avg {player.averagePoints.toFixed(1)}
+                        </span>
+
+                        <span className="text-slate-300">
+                          •
+                        </span>
+
+                        <span>
+                          Best {player.bestRound}
+                        </span>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="text-[7px] font-black uppercase tracking-[0.13em] text-slate-400">
+                          total pts
+                        </span>
                       </div>
                     </div>
                   </div>
 
                   {/* DESKTOP */}
-                  <div className="hidden grid-cols-[70px_1.5fr_100px_110px_110px_100px_100px] items-center px-4 py-4 md:grid">
+
+                  <div className="hidden grid-cols-[70px_1.4fr_100px_110px_110px_100px_100px] items-center px-5 py-4 md:grid">
                     <div>
-                      <PositionBadge position={player.pos} />
+                      <TablePosition position={player.pos} />
                     </div>
 
                     <div>
-                      <p className="font-black text-green-950">
+                      <p className="text-base font-black text-green-950">
                         {player.playerName}
                       </p>
                     </div>
 
-                    <div className="text-center font-bold text-slate-600">
+                    <div className="text-center text-sm font-bold text-slate-600">
                       {player.roundsPlayed}
                     </div>
 
                     <div className="text-center">
-                      <span className="text-xl font-black text-green-900">
+                      <span className="text-2xl font-black text-green-900">
                         {player.totalPoints}
                       </span>
                     </div>
 
-                    <div className="text-center font-black text-slate-700">
+                    <div className="text-center text-sm font-black text-slate-700">
                       {player.averagePoints.toFixed(1)}
                     </div>
 
-                    <div className="text-center font-bold text-slate-600">
+                    <div className="text-center text-sm font-bold text-slate-600">
                       {player.bestRound}
                     </div>
 
-                    <div className="text-center font-bold text-slate-600">
+                    <div className="text-center text-sm font-bold text-slate-600">
                       {player.eventsPlayed}
                     </div>
                   </div>
                 </div>
               ))}
+            </div>
+
+            <div className="border-t border-slate-100 bg-slate-50 px-4 py-3">
+              <p className="text-center text-[9px] font-bold leading-4 text-slate-400">
+                Ranked by total points · Average and best round used as
+                tie-breakers
+              </p>
             </div>
           </div>
         )}
@@ -498,24 +553,24 @@ export default function OverallLeaderboardPage() {
       {/* ======================================================
           ROUND HISTORY
       ====================================================== */}
+
       <section className="mt-10">
         <div className="mb-5">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-700">
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-emerald-700">
             Permanent Record
           </p>
 
-          <h2 className="mt-1 text-3xl font-black tracking-tight text-green-950">
+          <h2 className="mt-1 text-3xl font-black tracking-[-0.03em] text-green-950">
             Round history
           </h2>
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
-            Every individual Stableford round that contributes to
-            the overall standings. Open a round to see exactly where
-            everyone&apos;s points came from.
+            Every individual Stableford round that contributes to the
+            overall standings. Open a round to see the full results.
           </p>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           {roundGroups.map((round) => {
             const isOpen = Boolean(openRounds[round.key]);
 
@@ -526,7 +581,7 @@ export default function OverallLeaderboardPage() {
             return (
               <div
                 key={round.key}
-                className="overflow-hidden rounded-[1.8rem] bg-white shadow-sm ring-1 ring-slate-200"
+                className="overflow-hidden rounded-[1.6rem] bg-white shadow-sm ring-1 ring-slate-200"
               >
                 <button
                   type="button"
@@ -537,20 +592,20 @@ export default function OverallLeaderboardPage() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full bg-green-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-green-900">
+                          <span className="rounded-full bg-green-100 px-3 py-1 text-[9px] font-black uppercase tracking-[0.15em] text-green-900">
                             {round.eventName}
                           </span>
 
-                          <span className="text-xs font-black uppercase tracking-wider text-slate-400">
+                          <span className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
                             Round {round.roundNumber}
                           </span>
                         </div>
 
-                        <h3 className="mt-3 text-2xl font-black tracking-tight text-green-950">
+                        <h3 className="mt-3 text-xl font-black tracking-tight text-green-950 md:text-2xl">
                           {round.courseName ?? "Course"}
                         </h3>
 
-                        <p className="mt-1 text-sm font-semibold text-slate-500">
+                        <p className="mt-1 text-xs font-semibold text-slate-500">
                           {formatDate(round.eventDate)}
                           {" • "}
                           {round.results.length} players
@@ -558,7 +613,7 @@ export default function OverallLeaderboardPage() {
                       </div>
 
                       <div
-                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl font-black text-green-950 transition ${
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-lg font-black text-green-950 transition ${
                           isOpen ? "rotate-180" : ""
                         }`}
                       >
@@ -566,8 +621,7 @@ export default function OverallLeaderboardPage() {
                       </div>
                     </div>
 
-                    {/* PODIUM PREVIEW */}
-                    <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                    <div className="mt-4 grid grid-cols-3 divide-x divide-slate-100 rounded-xl bg-slate-50">
                       {winner && (
                         <PodiumPreview
                           medal="🥇"
@@ -593,7 +647,7 @@ export default function OverallLeaderboardPage() {
                       )}
                     </div>
 
-                    <p className="mt-4 text-xs font-black text-green-800">
+                    <p className="mt-4 text-[10px] font-black text-green-800">
                       {isOpen
                         ? "Hide full results ↑"
                         : "View full results ↓"}
@@ -602,21 +656,29 @@ export default function OverallLeaderboardPage() {
                 </button>
 
                 {isOpen && (
-                  <div className="border-t border-slate-100 bg-slate-50 px-3 py-3 md:px-5 md:py-5">
-                    <div className="overflow-hidden rounded-2xl bg-white ring-1 ring-slate-200">
-                      <div className="grid grid-cols-[55px_1fr_80px] bg-[#07111f] px-4 py-3 text-[9px] font-black uppercase tracking-[0.16em] text-slate-300">
-                        <div>Pos</div>
-                        <div>Player</div>
-                        <div className="text-right">Pts</div>
+                  <div className="border-t border-slate-100 bg-slate-50 p-3 md:p-5">
+                    <div className="overflow-hidden rounded-xl bg-white ring-1 ring-slate-200">
+                      <div className="grid grid-cols-[50px_1fr_60px] bg-[#07140f] px-3 py-2.5">
+                        <div className="text-[8px] font-black uppercase tracking-[0.15em] text-slate-400">
+                          Pos
+                        </div>
+
+                        <div className="text-[8px] font-black uppercase tracking-[0.15em] text-slate-400">
+                          Player
+                        </div>
+
+                        <div className="text-right text-[8px] font-black uppercase tracking-[0.15em] text-slate-400">
+                          Pts
+                        </div>
                       </div>
 
                       <div className="divide-y divide-slate-100">
                         {round.results.map((result, index) => (
                           <div
                             key={result.id}
-                            className={`grid grid-cols-[55px_1fr_80px] items-center px-4 py-3 ${
+                            className={`grid grid-cols-[50px_1fr_60px] items-center px-3 py-3 ${
                               index === 0
-                                ? "bg-amber-50"
+                                ? "bg-[#fffdf2]"
                                 : "bg-white"
                             }`}
                           >
@@ -644,10 +706,11 @@ export default function OverallLeaderboardPage() {
       </section>
 
       {/* ======================================================
-          EXPLANATION
+          HOW IT WORKS
       ====================================================== */}
-      <section className="mt-8 rounded-[1.8rem] bg-green-950 p-6 text-white">
-        <p className="text-xs font-black uppercase tracking-[0.2em] text-lime-300">
+
+      <section className="mt-8 overflow-hidden rounded-[1.7rem] bg-green-950 p-6 text-white">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-lime-300">
           How it works
         </p>
 
@@ -656,10 +719,10 @@ export default function OverallLeaderboardPage() {
         </h2>
 
         <p className="mt-3 max-w-2xl text-sm leading-6 text-green-100">
-          The overall table is ranked by total individual
-          Stableford points. Average points per round are shown
-          alongside the total so players who attend fewer weekends
-          can still compare their scoring level fairly.
+          The overall table is ranked by total individual Stableford
+          points. Average points per round are shown alongside the total
+          so players who attend fewer weekends can still compare their
+          scoring level.
         </p>
 
         <p className="mt-3 max-w-2xl text-sm leading-6 text-green-200">
@@ -674,7 +737,7 @@ export default function OverallLeaderboardPage() {
 }
 
 /* ============================================================
-   SMALL COMPONENTS
+   COMPONENTS
 ============================================================ */
 
 function HeaderStat({
@@ -685,44 +748,51 @@ function HeaderStat({
   label: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
+    <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur">
       <p className="text-2xl font-black text-lime-300 md:text-3xl">
         {value}
       </p>
 
-      <p className="mt-1 text-[10px] font-black uppercase tracking-[0.15em] text-slate-400">
+      <p className="mt-1 text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">
         {label}
       </p>
     </div>
   );
 }
 
-function PositionBadge({
+function TablePosition({
   position,
 }: {
   position: number;
 }) {
-  const icon =
-    position === 1
-      ? "🥇"
-      : position === 2
-      ? "🥈"
-      : position === 3
-      ? "🥉"
-      : null;
-
-  if (icon) {
+  if (position === 1) {
     return (
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-xl shadow-sm ring-1 ring-slate-200">
-        {icon}
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-sm">
+        🥇
+      </div>
+    );
+  }
+
+  if (position === 2) {
+    return (
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-100 text-sm">
+        🥈
+      </div>
+    );
+  }
+
+  if (position === 3) {
+    return (
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-100 text-sm">
+        🥉
       </div>
     );
   }
 
   return (
-    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-sm font-black text-slate-700">
+    <span className="pl-2 text-sm font-black text-slate-400">
       {position}
-    </div>
+    </span>
   );
 }
 
@@ -731,34 +801,14 @@ function SmallPosition({
 }: {
   position: number;
 }) {
-  if (position === 1) return <span className="text-lg">🥇</span>;
-  if (position === 2) return <span className="text-lg">🥈</span>;
-  if (position === 3) return <span className="text-lg">🥉</span>;
+  if (position === 1) return <span className="text-base">🥇</span>;
+  if (position === 2) return <span className="text-base">🥈</span>;
+  if (position === 3) return <span className="text-base">🥉</span>;
 
   return (
-    <span className="text-sm font-black text-slate-500">
+    <span className="text-xs font-black text-slate-500">
       {position}
     </span>
-  );
-}
-
-function MiniStat({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-xl bg-slate-100 px-3 py-2">
-      <p className="text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
-        {label}
-      </p>
-
-      <p className="mt-1 font-black text-slate-800">
-        {value}
-      </p>
-    </div>
   );
 }
 
@@ -772,20 +822,18 @@ function PodiumPreview({
   points: number;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-2xl bg-slate-100 px-4 py-3">
-      <div className="flex min-w-0 items-center gap-2">
-        <span className="text-lg">
-          {medal}
-        </span>
+    <div className="min-w-0 px-2 py-3 text-center md:px-4">
+      <p className="text-base">
+        {medal}
+      </p>
 
-        <span className="truncate text-sm font-black text-green-950">
-          {player}
-        </span>
-      </div>
+      <p className="mt-1 truncate text-[10px] font-black text-green-950 md:text-sm">
+        {player}
+      </p>
 
-      <span className="ml-3 shrink-0 font-black text-green-900">
+      <p className="mt-0.5 text-xs font-black text-green-800 md:text-sm">
         {points}
-      </span>
+      </p>
     </div>
   );
 }
