@@ -1607,53 +1607,713 @@ function buildScrambleMoment(
 }
 
 
-function shouldSendPush(
-  moment: LiveMomentRow
+
+
+type PushMessage = {
+  priority: number;
+  fact: string;
+  subjectKey: string;
+};
+
+type PushStage = {
+  stage: 1 | 2;
+  reportedGroups: number;
+  totalGroups: number;
+  isFinal: boolean;
+};
+
+function ordinal(position: number) {
+  const mod100 = position % 100;
+
+  if (mod100 >= 11 && mod100 <= 13) {
+    return `${position}th`;
+  }
+
+  switch (position % 10) {
+    case 1:
+      return `${position}st`;
+    case 2:
+      return `${position}nd`;
+    case 3:
+      return `${position}rd`;
+    default:
+      return `${position}th`;
+  }
+}
+
+function capPushText(
+  text: string,
+  maxLength = 120
 ) {
-  const significantTypes =
-    new Set([
-      "stableford_birdie",
-      "stableford_eagle",
+  const clean = text
+    .replace(/\s+/g, " ")
+    .trim();
 
-      "scramble_birdie",
-      "scramble_eagle",
+  if (clean.length <= maxLength) {
+    return clean;
+  }
 
-      "scramble_lead_taken",
-      "scramble_lead_joined",
-      "scramble_gap_cut_to_one",
-      "scramble_gap_reduced",
-      "scramble_movement_up",
-      "scramble_lead_extended",
+  const shortened =
+    clean.slice(0, maxLength - 1).trimEnd();
 
-      "movement_up",
-      "movement_down",
+  const lastSpace =
+    shortened.lastIndexOf(" ");
 
-      "battle_alert",
-      "team_battle",
-    ]);
+  const safe =
+    lastSpace >= maxLength - 18
+      ? shortened.slice(0, lastSpace)
+      : shortened;
 
+  return `${safe}…`;
+}
+
+function scoreAchievement(
+  row: ScoreRow,
+  tournament: TournamentSetup
+) {
+  const round = getRound(
+    tournament,
+    Number(row.round_number)
+  );
+
+  const par = getHolePar(
+    round,
+    Number(row.hole_number)
+  );
+
+  const gross =
+    Number(row.gross_score ?? 0);
+
+  if (!par || !gross) {
+    return null;
+  }
+
+  const difference = gross - par;
+
+  if (difference <= -2) {
+    return "eagles";
+  }
+
+  if (difference === -1) {
+    return "birdies";
+  }
+
+  return null;
+}
+
+function buildPlayerPush(
+  row: ScoreRow,
+  tournament: TournamentSetup,
+  leaderboardBefore: LeaderboardRow[],
+  leaderboardAfter: LeaderboardRow[]
+): PushMessage | null {
+  if (!row.player_id) {
+    return null;
+  }
+
+  const playerId =
+    Number(row.player_id);
+
+  const player =
+    tournament.players?.find(
+      (candidate) =>
+        Number(candidate.id) === playerId
+    );
+
+  const before =
+    leaderboardBefore.find(
+      (candidate) =>
+        candidate.id === playerId
+    );
+
+  const after =
+    leaderboardAfter.find(
+      (candidate) =>
+        candidate.id === playerId
+    );
+
+  if (!player || !after) {
+    return null;
+  }
+
+  const achievement =
+    scoreAchievement(row, tournament);
+
+  const moved =
+    before
+      ? before.pos - after.pos
+      : 0;
+
+  let fact = "";
+  let priority = 20;
+
+  if (achievement === "eagles") {
+    priority = 100;
+  } else if (achievement === "birdies") {
+    priority = 90;
+  } else if (
+    before &&
+    before.pos > 1 &&
+    after.pos === 1
+  ) {
+    priority = 85;
+  } else if (moved > 0) {
+    priority = 60 + Math.min(moved, 10);
+  }
+
+  if (achievement) {
+    if (
+      before &&
+      before.pos > 1 &&
+      after.pos === 1
+    ) {
+      fact =
+        `${player.name} ${achievement} to take the lead.`;
+    } else if (moved > 0) {
+      fact =
+        `${player.name} ${achievement} to move up ${moved} ${moved === 1 ? "place" : "places"} into ${ordinal(after.pos)}.`;
+    } else {
+      fact =
+        `${player.name} ${achievement} for ${Number(row.points ?? 0)} pts and sits ${ordinal(after.pos)}.`;
+    }
+  } else if (
+    before &&
+    before.pos > 1 &&
+    after.pos === 1
+  ) {
+    fact =
+      `${player.name} moves into the lead.`;
+  } else if (moved > 0) {
+    fact =
+      `${player.name} moves up ${moved} ${moved === 1 ? "place" : "places"} into ${ordinal(after.pos)}.`;
+  } else if (moved < 0) {
+    fact =
+      `${player.name} drops ${Math.abs(moved)} ${Math.abs(moved) === 1 ? "place" : "places"} to ${ordinal(after.pos)}.`;
+    priority = 35;
+  } else {
+    return null;
+  }
+
+  return {
+    priority,
+    fact,
+    subjectKey: `player-${playerId}`,
+  };
+}
+
+function buildPairPush(
+  row: ScoreRow,
+  tournament: TournamentSetup,
+  pairsBefore: PairStanding[],
+  pairsAfter: PairStanding[]
+): PushMessage | null {
+  if (
+    row.player_id ||
+    !row.group_number ||
+    !row.pair_number
+  ) {
+    return null;
+  }
+
+  const pairInfo =
+    getPairInfo(row, tournament);
 
   if (
-    moment.moment_type.startsWith(
-      "storyline_"
-    )
+    !pairInfo.pairNames ||
+    pairInfo.playerIds.length === 0
   ) {
-    return true;
+    return null;
+  }
+
+  const pairKey =
+    pairInfo.playerIds
+      .slice()
+      .sort((a, b) => a - b)
+      .join("-");
+
+  const before =
+    pairsBefore.find(
+      (pair) =>
+        pair.pairKey === pairKey
+    );
+
+  const after =
+    pairsAfter.find(
+      (pair) =>
+        pair.pairKey === pairKey
+    );
+
+  if (!after) {
+    return null;
+  }
+
+  const achievement =
+    scoreAchievement(row, tournament);
+
+  const moved =
+    before
+      ? before.pos - after.pos
+      : 0;
+
+  let fact = "";
+  let priority = 20;
+
+  if (achievement === "eagles") {
+    priority = 100;
+  } else if (achievement === "birdies") {
+    priority = 90;
+  } else if (
+    before &&
+    before.pos > 1 &&
+    after.pos === 1
+  ) {
+    priority = 85;
+  } else if (moved > 0) {
+    priority = 60 + Math.min(moved, 10);
+  }
+
+  if (achievement) {
+    if (
+      before &&
+      before.pos > 1 &&
+      after.pos === 1
+    ) {
+      fact =
+        `${pairInfo.pairNames} ${achievement} to take the lead.`;
+    } else if (moved > 0) {
+      fact =
+        `${pairInfo.pairNames} ${achievement} to move up ${moved} ${moved === 1 ? "place" : "places"} into ${ordinal(after.pos)}.`;
+    } else {
+      fact =
+        `${pairInfo.pairNames} ${achievement} for ${Number(row.points ?? 0)} pts and sit ${ordinal(after.pos)}.`;
+    }
+  } else if (
+    before &&
+    before.pos > 1 &&
+    after.pos === 1
+  ) {
+    fact =
+      `${pairInfo.pairNames} take the lead.`;
+  } else if (moved > 0) {
+    fact =
+      `${pairInfo.pairNames} move up ${moved} ${moved === 1 ? "place" : "places"} into ${ordinal(after.pos)}.`;
+  } else {
+    return null;
+  }
+
+  return {
+    priority,
+    fact,
+    subjectKey: `pair-${pairKey}`,
+  };
+}
+
+function buildTeamLeadPush(
+  teamsBefore: TeamStanding[],
+  teamsAfter: TeamStanding[]
+): PushMessage | null {
+  const beforeLeader =
+    teamsBefore[0];
+
+  const afterLeader =
+    teamsAfter[0];
+
+  if (!afterLeader) {
+    return null;
   }
 
   if (
-    significantTypes.has(
-      moment.moment_type
-    )
+    beforeLeader &&
+    beforeLeader.team !== afterLeader.team
   ) {
-    return true;
+    return {
+      priority: 88,
+      fact:
+        `${afterLeader.team} take the team lead on ${afterLeader.points} pts.`,
+      subjectKey: `team-${afterLeader.team}`,
+    };
   }
 
-  return moment.rarity === "major";
+  return null;
+}
+
+function buildLeaderboardSummaryFact(
+  teamEvent: boolean,
+  leaderboardAfter: LeaderboardRow[],
+  teamsAfter: TeamStanding[]
+): PushMessage | null {
+  if (teamEvent && teamsAfter.length > 0) {
+    const leader = teamsAfter[0];
+    const second = teamsAfter[1];
+
+    if (second) {
+      const gap =
+        leader.points - second.points;
+
+      return {
+        priority: 10,
+        fact:
+          `${leader.team} lead ${second.team} by ${gap} ${gap === 1 ? "pt" : "pts"}.`,
+        subjectKey: `team-summary-${leader.team}`,
+      };
+    }
+
+    return {
+      priority: 10,
+      fact:
+        `${leader.team} lead the team standings on ${leader.points} pts.`,
+      subjectKey: `team-summary-${leader.team}`,
+    };
+  }
+
+  const leader =
+    leaderboardAfter[0];
+
+  const second =
+    leaderboardAfter[1];
+
+  if (!leader) {
+    return null;
+  }
+
+  if (second) {
+    const gap =
+      leader.points - second.points;
+
+    return {
+      priority: 10,
+      fact:
+        `${leader.name} leads ${second.name} by ${gap} ${gap === 1 ? "pt" : "pts"}.`,
+      subjectKey: `leader-summary-${leader.id}`,
+    };
+  }
+
+  return {
+    priority: 10,
+    fact:
+      `${leader.name} leads on ${leader.points} pts.`,
+    subjectKey: `leader-summary-${leader.id}`,
+  };
+}
+
+function buildPushSummary({
+  rows,
+  tournament,
+  holeNumber,
+  teamEvent,
+  leaderboardBefore,
+  leaderboardAfter,
+  teamsBefore,
+  teamsAfter,
+  pairsBefore,
+  pairsAfter,
+}: {
+  rows: ScoreRow[];
+  tournament: TournamentSetup;
+  holeNumber: number;
+  teamEvent: boolean;
+  leaderboardBefore: LeaderboardRow[];
+  leaderboardAfter: LeaderboardRow[];
+  teamsBefore: TeamStanding[];
+  teamsAfter: TeamStanding[];
+  pairsBefore: PairStanding[];
+  pairsAfter: PairStanding[];
+}) {
+  const candidates: PushMessage[] = [];
+
+  for (const row of rows) {
+    const candidate = row.player_id
+      ? buildPlayerPush(
+          row,
+          tournament,
+          leaderboardBefore,
+          leaderboardAfter
+        )
+      : buildPairPush(
+          row,
+          tournament,
+          pairsBefore,
+          pairsAfter
+        );
+
+    if (candidate) {
+      candidates.push(candidate);
+    }
+  }
+
+  const teamLead =
+    teamEvent
+      ? buildTeamLeadPush(
+          teamsBefore,
+          teamsAfter
+        )
+      : null;
+
+  if (teamLead) {
+    candidates.push(teamLead);
+  }
+
+  candidates.sort(
+    (a, b) =>
+      b.priority - a.priority
+  );
+
+  const fallback =
+    buildLeaderboardSummaryFact(
+      teamEvent,
+      leaderboardAfter,
+      teamsAfter
+    );
+
+  const primary =
+    candidates[0] ??
+    fallback;
+
+  if (!primary) {
+    return null;
+  }
+
+  const second =
+    candidates.find(
+      (candidate) =>
+        candidate.subjectKey !==
+          primary.subjectKey &&
+        candidate.priority >= 60
+    ) ??
+    (
+      fallback &&
+      fallback.subjectKey !==
+        primary.subjectKey
+        ? fallback
+        : null
+    );
+
+  const base =
+    `Hole ${holeNumber}. ${primary.fact}`;
+
+  if (!second) {
+    return capPushText(base);
+  }
+
+  const combined =
+    `${base} ${second.fact}`;
+
+  if (combined.length <= 120) {
+    return capPushText(combined);
+  }
+
+  return capPushText(base);
+}
+
+function getRoundTotalGroups(
+  tournament: TournamentSetup,
+  roundNumber: number
+) {
+  const round =
+    getRound(
+      tournament,
+      roundNumber
+    );
+
+  const groupNumbers =
+    new Set(
+      (round?.groups ?? [])
+        .map(getGroupNumber)
+        .filter(
+          (groupNumber) =>
+            groupNumber > 0
+        )
+    );
+
+  return Math.max(
+    groupNumbers.size,
+    1
+  );
+}
+
+function getReportedGroupNumbers(
+  stablefordScores: ScoreRow[],
+  scrambleScores: ScoreRow[],
+  roundNumber: number,
+  holeNumber: number
+) {
+  const groups =
+    new Set<number>();
+
+  [
+    ...stablefordScores,
+    ...scrambleScores,
+  ].forEach((score) => {
+    if (
+      Number(score.round_number) !==
+        roundNumber ||
+      Number(score.hole_number) !==
+        holeNumber
+    ) {
+      return;
+    }
+
+    const groupNumber =
+      Number(score.group_number);
+
+    if (
+      Number.isFinite(groupNumber) &&
+      groupNumber > 0
+    ) {
+      groups.add(groupNumber);
+    }
+  });
+
+  return groups;
+}
+
+function getPushStage({
+  tournament,
+  roundNumber,
+  holeNumber,
+  stablefordScores,
+  scrambleScores,
+}: {
+  tournament: TournamentSetup;
+  roundNumber: number;
+  holeNumber: number;
+  stablefordScores: ScoreRow[];
+  scrambleScores: ScoreRow[];
+}): PushStage | null {
+  const totalGroups =
+    getRoundTotalGroups(
+      tournament,
+      roundNumber
+    );
+
+  const reportedGroups =
+    getReportedGroupNumbers(
+      stablefordScores,
+      scrambleScores,
+      roundNumber,
+      holeNumber
+    ).size;
+
+  if (reportedGroups <= 0) {
+    return null;
+  }
+
+  if (totalGroups <= 1) {
+    return {
+      stage: 1,
+      reportedGroups,
+      totalGroups,
+      isFinal: true,
+    };
+  }
+
+  if (reportedGroups === 1) {
+    return {
+      stage: 1,
+      reportedGroups,
+      totalGroups,
+      isFinal: false,
+    };
+  }
+
+  if (reportedGroups >= totalGroups) {
+    return {
+      stage: 2,
+      reportedGroups,
+      totalGroups,
+      isFinal: true,
+    };
+  }
+
+  return null;
+}
+
+function rowsBeforeWholeHole(
+  rows: ScoreRow[],
+  roundNumber: number,
+  holeNumber: number
+) {
+  return rows.filter(
+    (score) =>
+      !(
+        Number(score.round_number) ===
+          roundNumber &&
+        Number(score.hole_number) ===
+          holeNumber
+      )
+  );
+}
+
+function rowsOnHole(
+  rows: ScoreRow[],
+  roundNumber: number,
+  holeNumber: number
+) {
+  return rows.filter(
+    (score) =>
+      Number(score.round_number) ===
+        roundNumber &&
+      Number(score.hole_number) ===
+        holeNumber
+  );
+}
+
+async function reservePushCheckpoint(
+  supabase: any,
+  {
+    eventSlug,
+    roundNumber,
+    holeNumber,
+    stage,
+    message,
+  }: {
+    eventSlug: string;
+    roundNumber: number;
+    holeNumber: number;
+    stage: 1 | 2;
+    message: string;
+  }
+) {
+  const checkpoint: LiveMomentRow = {
+    event_slug: eventSlug,
+    moment_key:
+      `push-hole-${roundNumber}-${holeNumber}-stage-${stage}`,
+    moment_type:
+      "push_checkpoint",
+    player_id: null,
+    player_name: null,
+    team: null,
+    round_number: roundNumber,
+    hole_number: holeNumber,
+    icon: "",
+    title: "",
+    text: message,
+    rarity: "common",
+  };
+
+  const { error } =
+    await supabase
+      .from("live_moments")
+      .insert([checkpoint] as any);
+
+  if (error?.code === "23505") {
+    return false;
+  }
+
+  if (error) {
+    console.error(
+      "Could not reserve push checkpoint:",
+      error
+    );
+
+    return false;
+  }
+
+  return true;
 }
 
 
-async function saveMomentAndPush(
+async function saveMoment(
   supabase: any,
   moment: LiveMomentRow
 ) {
@@ -1661,30 +2321,26 @@ async function saveMomentAndPush(
    * INSERT, not UPSERT.
    *
    * The existing unique constraint on
-   * (event_slug, moment_key) is our final
-   * duplicate-notification protection.
+   * (event_slug, moment_key) remains the
+   * duplicate-moment protection.
    */
   const {
     data,
     error,
   } =
-   await supabase
-  .from("live_moments")
-  .insert([moment] as any)
-  .select("*")
-  .single();
+    await supabase
+      .from("live_moments")
+      .insert([moment] as any)
+      .select("*")
+      .single();
 
-
-  if (
-    error?.code === "23505"
-  ) {
+  if (error?.code === "23505") {
     return {
       created: false,
       duplicate: true,
-      pushed: false,
+      data: null,
     };
   }
-
 
   if (error) {
     console.error(
@@ -1695,45 +2351,13 @@ async function saveMomentAndPush(
     return {
       created: false,
       duplicate: false,
-      pushed: false,
+      data: null,
     };
   }
-
-
-  let pushed = false;
-
-
-  if (
-    shouldSendPush(moment)
-  ) {
-    try {
-      const result =
-        await sendPushToAll({
-          title:
-            "⛳ Live Update",
-
-          message:
-            `${moment.icon ? `${moment.icon} ` : ""}${moment.title} — ${moment.text}`,
-
-          url:
-            "/live-centre",
-        });
-
-      pushed =
-        result.sent > 0;
-    } catch (error) {
-      console.error(
-        "Automatic commentary push failed:",
-        error
-      );
-    }
-  }
-
 
   return {
     created: true,
     duplicate: false,
-    pushed,
     data,
   };
 }
@@ -1900,6 +2524,10 @@ export async function POST(
           .eq(
             "event_slug",
             eventSlug
+          )
+          .neq(
+            "moment_type",
+            "push_checkpoint"
           )
           .order(
             "created_at",
@@ -2325,32 +2953,223 @@ export async function POST(
 
 
     /*
-     * Insert + push sequentially so the stored
-     * broadcast order matches the batch order.
+     * Save ALL commentary moments for Live Centre.
+     *
+     * Push notifications are deliberately handled
+     * afterwards as a compact summary of this whole
+     * tee-time / hole save, rather than one push per
+     * commentary moment.
      */
     for (
       const moment of
         enhancedMoments
     ) {
       const result =
-        await saveMomentAndPush(
+        await saveMoment(
           supabase,
           moment
         );
-
 
       if (result.created) {
         createdMoments += 1;
       }
 
-
       if (result.duplicate) {
         duplicates += 1;
       }
+    }
 
 
-      if (result.pushed) {
-        pushed += 1;
+    /*
+     * Notification rhythm:
+     *
+     * 1 tee time:
+     *   -> one notification for the hole.
+     *
+     * 2 or 3 tee times:
+     *   -> first update after the first group reports.
+     *   -> second/final update only after every group
+     *      has reported the hole.
+     *
+     * For 3 tee times, the middle group creates Live
+     * Centre commentary but deliberately sends no push.
+     */
+    if (createdMoments > 0) {
+      const pushStage =
+        getPushStage({
+          tournament,
+          roundNumber,
+          holeNumber,
+          stablefordScores:
+            currentStablefordScores,
+          scrambleScores:
+            currentScrambleScores,
+        });
+
+      if (pushStage) {
+        let summaryRows =
+          changedRows;
+
+        let summaryLeaderboardBefore =
+          leaderboardBefore;
+
+        let summaryLeaderboardAfter =
+          leaderboardAfter;
+
+        let summaryTeamsBefore =
+          teamsBefore;
+
+        let summaryTeamsAfter =
+          teamsAfter;
+
+        let summaryPairsBefore =
+          pairsBefore;
+
+        let summaryPairsAfter =
+          pairsAfter;
+
+        /*
+         * The final notification compares the whole
+         * field before Hole X with the whole field
+         * after Hole X. That lets it summarise all
+         * tee times, rather than only the final group.
+         */
+        if (pushStage.isFinal) {
+          const stablefordAtHoleStart =
+            rowsBeforeWholeHole(
+              currentStablefordScores,
+              roundNumber,
+              holeNumber
+            );
+
+          const scrambleAtHoleStart =
+            rowsBeforeWholeHole(
+              currentScrambleScores,
+              roundNumber,
+              holeNumber
+            );
+
+          const leaderboardAtHoleStart =
+            buildLeaderboard(
+              stablefordAtHoleStart,
+              scrambleAtHoleStart,
+              tournament,
+              roundNumber
+            );
+
+          const leaderboardAtHoleEnd =
+            addMovements(
+              leaderboardAfterBase,
+              leaderboardAtHoleStart
+            );
+
+          summaryLeaderboardBefore =
+            leaderboardAtHoleStart;
+
+          summaryLeaderboardAfter =
+            leaderboardAtHoleEnd;
+
+          summaryTeamsBefore =
+            teamEvent
+              ? buildTeams(
+                  leaderboardAtHoleStart
+                )
+              : [];
+
+          summaryTeamsAfter =
+            teamEvent
+              ? buildTeams(
+                  leaderboardAtHoleEnd
+                )
+              : [];
+
+          summaryPairsBefore =
+            buildPairStandings(
+              scrambleAtHoleStart,
+              tournament,
+              roundNumber
+            );
+
+          summaryPairsAfter =
+            buildPairStandings(
+              currentScrambleScores,
+              tournament,
+              roundNumber
+            );
+
+          summaryRows = [
+            ...rowsOnHole(
+              currentStablefordScores,
+              roundNumber,
+              holeNumber
+            ),
+            ...rowsOnHole(
+              currentScrambleScores,
+              roundNumber,
+              holeNumber
+            ),
+          ];
+        }
+
+        const pushMessage =
+          buildPushSummary({
+            rows:
+              summaryRows,
+            tournament,
+            holeNumber,
+            teamEvent,
+            leaderboardBefore:
+              summaryLeaderboardBefore,
+            leaderboardAfter:
+              summaryLeaderboardAfter,
+            teamsBefore:
+              summaryTeamsBefore,
+            teamsAfter:
+              summaryTeamsAfter,
+            pairsBefore:
+              summaryPairsBefore,
+            pairsAfter:
+              summaryPairsAfter,
+          });
+
+        if (pushMessage) {
+          const reserved =
+            await reservePushCheckpoint(
+              supabase,
+              {
+                eventSlug,
+                roundNumber,
+                holeNumber,
+                stage:
+                  pushStage.stage,
+                message:
+                  pushMessage,
+              }
+            );
+
+          if (reserved) {
+            try {
+              const result =
+                await sendPushToAll({
+                  title:
+                    "⛳ Live Update",
+                  message:
+                    pushMessage,
+                  url:
+                    "/live-centre",
+                });
+
+              if (result.sent > 0) {
+                pushed += 1;
+              }
+            } catch (error) {
+              console.error(
+                "Automatic commentary push failed:",
+                error
+              );
+            }
+          }
+        }
       }
     }
 
