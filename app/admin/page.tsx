@@ -3,57 +3,42 @@ import Link from "next/link";
 import PageContainer from "@/components/PageContainer";
 import PageHeader from "@/components/PageHeader";
 
-const moreLinks = [
+const adminLinks = [
   {
-    title: "Overall Leaderboard",
-    description: "Full standings and detailed results.",
-    href: "/overall-leaderboard",
-    icon: "🏆",
-  },
-  {
-    title: "Past Events",
-    description: "Browse previous Swift Tees weekends.",
-    href: "/events",
-    icon: "📅",
-  },
-  {
-    title: "Hall of Fame",
-    description: "Past winners, legends and questionable achievements.",
-    href: "/hall-of-fame",
-    icon: "🏅",
-  },
-  {
-    title: "Soundboard",
-    description: "Swift Tees sounds.",
-    href: "/soundboard",
-    icon: "🔊",
-  },
-  {
-    title: "Notifications",
+    title: "Tournament Setup",
     description:
-      "Choose which tournaments and rounds send alerts to this device.",
-    href: "/notifications",
-    icon: "🔔",
+      "Create and manage tournaments, players, rounds and handicaps.",
+    href: "/setup-v2",
+    icon: "⛳",
   },
   {
-    title: "Admin",
-    description: "Tournament setup and admin tools.",
-    href: "/admin",
-    icon: "⚙️",
+    title: "Send Notifications",
+    description: "Create and send manual Swift Tees push notifications.",
+    href: "/admin/notifications",
+    icon: "📣",
   },
 ];
 
-export default function MorePage() {
+export default function AdminPage() {
   return (
     <PageContainer className="bg-slate-100 text-slate-900">
+      <div className="mb-4">
+        <Link
+          href="/more"
+          className="text-sm font-black text-green-800"
+        >
+          ← More
+        </Link>
+      </div>
+
       <PageHeader
         eyebrow="Swift Tees"
-        title="More"
-        subtitle="Explore Swift Tees beyond the live weekend."
+        title="Admin"
+        subtitle="Tournament setup and Swift Tees admin tools."
       />
 
       <div className="grid gap-3 pb-4">
-        {moreLinks.map((item) => (
+        {adminLinks.map((item) => (
           <Link
             key={item.title}
             href={item.href}
@@ -73,7 +58,9 @@ export default function MorePage() {
               </p>
             </div>
 
-            <span className="text-xl font-black text-green-700">→</span>
+            <span className="text-xl font-black text-green-700">
+              →
+            </span>
           </Link>
         ))}
       </div>

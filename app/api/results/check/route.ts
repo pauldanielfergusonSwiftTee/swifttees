@@ -1173,6 +1173,12 @@ async function saveResultAndPush(
 
         url:
           "/live-centre",
+
+        eventSlug:
+          moment.event_slug,
+
+        category:
+          "results",
       });
 
     pushed =

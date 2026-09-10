@@ -2947,37 +2947,19 @@ export async function POST(
       );
 
 
-    let createdMoments = 0;
-    let duplicates = 0;
-    let pushed = 0;
-
-
     /*
-     * Save ALL commentary moments for Live Centre.
+     * Notification-only mode.
      *
-     * Push notifications are deliberately handled
-     * afterwards as a compact summary of this whole
-     * tee-time / hole save, rather than one push per
-     * commentary moment.
+     * We still use the existing scoring/context builders above to create
+     * a good factual push summary, but we no longer save commentary
+     * moments for a Live Centre feed.
+     *
+     * Durable duplicate protection is still handled below by the
+     * push_checkpoint rows.
      */
-    for (
-      const moment of
-        enhancedMoments
-    ) {
-      const result =
-        await saveMoment(
-          supabase,
-          moment
-        );
-
-      if (result.created) {
-        createdMoments += 1;
-      }
-
-      if (result.duplicate) {
-        duplicates += 1;
-      }
-    }
+    const createdMoments = 0;
+    const duplicates = 0;
+    let pushed = 0;
 
 
     /*
@@ -2991,10 +2973,9 @@ export async function POST(
      *   -> second/final update only after every group
      *      has reported the hole.
      *
-     * For 3 tee times, the middle group creates Live
-     * Centre commentary but deliberately sends no push.
+     * For 3 tee times, the middle group deliberately sends no push.
      */
-    if (createdMoments > 0) {
+    if (changedRows.length > 0) {
       const pushStage =
         getPushStage({
           tournament,
@@ -3157,6 +3138,10 @@ export async function POST(
                     pushMessage,
                   url:
                     "/live-centre",
+                  eventSlug,
+                  roundNumber,
+                  category:
+                    "live",
                 });
 
               if (result.sent > 0) {

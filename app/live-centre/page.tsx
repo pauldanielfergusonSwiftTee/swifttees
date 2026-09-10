@@ -11,28 +11,16 @@ import {
   getBonusWinners,
 } from "@/lib/scores";
 
-import {
-  getRunningJokeForPlayer,
-} from "@/lib/commentary/commentaryEngine";
-import { buildBroadcastCommentary } from "@/lib/commentary/teamCommentaryEngine";
-import { enhanceBroadcastMoments } from "@/lib/commentary/broadcastProducer";
-
 import { supabase } from "@/lib/supabase";
 import { getLiveMoments, saveLiveMoment } from "@/lib/liveMoments";
 import {
   buildStablefordEvent,
   buildScrambleEvent,
 } from "@/lib/commentary/eventBuilders";
-
-import {
-  getPrimaryStoryline,
-  type Storyline,
-} from "@/lib/commentary/storylineEngine";
-
+import { buildCommentary } from "@/lib/commentary/commentaryEngine";
 import type {
   CommentaryTier,
   CommentaryEventType,
-  CommentaryEvent,
 } from "@/lib/commentary/types";
 
 function getPositionStorageKey(eventSlug: string) {
@@ -85,7 +73,6 @@ type LeaderboardRow = {
   name: string;
   team: string;
   points: number;
-  teamPoints: number;
   through: number;
   movement: Movement;
   bonusIcons: string[];
@@ -97,7 +84,6 @@ type TeamStanding = {
   points: number;
   through: number;
   icon: string;
-  pos?: number;
 };
 
 type Moment = {
@@ -652,10 +638,7 @@ function buildTeams(rows: LeaderboardRow[]) {
       };
     }
 
-    // Individual leaderboard points can include a scramble score for both
-    // players in a pair. teamPoints only counts that scramble score for
-    // player1, while a single-scramble player still counts normally.
-    acc[teamName].points += player.teamPoints;
+    acc[teamName].points += player.points;
 
     return acc;
   }, {});
@@ -675,50 +658,8 @@ function buildTeams(rows: LeaderboardRow[]) {
     .sort((a, b) => b.points - a.points)
     .map((team, index) => ({
       ...team,
-      pos: index + 1,
       icon: index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉",
     }));
-}
-
-/**
- * Rebuilds the team standings as they were immediately before the latest
- * Stableford score was added.
- *
- * This is derived from the actual score data rather than localStorage, so
- * commentary remains consistent after refreshes and across different devices.
- */
-function buildPreviousTeamStandingsFromLatestScore(
-  currentRows: LeaderboardRow[],
-  latestStablefordScore: any
-): Record<string, { pos: number; points: number }> {
-  if (!latestStablefordScore?.player_id) return {};
-
-  const latestPlayerId = Number(latestStablefordScore.player_id);
-  const latestPoints = Number(latestStablefordScore.points ?? 0);
-
-  const rowsBeforeLatestScore = currentRows.map((row) => {
-    if (Number(row.id) !== latestPlayerId) {
-      return row;
-    }
-
-    return {
-      ...row,
-      points: Math.max(0, Number(row.points) - latestPoints),
-      teamPoints: Math.max(0, Number(row.teamPoints) - latestPoints),
-    };
-  });
-
-  const previousTeams = buildTeams(rowsBeforeLatestScore);
-
-  return Object.fromEntries(
-    previousTeams.map((team, index) => [
-      team.team,
-      {
-        pos: team.pos ?? index + 1,
-        points: team.points,
-      },
-    ])
-  );
 }
 
 function commentaryTierToRarity(
@@ -733,82 +674,6 @@ function commentaryTierToRarity(
   }
 
   return "common";
-}
-
-function storylineToLiveMoment(
-  storyline: Storyline,
-  eventSlug: string,
-  currentRoundNumber: number
-): LiveMomentRow {
-  return {
-    event_slug: eventSlug,
-    moment_key: `storyline-${storyline.key}`,
-    moment_type: `storyline_${storyline.kind}`,
-
-    player_id: storyline.playerId ?? null,
-    player_name:
-      storyline.playerName ??
-      storyline.pairNames ??
-      null,
-
-    team: storyline.team ?? null,
-
-    round_number:
-      storyline.roundNumber ??
-      currentRoundNumber ??
-      null,
-
-    hole_number: storyline.holeNumber ?? null,
-
-    icon: storyline.icon,
-    title: storyline.title,
-    text: storyline.text,
-
-    rarity: commentaryTierToRarity(storyline.tier),
-  };
-}
-
-function removeMomentsDuplicatedByStoryline(
-  moments: LiveMomentRow[],
-  storyline: Storyline | null
-): LiveMomentRow[] {
-  if (!storyline) return moments;
-
-  const blockedMomentTypes = new Set<string>();
-
-  if (
-    storyline.kind === "new_leader" ||
-    storyline.kind === "joined_lead" ||
-    storyline.kind === "within_one" ||
-    storyline.kind === "lead_extended"
-  ) {
-    blockedMomentTypes.add("battle_alert");
-  }
-
-  if (
-    storyline.kind === "big_climber" ||
-    storyline.kind === "pair_recovery"
-  ) {
-    blockedMomentTypes.add("movement_up");
-    blockedMomentTypes.add("scramble_movement_up");
-  }
-
-  if (storyline.kind === "big_drop") {
-    blockedMomentTypes.add("movement_down");
-  }
-
-  if (
-    storyline.kind === "team_lead_change" ||
-    storyline.kind === "team_pressure"
-  ) {
-    blockedMomentTypes.add("team_battle");
-  }
-
-  return moments.filter(
-    (moment) =>
-      moment.moment_key === `storyline-${storyline.key}` ||
-      !blockedMomentTypes.has(moment.moment_type)
-  );
 }
 
 function stablefordMomentType(eventType: CommentaryEventType) {
@@ -834,7 +699,9 @@ function stablefordMomentType(eventType: CommentaryEventType) {
 function formatWhatsAppMoment(moment: Moment) {
   return `🚨 ${moment.title.toUpperCase()}
 
-${moment.icon} ${moment.text}`;
+${moment.icon} ${moment.text}
+
+#SwiftTees`;
 }
 
 
@@ -861,138 +728,23 @@ function formatLeaderboardCopy(
 ${playerLines}
 
 🥊 Team Race
-${teamLines}`;
-}
+${teamLines}
 
-function buildTeamCommentaryContext(
-  teamName: string,
-  currentStandings: TeamStanding[],
-  previousStandings: Record<string, { pos: number; points: number }>
-) {
-  const current = currentStandings.find((team) => team.team === teamName);
-  const previous = previousStandings[teamName];
-
-  const currentLeader = currentStandings[0];
-  const currentJointLeaders = currentLeader
-    ? currentStandings.filter((team) => team.points === currentLeader.points)
-    : [];
-
-  const previousRows = Object.entries(previousStandings)
-    .map(([team, standing]) => ({
-      team,
-      pos: Number(standing.pos ?? 0),
-      points: Number(standing.points ?? 0),
-    }))
-    .sort((a, b) => b.points - a.points || a.pos - b.pos);
-
-  const previousLeader = previousRows[0];
-  const previousJointLeaders = previousLeader
-    ? previousRows.filter((team) => team.points === previousLeader.points)
-    : [];
-
-  const teamPositionBefore = previous?.pos;
-  const teamPositionAfter = current?.pos;
-  const teamPointsBefore = previous?.points;
-  const teamPointsAfter = current?.points;
-
-  const teamGapBefore =
-    previous && previousLeader
-      ? Math.max(0, previousLeader.points - previous.points)
-      : undefined;
-
-  const teamGapAfter =
-    current && currentLeader
-      ? current.pos === 1
-        ? Math.max(
-            0,
-            current.points -
-              Number(
-                currentStandings.find((team) => team.team !== current.team)
-                  ?.points ?? current.points
-              )
-          )
-        : Math.max(0, currentLeader.points - current.points)
-      : undefined;
-
-  const teamPlacesMoved =
-    typeof teamPositionBefore === "number" &&
-    typeof teamPositionAfter === "number"
-      ? teamPositionBefore - teamPositionAfter
-      : 0;
-
-  const wasOutrightLeader =
-    previous?.pos === 1 &&
-    previousJointLeaders.length === 1 &&
-    previousLeader?.team === teamName;
-
-  const isOutrightLeader =
-    current?.pos === 1 &&
-    currentJointLeaders.length === 1 &&
-    currentLeader?.team === teamName;
-
-  const isJointTeamLeader =
-    current?.pos === 1 &&
-    currentJointLeaders.length > 1 &&
-    previous?.pos !== 1;
-
-  return {
-    teamPositionBefore,
-    teamPointsBefore,
-    teamLeaderBefore: previousLeader?.team,
-    teamLeaderPointsBefore: previousLeader?.points,
-    teamGapBefore,
-
-    teamPositionAfter,
-    teamPointsAfter,
-    teamLeaderAfter: currentLeader?.team,
-    teamLeaderPointsAfter: currentLeader?.points,
-    teamGapAfter,
-
-    teamPlacesMoved,
-    isNewTeamLeader:
-      Boolean(previous) &&
-      !wasOutrightLeader &&
-      isOutrightLeader,
-    isJointTeamLeader,
-    teamExtendedLead:
-      wasOutrightLeader &&
-      isOutrightLeader &&
-      typeof teamGapBefore === "number" &&
-      typeof teamGapAfter === "number" &&
-      teamGapAfter > teamGapBefore,
-    teamReducedGap:
-      Boolean(previous) &&
-      !isOutrightLeader &&
-      typeof teamGapBefore === "number" &&
-      typeof teamGapAfter === "number" &&
-      teamGapAfter < teamGapBefore,
-    teamLostLead:
-      wasOutrightLeader &&
-      !isOutrightLeader,
-    teamDroppedPosition:
-      Boolean(previous) &&
-      typeof teamPositionBefore === "number" &&
-      typeof teamPositionAfter === "number" &&
-      teamPositionAfter > teamPositionBefore,
-  };
+#SwiftTees`;
 }
 
 function buildLatestStablefordMoment(
   latestStablefordScore: any,
   players: any[],
   currentRound: any,
-  leaderboard: LeaderboardRow[],
-  previousPositions: Record<string, number>,
-  scoreStateChanged: boolean,
-  isTeamEvent: boolean,
-  teamStandings: TeamStanding[],
-  previousTeamStandings: Record<string, { pos: number; points: number }>
+  leaderboard: LeaderboardRow[]
 ): LiveMomentRow | null {
   if (!latestStablefordScore) return null;
 
   const player = players.find(
     (item: any) =>
-      Number(item.id) === Number(latestStablefordScore.player_id)
+      Number(item.id) ===
+      Number(latestStablefordScore.player_id)
   );
 
   if (!player) return null;
@@ -1001,161 +753,42 @@ function buildLatestStablefordMoment(
     (row) => Number(row.id) === Number(player.id)
   );
 
-  if (!leaderboardRow) return null;
-
   const commentaryEvent = buildStablefordEvent(
     latestStablefordScore,
     {
       ...player,
-      team: leaderboardRow.team ?? player.team ?? "",
+      team: leaderboardRow?.team ?? player.team ?? "",
     },
     currentRound
   );
 
   if (!commentaryEvent) return null;
 
-  const positionAfter = leaderboardRow.pos;
+  const commentary = buildCommentary(commentaryEvent);
 
-  const storedPositionBefore =
-    previousPositions[String(player.id)] ??
-    previousPositions[player.id as unknown as string];
+  const roundNumber = commentaryEvent.roundNumber;
+  const holeNumber = commentaryEvent.holeNumber;
 
-  const positionBefore =
-    typeof storedPositionBefore === "number"
-      ? storedPositionBefore
-      : undefined;
+  let momentKey = `stableford-score-${roundNumber}-${player.id}-${holeNumber}`;
 
-  const placesMoved =
-    typeof positionBefore === "number"
-      ? positionBefore - positionAfter
-      : 0;
-
-  const leaderPoints = leaderboard[0]?.points ?? leaderboardRow.points;
-
-  const leaderGap = Math.max(
-    0,
-    Number(leaderPoints) - Number(leaderboardRow.points)
-  );
-
-  const playersOnSamePoints = leaderboard.filter(
-    (row) => Number(row.points) === Number(leaderboardRow.points)
-  );
-
-  const isJointLeader =
-    positionAfter === 1 && playersOnSamePoints.length > 1;
-
-  const isNewLeader =
-    scoreStateChanged &&
-    positionAfter === 1 &&
-    typeof positionBefore === "number" &&
-    positionBefore > 1;
-
-  const totalHoles =
-    Array.isArray(currentRound?.holes) && currentRound.holes.length > 0
-      ? currentRound.holes.length
-      : 18;
-
-  const holesCompleted = Number(commentaryEvent.holeNumber ?? 0);
-
-  const holesRemaining = Math.max(0, totalHoles - holesCompleted);
-
-  let tournamentStage: CommentaryEvent["tournamentStage"] = "middle";
-
-  if (holesCompleted <= 1) {
-    tournamentStage = "opening";
-  } else if (holesCompleted <= 5) {
-    tournamentStage = "early";
-  } else if (holesRemaining === 0) {
-    tournamentStage = "complete";
-  } else if (holesRemaining === 1) {
-    tournamentStage = "final_hole";
-  } else if (holesRemaining <= 4) {
-    tournamentStage = "closing";
+  if (commentaryEvent.eventType === "birdie") {
+    momentKey = `stableford-birdie-${roundNumber}-${player.id}-${holeNumber}`;
   }
 
-  const teamContext =
-    isTeamEvent && leaderboardRow.team
-      ? buildTeamCommentaryContext(
-          leaderboardRow.team,
-          teamStandings,
-          previousTeamStandings
-        )
-      : {};
-
-  const contextualEvent: CommentaryEvent = {
-    ...commentaryEvent,
-
-    positionBefore,
-    positionAfter,
-    placesMoved,
-    leaderGap,
-    isNewLeader,
-    isJointLeader,
-    tournamentStage,
-    holesCompleted,
-    holesRemaining,
-
-    isTeamEvent,
-    ...teamContext,
-  };
-
-  const commentary = buildBroadcastCommentary(contextualEvent);
-
-  /*
-   * Broadcast producer:
-   * In team events, routine scores update the leaderboard silently.
-   * Publish only moments that materially affect the team race, feature a
-   * standout score, or occur during the closing stretch.
-   */
-  if (isTeamEvent) {
-    const changedTeamRace =
-      contextualEvent.isNewTeamLeader ||
-      contextualEvent.isJointTeamLeader ||
-      contextualEvent.teamExtendedLead ||
-      contextualEvent.teamReducedGap ||
-      contextualEvent.teamLostLead ||
-      contextualEvent.teamDroppedPosition ||
-      Number(contextualEvent.teamPlacesMoved ?? 0) !== 0;
-
-    const standoutScore =
-      contextualEvent.eventType === "birdie" ||
-      contextualEvent.eventType === "eagle" ||
-      Number(contextualEvent.stablefordPoints ?? 0) >= 4;
-
-    const closingStage =
-      contextualEvent.tournamentStage === "closing" ||
-      contextualEvent.tournamentStage === "final_hole" ||
-      contextualEvent.tournamentStage === "complete";
-
-    if (!changedTeamRace && !standoutScore && !closingStage) {
-      return null;
-    }
-  }
-
-  const roundNumber = contextualEvent.roundNumber;
-  const holeNumber = contextualEvent.holeNumber;
-
-  let momentKey =
-    `stableford-score-${roundNumber}-${player.id}-${holeNumber}`;
-
-  if (contextualEvent.eventType === "birdie") {
-    momentKey =
-      `stableford-birdie-${roundNumber}-${player.id}-${holeNumber}`;
-  }
-
-  if (contextualEvent.eventType === "eagle") {
-    momentKey =
-      `stableford-eagle-${roundNumber}-${player.id}-${holeNumber}`;
+  if (commentaryEvent.eventType === "eagle") {
+    momentKey = `stableford-eagle-${roundNumber}-${player.id}-${holeNumber}`;
   }
 
   return {
     event_slug: EVENT_SLUG,
     moment_key: momentKey,
-    moment_type: stablefordMomentType(contextualEvent.eventType),
+    moment_type: stablefordMomentType(
+      commentaryEvent.eventType
+    ),
 
     player_id: Number(player.id),
     player_name: player.name,
-    team: leaderboardRow.team ?? player.team ?? null,
+    team: leaderboardRow?.team ?? player.team ?? null,
 
     round_number: roundNumber,
     hole_number: holeNumber,
@@ -1168,29 +801,10 @@ function buildLatestStablefordMoment(
   };
 }
 
-function getScramblePersonalityName(
-  latestScrambleInfo: LatestScrambleInfo | null,
-  players: any[]
-) {
-  if (!latestScrambleInfo?.playerIds?.length) return null;
 
-  const personalityIndex =
-    latestScrambleInfo.holeNumber % latestScrambleInfo.playerIds.length;
-
-  const selectedPlayerId =
-    latestScrambleInfo.playerIds[personalityIndex];
-
-  return (
-    players.find(
-      (player: any) =>
-        Number(player.id) === Number(selectedPlayerId)
-    )?.name ?? null
-  );
-}
 
 function buildLatestScrambleMoment(
   latestScrambleInfo: LatestScrambleInfo | null,
-  players: any[],
   pairStandings: ScramblePairStanding[],
   previousPairStandings: Record<
     string,
@@ -1203,28 +817,19 @@ function buildLatestScrambleMoment(
 ): LiveMomentRow | null {
   if (!scoreStateChanged) return null;
 
-  const commentaryEvent = buildScrambleEvent(latestScrambleInfo);
+  const commentaryEvent =
+    buildScrambleEvent(latestScrambleInfo);
 
   if (!commentaryEvent || !latestScrambleInfo) {
     return null;
   }
 
-  // Keep routine scramble pars and bogeys out of the commentary feed.
+  // Do not create routine scramble score updates.
   if (commentaryEvent.eventType === "scramble_score") {
     return null;
   }
 
-  const personalityName = getScramblePersonalityName(
-  latestScrambleInfo,
-  players
-);
-
-const personalityEvent: CommentaryEvent = {
-  ...commentaryEvent,
-  playerName: personalityName ?? commentaryEvent.playerName,
-};
-
-const commentary = buildBroadcastCommentary(personalityEvent);
+  const commentary = buildCommentary(commentaryEvent);
 
   const pairKey = latestScrambleInfo.playerIds
     .slice()
@@ -1244,8 +849,8 @@ const commentary = buildBroadcastCommentary(personalityEvent);
   );
 
   const isJointLeader =
-    Boolean(currentPair) &&
-    currentPair!.points === topPoints &&
+    currentPair &&
+    currentPair.points === topPoints &&
     jointLeaders.length > 1;
 
   const movedUpBy =
@@ -1253,64 +858,17 @@ const commentary = buildBroadcastCommentary(personalityEvent);
       ? previousPair.pos - currentPair.pos
       : 0;
 
-  const previousStandingsEntries = Object.entries(
-    previousPairStandings
-  );
-
-  const previousTopPoints =
-    previousStandingsEntries.length > 0
-      ? Math.max(
-          ...previousStandingsEntries.map(
-            ([, standing]) => Number(standing.points ?? 0)
-          )
-        )
-      : 0;
-
-  const previousGapToLead =
-    previousPair && previousTopPoints > 0
-      ? Math.max(
-          0,
-          previousTopPoints - Number(previousPair.points ?? 0)
-        )
-      : null;
-
-  const currentGapToLead =
-    currentPair
-      ? Math.max(0, topPoints - currentPair.points)
-      : null;
-
-  const gapReducedBy =
-    previousGapToLead !== null &&
-    currentGapToLead !== null
-      ? previousGapToLead - currentGapToLead
-      : 0;
-
-  const scoreWord =
-    commentaryEvent.eventType === "scramble_eagle"
-      ? "eagle"
-      : "birdie";
-
   let title = commentary.title;
   let text = commentary.text;
   let icon = commentary.icon;
-  let rarity = commentaryTierToRarity(commentary.tier);
+  let rarity = commentaryTierToRarity(
+    commentary.tier
+  );
 
   let momentType =
     commentaryEvent.eventType === "scramble_eagle"
       ? "scramble_eagle"
       : "scramble_birdie";
-
-  /*
-   * Story priority:
-   *
-   * 1. Take the lead
-   * 2. Join the lead
-   * 3. Cut the gap to one
-   * 4. Meaningfully reduce the lead
-   * 5. Move up the table
-   * 6. Extend an existing lead
-   * 7. Standard birdie/eagle commentary
-   */
 
   if (
     currentPair &&
@@ -1321,11 +879,11 @@ const commentary = buildBroadcastCommentary(personalityEvent);
   ) {
     icon = "🏆";
     title = "New Leaders";
-
-    text = `${currentPair.pairNames} ${scoreWord} hole ${
-      latestScrambleInfo.holeNumber
-    } to take the outright lead on ${currentPair.points} points.`;
-
+    text = `${currentPair.pairNames} ${
+      commentaryEvent.eventType === "scramble_eagle"
+        ? "eagle"
+        : "birdie"
+    } hole ${currentPair.through} to take the outright lead.`;
     rarity = "major";
     momentType = "scramble_lead_taken";
   } else if (
@@ -1335,67 +893,29 @@ const commentary = buildBroadcastCommentary(personalityEvent);
   ) {
     icon = "⚔️";
     title = "Tied at the Top";
-
-    text = `${currentPair.pairNames} ${scoreWord} hole ${
-      latestScrambleInfo.holeNumber
-    } to join the lead on ${currentPair.points} points.`;
-
+    text = `${currentPair.pairNames} ${
+      commentaryEvent.eventType === "scramble_eagle"
+        ? "eagle"
+        : "birdie"
+    } hole ${currentPair.through} to join the lead on ${currentPair.points} points.`;
     rarity = "major";
     momentType = "scramble_lead_joined";
-  } else if (
-    currentPair &&
-    previousPair &&
-    currentPair.pos > 1 &&
-    currentGapToLead === 1 &&
-    previousGapToLead !== null &&
-    previousGapToLead > 1
-  ) {
-    icon = "👀";
-    title = "Pressure Building";
-
-    text = `${currentPair.pairNames} ${scoreWord} hole ${
-      latestScrambleInfo.holeNumber
-    } and cut the gap to a single point. The leaders can hear the footsteps.`;
-
-    rarity = "major";
-    momentType = "scramble_gap_cut_to_one";
-  } else if (
-    currentPair &&
-    previousPair &&
-    currentPair.pos > 1 &&
-    gapReducedBy >= 2 &&
-    currentGapToLead !== null
-  ) {
-    icon = "🔥";
-    title = "Closing the Gap";
-
-    text = `${currentPair.pairNames} ${scoreWord} hole ${
-      latestScrambleInfo.holeNumber
-    } and reduce the deficit by ${gapReducedBy} points. They are now ${
-      currentGapToLead === 0
-        ? "level at the top"
-        : `${currentGapToLead} point${
-            currentGapToLead === 1 ? "" : "s"
-          } behind`
-    }.`;
-
-    rarity = currentGapToLead <= 2 ? "major" : "rare";
-    momentType = "scramble_gap_reduced";
   } else if (
     currentPair &&
     previousPair &&
     movedUpBy >= 1
   ) {
     icon = movedUpBy >= 2 ? "🚀" : "🔥";
-
     title =
       movedUpBy >= 2
         ? "Flying Up the Table"
         : "Pair on the Move";
 
-    text = `${currentPair.pairNames} ${scoreWord} hole ${
-      latestScrambleInfo.holeNumber
-    } and climb ${
+    text = `${currentPair.pairNames} ${
+      commentaryEvent.eventType === "scramble_eagle"
+        ? "eagle"
+        : "birdie"
+    } hole ${currentPair.through} and climb ${
       movedUpBy === 1
         ? "one place"
         : `${movedUpBy} places`
@@ -1405,66 +925,35 @@ const commentary = buildBroadcastCommentary(personalityEvent);
     momentType = "scramble_movement_up";
   } else if (
     currentPair &&
-    previousPair &&
     currentPair.pos === 1 &&
-    previousPair.pos === 1 &&
     pairStandings[1]
   ) {
     const lead =
       currentPair.points - pairStandings[1].points;
 
-    const previousSecondHighestPoints = previousStandingsEntries
-      .filter(([storedPairKey]) => storedPairKey !== pairKey)
-      .map(([, standing]) => Number(standing.points ?? 0))
-      .sort((a, b) => b - a)[0] ?? 0;
-
-    const previousLead =
-      Number(previousPair.points ?? 0) -
-      previousSecondHighestPoints;
-
-    if (lead > previousLead && lead > 0) {
+    if (lead > 0) {
       icon = "🏆";
       title = "Lead Extended";
-
-      text = `${currentPair.pairNames} ${scoreWord} hole ${
-        latestScrambleInfo.holeNumber
-      } and stretch their advantage to ${lead} point${
+      text = `${currentPair.pairNames} ${
+        commentaryEvent.eventType === "scramble_eagle"
+          ? "eagle"
+          : "birdie"
+      } hole ${currentPair.through} to move ${lead} point${
         lead === 1 ? "" : "s"
-      }.`;
+      } clear at the top.`;
 
       rarity = lead >= 3 ? "major" : "rare";
       momentType = "scramble_lead_extended";
     }
   }
 
-if (personalityName) {
-  const shouldAddRunningJoke =
-    latestScrambleInfo.holeNumber % 5 === 0;
-
-  if (shouldAddRunningJoke) {
-    const runningJoke = getRunningJokeForPlayer(
-      personalityName,
-      commentaryEvent.eventKey
-    );
-
-    if (runningJoke) {
-      text = `${text} ${runningJoke}`;
-    }
-  }
-}
-
-  const sortedPlayerIds = latestScrambleInfo.playerIds
-    .slice()
-    .sort((a, b) => a - b)
-    .join("-");
-
   const momentKey = `${
     commentaryEvent.eventType === "scramble_eagle"
       ? "scramble-eagle"
       : "scramble-birdie"
-  }-${latestScrambleInfo.roundNumber}-${sortedPlayerIds}-${
-    latestScrambleInfo.holeNumber
-  }`;
+  }-${latestScrambleInfo.roundNumber}-${latestScrambleInfo.playerIds.join(
+    "-"
+  )}-${latestScrambleInfo.holeNumber}`;
 
   return {
     event_slug: EVENT_SLUG,
@@ -1750,13 +1239,6 @@ const scramblePairStandings =
   getStoredPairStandings(eventSlug);
  
     const scramblePointsByPlayerId: Record<number, number> = {};
-
-    // Used only for the TEAM leaderboard.
-    // For a 2-player scramble pair, only player1 contributes the pair score
-    // to the team total. Both players still receive the points individually.
-    // For a single-scramble entry there is only player1, so it counts normally.
-    const teamScramblePointsByPlayerId: Record<number, number> = {};
-
     const scrambleThroughByPlayerId: Record<number, number> = {};
     const bonusPointsByPlayerName: Record<string, number> = {};
     const bonusIconsByPlayerName: Record<string, string[]> = {};
@@ -1791,8 +1273,6 @@ const scramblePairStandings =
         players
       );
 
-      // Individual leaderboard:
-      // award the scramble points to every player in the pair.
       pairInfo.playerIds.forEach((playerId: number) => {
         scramblePointsByPlayerId[playerId] =
           (scramblePointsByPlayerId[playerId] ?? 0) + scramblePoints;
@@ -1804,18 +1284,6 @@ const scramblePairStandings =
           );
         }
       });
-
-      // Team leaderboard:
-      // count the scramble score ONCE, using the first listed player.
-      // A single-scramble entry also has its player as the first/only player,
-      // so its points are counted once too.
-      const firstPlayerId = pairInfo.playerIds[0];
-
-      if (firstPlayerId) {
-        teamScramblePointsByPlayerId[firstPlayerId] =
-          (teamScramblePointsByPlayerId[firstPlayerId] ?? 0) +
-          scramblePoints;
-      }
     });
 
     const rows = players
@@ -1844,12 +1312,7 @@ const scramblePairStandings =
             )
           : 0;
 
-      const scramblePoints =
-        scramblePointsByPlayerId[Number(player.id)] ?? 0;
-
-      const teamScramblePoints =
-        teamScramblePointsByPlayerId[Number(player.id)] ?? 0;
-
+      const scramblePoints = scramblePointsByPlayerId[Number(player.id)] ?? 0;
       const bonusPoints = bonusPointsByPlayerName[player.name] ?? 0;
       const scrambleThrough = scrambleThroughByPlayerId[Number(player.id)] ?? 0;
 
@@ -1863,17 +1326,7 @@ const scramblePairStandings =
   )?.eventTeam ??
   player.team ??
   "",
-        // Individual total: both members of a scramble pair receive the
-        // pair's Stableford points.
         points: stablefordPoints + scramblePoints + bonusPoints,
-
-        // Team total: the scramble pair score only counts once (player1).
-        // Individual Stableford and bonus points continue to count normally.
-        teamPoints:
-          stablefordPoints +
-          teamScramblePoints +
-          bonusPoints,
-
         through: Math.max(stablefordThrough, scrambleThrough),
         movement: {
           icon: "➖",
@@ -1995,134 +1448,33 @@ const rowsWithPositions = rows.map((player, index) => {
 
 const sortedTeams = hasTeams ? buildTeams(finalRows) : [];
 
-const previousTeamStandings =
-  hasTeams && latestStablefordScore
-    ? buildPreviousTeamStandingsFromLatestScore(
-        finalRows,
-        latestStablefordScore
-      )
-    : {};
-
-const primaryStoryline = scoreStateChanged
-  ? getPrimaryStoryline({
-      eventSlug,
-
-      players: players.map((player: any) => ({
-        id: Number(player.id),
-        name: player.name,
-        team: player.team ?? "",
-        eventTeam:
-          tournament.players?.find(
-            (tournamentPlayer: any) =>
-              Number(tournamentPlayer.id) === Number(player.id)
-          )?.eventTeam ?? "",
-      })),
-
-      scores: stablefordScores,
-      scrambleScores,
-
-      rounds: tournamentSetup.rounds,
-
-      leaderboard: finalRows.map((row) => ({
-        id: Number(row.id),
-        name: row.name,
-        team: row.team,
-        pos: row.pos,
-        points: row.points,
-        through: row.through,
-        movement: row.movement,
-      })),
-
-      previousPositions,
-
-      teamStandings: sortedTeams.map((team) => ({
-        team: team.team,
-        points: team.points,
-        through: team.through,
-      })),
-
-      pairStandings: scramblePairStandings,
-
-      previousPairStandings,
-
-      latestPlayerId: latestStablefordScore
-        ? Number(latestStablefordScore.player_id)
-        : null,
-
-      currentRoundNumber: currentRoundInfo.roundNumber,
-
-      totalHoles:
-        Array.isArray(currentRoundInfo.round?.holes) &&
-        currentRoundInfo.round.holes.length > 0
-          ? currentRoundInfo.round.holes.length
-          : 18,
-    })
-  : null;
-
- const storylineMoment = primaryStoryline
-  ? storylineToLiveMoment(
-      primaryStoryline,
-      eventSlug,
-      currentRoundInfo.roundNumber
-    )
-  : null; 
-
 const generatedMoments = hasScoringActivity
   ? ([
       buildLatestStablefordMoment(
         latestStablefordScore,
         players,
         currentRoundInfo.round,
-        finalRows,
-        previousPositions,
-        scoreStateChanged,
-        hasTeams,
-        sortedTeams,
-        previousTeamStandings
+        finalRows
       ),
-
       buildLatestScrambleMoment(
-        latestScrambleInfo,
-        players,
-        scramblePairStandings,
-        previousPairStandings,
-        scoreStateChanged
-      ),
-
-      storylineMoment,
-
+  latestScrambleInfo,
+  scramblePairStandings,
+  previousPairStandings,
+  scoreStateChanged
+),
       ...buildBonusMoments(bonusWinners),
-
       ...buildMovementMoments(finalRows),
-
       ...buildBattleMoments(
-        finalRows,
-        sortedTeams,
-        currentRoundInfo.round
-      ),
+  finalRows,
+  sortedTeams,
+  currentRoundInfo.round
+),
     ].filter(Boolean) as LiveMomentRow[])
   : [];
 
-const filteredGeneratedMoments =
-  removeMomentsDuplicatedByStoryline(
-    generatedMoments,
-    primaryStoryline
-  );
-
-const broadcastProducedMoments = enhanceBroadcastMoments(
-  filteredGeneratedMoments,
-  (savedMoments ?? []).slice(0, 20),
-  finalRows.map((row) => ({
-    name: row.name,
-    pos: row.pos,
-    points: row.points,
-    through: row.through,
-  }))
-);
-
-if (broadcastProducedMoments.length > 0) {
-  await saveGeneratedMoments(broadcastProducedMoments);
-}
+// Notification-only mode:
+ // Live Centre no longer saves generated commentary moments.
+ // Push notifications are created server-side when scores are saved.
 
 if (!hasScoringActivity && typeof window !== "undefined") {
   localStorage.removeItem(getPositionStorageKey(eventSlug));
@@ -2397,139 +1749,23 @@ useEffect(() => {
         </div>
       </section>
 
-      <section className="mt-2.5 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-        <div className="mb-2">
-          <h2 className="text-lg font-black text-green-950">
-            🎙️ Commentary Feed
-          </h2>
+     <section className="mt-2.5 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+  <div className="flex items-center justify-between gap-3">
+    <div className="min-w-0">
+      <h2 className="text-lg font-black text-green-950">
+        📝 Live Scoring
+      </h2>
 
-          <p className="text-[11px] font-semibold text-slate-400">
-  Tap Copy to share an update
-</p>
-        </div>
-
-       
-
-        <div className="max-h-80 space-y-1.5 overflow-y-auto pr-1">
-  {moments.length === 0 && (
-    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center">
-      <p className="text-sm font-black text-green-950">
-        Waiting for tournament moments
-      </p>
-
-      <p className="mt-1 text-xs font-semibold text-slate-500">
-        Commentary will appear as scores and bonus winners are added.
+      <p className="mt-0.5 text-xs text-slate-500">
+        Enter your group&apos;s scores
       </p>
     </div>
-  )}
 
- {moments.map((moment, index) => {
-  const momentKey =
-    moment.moment_key ?? `${moment.title}-${index}`;
-
-  const hasBeenCopied =
-    copiedMomentKeys.includes(momentKey);
-
-  return (
-    <div
-      key={momentKey}
-      className={`rounded-xl border border-l-4 px-3 py-2.5 transition-all ${
-        hasBeenCopied
-          ? "border-slate-300 bg-slate-100 opacity-70"
-          : moment.rarity === "major"
-          ? "border-yellow-300 bg-yellow-50"
-          : moment.rarity === "rare"
-          ? "border-green-300 bg-green-50"
-          : "border-slate-200 bg-slate-50"
-      }`}
-    >
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-  <p className="text-[10px] font-black uppercase tracking-wide text-green-700">
-    {moment.icon} {moment.title}
-  </p>
-
-  {moment.created_at && (
-    <span className="text-[10px] font-semibold text-slate-400">
-      {new Date(moment.created_at).toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}
-    </span>
-  )}
-</div>
-
-                  <p className="mt-0.5 text-sm font-bold leading-snug text-green-950">
-                    {moment.text}
-                  </p>
-                </div>
-
-                <button
-  type="button"
-  onClick={() => copyMoment(moment, index)}
-  className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black ${
-    hasBeenCopied
-      ? "bg-slate-300 text-slate-700"
-      : "bg-green-950 text-white"
-  }`}
->
-  {copiedKey === `moment-${index}`
-    ? "Copied!"
-    : hasBeenCopied
-    ? "✓ Copied"
-    : "Copy"}
-</button>
-              </div>
-                </div>
-  );
-})}
-        </div>
-      </section>
-
-    <section className="mt-5 border-t border-slate-200 pt-5">
-  <p className="mb-3 text-center text-xs font-black uppercase tracking-[0.18em] text-slate-500">
-    Navigation
-  </p>
-
-  <div className="grid grid-cols-2 gap-3">
     <Link
       href="/live-scoring-v2"
-      className="flex min-h-20 flex-col items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-center shadow-sm transition hover:bg-emerald-100"
+      className="shrink-0 rounded-xl bg-green-700 px-4 py-2.5 text-sm font-black text-white"
     >
-      <span className="text-sm font-black text-emerald-800">
-        📝 Enter Scores
-      </span>
-
-      <span className="mt-1 text-[11px] font-semibold text-emerald-700/70">
-        Add live hole scores
-      </span>
-    </Link>
-
-    <Link
-      href="/full-scorecard"
-      className="flex min-h-20 flex-col items-center justify-center rounded-2xl border border-blue-200 bg-blue-50 px-3 py-3 text-center shadow-sm transition hover:bg-blue-100"
-    >
-      <span className="text-sm font-black text-blue-800">
-        📊 Full Scorecard
-      </span>
-
-      <span className="mt-1 text-[11px] font-semibold text-blue-700/70">
-        View player scorecards
-      </span>
-    </Link>
-
-    <Link
-      href="/setup-v2"
-      className="col-span-2 flex min-h-20 flex-col items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-center shadow-sm transition hover:bg-amber-100"
-    >
-      <span className="text-sm font-black text-amber-800">
-        ⚙️ Tournament Setup
-      </span>
-
-      <span className="mt-1 text-[11px] font-semibold text-amber-700/70">
-        Manage players, rounds and settings
-      </span>
+      Scorecards →
     </Link>
   </div>
 </section>
