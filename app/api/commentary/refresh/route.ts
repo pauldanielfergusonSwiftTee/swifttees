@@ -356,7 +356,7 @@ function getPairInfo(
         )?.name
     )
     .filter(Boolean)
-    .join(" & ");
+    .join(" and ");
 
   return {
     round,
@@ -1691,11 +1691,11 @@ function scoreAchievement(
   const difference = gross - par;
 
   if (difference <= -2) {
-    return "eagles";
+    return "eagle";
   }
 
   if (difference === -1) {
-    return "birdies";
+    return "birdie";
   }
 
   return null;
@@ -1739,6 +1739,13 @@ function buildPlayerPush(
   const achievement =
     scoreAchievement(row, tournament);
 
+  const achievementVerb =
+    achievement === "eagle"
+      ? "eagles"
+      : achievement === "birdie"
+        ? "birdies"
+        : null;
+
   const moved =
     before
       ? before.pos - after.pos
@@ -1747,9 +1754,9 @@ function buildPlayerPush(
   let fact = "";
   let priority = 20;
 
-  if (achievement === "eagles") {
+  if (achievement === "eagle") {
     priority = 100;
-  } else if (achievement === "birdies") {
+  } else if (achievement === "birdie") {
     priority = 90;
   } else if (
     before &&
@@ -1761,20 +1768,20 @@ function buildPlayerPush(
     priority = 60 + Math.min(moved, 10);
   }
 
-  if (achievement) {
+  if (achievementVerb) {
     if (
       before &&
       before.pos > 1 &&
       after.pos === 1
     ) {
       fact =
-        `${player.name} ${achievement} to take the lead.`;
+        `${player.name} ${achievementVerb} to take the lead.`;
     } else if (moved > 0) {
       fact =
-        `${player.name} ${achievement} to move up ${moved} ${moved === 1 ? "place" : "places"} into ${ordinal(after.pos)}.`;
+        `${player.name} ${achievementVerb} to move up ${moved} ${moved === 1 ? "place" : "places"} into ${ordinal(after.pos)}.`;
     } else {
       fact =
-        `${player.name} ${achievement} for ${Number(row.points ?? 0)} pts and sits ${ordinal(after.pos)}.`;
+        `${player.name} ${achievementVerb} for ${Number(row.points ?? 0)} pts and sits ${ordinal(after.pos)}.`;
     }
   } else if (
     before &&
@@ -1858,9 +1865,9 @@ function buildPairPush(
   let fact = "";
   let priority = 20;
 
-  if (achievement === "eagles") {
+  if (achievement === "eagle") {
     priority = 100;
-  } else if (achievement === "birdies") {
+  } else if (achievement === "birdie") {
     priority = 90;
   } else if (
     before &&
@@ -2089,7 +2096,7 @@ function buildPushSummary({
     );
 
   const base =
-    `Hole ${holeNumber}. ${primary.fact}`;
+    primary.fact;
 
   if (!second) {
     return capPushText(base);
@@ -3133,7 +3140,7 @@ export async function POST(
               const result =
                 await sendPushToAll({
                   title:
-                    "⛳ Live Update",
+                    `⛳ Hole ${holeNumber}`,
                   message:
                     pushMessage,
                   url:
