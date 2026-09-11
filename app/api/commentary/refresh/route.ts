@@ -1975,6 +1975,24 @@ function buildLeaderboardSummaryFact(
       const gap =
         leader.points - second.points;
 
+      if (gap === 0) {
+        const tiedTeams =
+          teamsAfter.filter(
+            (team) =>
+              team.points === leader.points
+          );
+
+        return {
+          priority: 10,
+          fact:
+            tiedTeams.length === 2
+              ? `${tiedTeams[0].team} and ${tiedTeams[1].team} are tied in the team race on ${leader.points} pts.`
+              : `${tiedTeams.length} teams are tied in the team race on ${leader.points} pts.`,
+          subjectKey:
+            `team-summary-tied-${leader.points}`,
+        };
+      }
+
       return {
         priority: 10,
         fact:
@@ -2004,6 +2022,24 @@ function buildLeaderboardSummaryFact(
   if (second) {
     const gap =
       leader.points - second.points;
+
+    if (gap === 0) {
+      const tiedPlayers =
+        leaderboardAfter.filter(
+          (player) =>
+            player.points === leader.points
+        );
+
+      return {
+        priority: 10,
+        fact:
+          tiedPlayers.length === 2
+            ? `${tiedPlayers[0].name} and ${tiedPlayers[1].name} are tied at the top on ${leader.points} pts.`
+            : `${tiedPlayers.length} players are tied at the top on ${leader.points} pts.`,
+        subjectKey:
+          `leader-summary-tied-${leader.points}`,
+      };
+    }
 
     return {
       priority: 10,
@@ -3200,6 +3236,41 @@ export async function POST(
                 `Automatic live push suppressed for ${eventSlug} — Hole ${holeNumber}, stage ${pushStage.stage}.`
               );
             } else {
+              /*
+               * Save the exact published notification text as the permanent
+               * tournament commentary archive. Internal push_checkpoint rows
+               * stay separate and hidden from the Live Centre feed.
+               */
+              await saveMoment(
+                supabase,
+                {
+                  event_slug:
+                    eventSlug,
+                  moment_key:
+                    `push-notification-${roundNumber}-${holeNumber}-stage-${pushStage.stage}`,
+                  moment_type:
+                    "push_notification",
+                  player_id:
+                    null,
+                  player_name:
+                    null,
+                  team:
+                    null,
+                  round_number:
+                    roundNumber,
+                  hole_number:
+                    holeNumber,
+                  icon:
+                    "⛳",
+                  title:
+                    `Hole ${holeNumber}`,
+                  text:
+                    pushMessage,
+                  rarity:
+                    "common",
+                }
+              );
+
               try {
                 const result =
                   await sendPushToAll({

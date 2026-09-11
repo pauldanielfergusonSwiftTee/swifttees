@@ -733,6 +733,42 @@ ${teamLines}
 #SwiftTees`;
 }
 
+function formatCommentaryArchive(
+  moments: LiveMomentRow[],
+  tournamentName: string
+) {
+  const chronological = moments
+    .slice()
+    .sort(
+      (a, b) =>
+        new Date(a.created_at ?? 0).getTime() -
+        new Date(b.created_at ?? 0).getTime()
+    );
+
+  const lines = chronological.map((moment) => {
+    const roundText = moment.round_number
+      ? `Round ${moment.round_number}`
+      : "";
+
+    const holeText = moment.hole_number
+      ? `Hole ${moment.hole_number}`
+      : "";
+
+    const context = [roundText, holeText]
+      .filter(Boolean)
+      .join(" • ");
+
+    return `${context ? `${context}\n` : ""}${moment.text}`;
+  });
+
+  return `SWIFT TEES — ${tournamentName}
+
+LIVE COMMENTARY ARCHIVE
+
+${lines.join("\n\n")}`;
+}
+
+
 function buildLatestStablefordMoment(
   latestStablefordScore: any,
   players: any[],
@@ -1489,13 +1525,7 @@ const isScrambleRound =
 const visibleMoments = hasScoringActivity
   ? (refreshedMoments ?? []).filter(
       (moment: LiveMomentRow) =>
-        !(
-          isScrambleRound &&
-          (
-            moment.moment_type === "battle_alert" ||
-            moment.moment_type === "scramble_score"
-          )
-        )
+        moment.moment_type === "push_notification"
     )
   : [];
 
@@ -1749,7 +1779,106 @@ useEffect(() => {
         </div>
       </section>
 
-     <section className="mt-2.5 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+           {moments.length > 0 && (
+        <section className="mt-2.5 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-lg font-black text-green-950">
+                🎙️ Live Commentary
+              </h2>
+
+              <p className="mt-0.5 text-xs text-slate-500">
+                The tournament story as it happens
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                copyText(
+                  formatCommentaryArchive(
+                    moments,
+                    tournament?.name ?? "Swift Tees"
+                  ),
+                  "commentary-archive"
+                )
+              }
+              className="shrink-0 rounded-full bg-green-950 px-3 py-1.5 text-[10px] font-black text-white"
+            >
+              {copiedKey === "commentary-archive"
+                ? "Copied"
+                : "Copy All"}
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {moments.map((moment, index) => {
+              const momentKey =
+                moment.moment_key ??
+                `${moment.title}-${index}`;
+
+              return (
+                <div
+                  key={momentKey}
+                  className="rounded-2xl bg-slate-50 px-3 py-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-base">
+                          {moment.icon || "⛳"}
+                        </span>
+
+                        <p className="text-xs font-black uppercase tracking-wide text-green-950">
+                          {moment.title}
+                        </p>
+
+                        {moment.round_number && (
+                          <span className="text-[10px] font-bold text-slate-400">
+                            R{moment.round_number}
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="mt-1.5 text-sm font-semibold leading-snug text-slate-700">
+                        {moment.text}
+                      </p>
+
+                      {moment.created_at && (
+                        <p className="mt-1.5 text-[10px] font-semibold text-slate-400">
+                          {new Date(moment.created_at).toLocaleTimeString(
+                            "en-GB",
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            }
+                          )}
+                        </p>
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        copyMoment(moment, index)
+                      }
+                      className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-black text-green-950"
+                    >
+                      {copiedKey === `moment-${index}`
+                        ? "Copied"
+                        : copiedMomentKeys.includes(momentKey)
+                          ? "Copy ✓"
+                          : "Copy"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+<section className="mt-2.5 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
   <div className="flex items-center justify-between gap-3">
     <div className="min-w-0">
       <h2 className="text-lg font-black text-green-950">
