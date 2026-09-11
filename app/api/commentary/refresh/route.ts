@@ -295,11 +295,24 @@ function getPlayerTeam(
         Number(candidate.id) === Number(player.id)
     );
 
-  return (
+  const teamName = (
     normaliseText(tournamentPlayer?.eventTeam) ||
     normaliseText(player.eventTeam) ||
     normaliseText(player.team)
   );
+
+  // Preserve tournament team names, but normalise the known
+  // Worsley colour-team labels if older data uses singular names.
+  const worsleyTeamNames: Record<string, string> = {
+    white: "Whites",
+    whites: "Whites",
+    blue: "Blues",
+    blues: "Blues",
+    green: "Greens",
+    greens: "Greens",
+  };
+
+  return worsleyTeamNames[teamName.toLowerCase()] ?? teamName;
 }
 
 
@@ -1711,33 +1724,25 @@ function buildPlayerPush(
     return null;
   }
 
-  const playerId =
-    Number(row.player_id);
+  const playerId = Number(row.player_id);
 
-  const player =
-    tournament.players?.find(
-      (candidate) =>
-        Number(candidate.id) === playerId
-    );
+  const player = tournament.players?.find(
+    (candidate) => Number(candidate.id) === playerId
+  );
 
-  const before =
-    leaderboardBefore.find(
-      (candidate) =>
-        candidate.id === playerId
-    );
+  const before = leaderboardBefore.find(
+    (candidate) => candidate.id === playerId
+  );
 
-  const after =
-    leaderboardAfter.find(
-      (candidate) =>
-        candidate.id === playerId
-    );
+  const after = leaderboardAfter.find(
+    (candidate) => candidate.id === playerId
+  );
 
   if (!player || !after) {
     return null;
   }
 
-  const achievement =
-    scoreAchievement(row, tournament);
+  const achievement = scoreAchievement(row, tournament);
 
   const achievementVerb =
     achievement === "eagle"
@@ -1746,10 +1751,17 @@ function buildPlayerPush(
         ? "birdies"
         : null;
 
-  const moved =
-    before
-      ? before.pos - after.pos
-      : 0;
+  const moved = before ? before.pos - after.pos : 0;
+  const leaderPoints = leaderboardAfter[0]?.points ?? after.points;
+  const gapToLeader = Math.max(0, leaderPoints - after.points);
+  const isJointLeader =
+    after.points === leaderPoints &&
+    leaderboardAfter.filter((candidate) => candidate.points === leaderPoints).length > 1;
+
+  const gapContext =
+    gapToLeader > 0
+      ? `, just ${gapToLeader} ${gapToLeader === 1 ? "pt" : "pts"} behind`
+      : "";
 
   let fact = "";
   let priority = 20;
@@ -1772,30 +1784,27 @@ function buildPlayerPush(
     if (
       before &&
       before.pos > 1 &&
-      after.pos === 1
+      after.pos === 1 &&
+      !isJointLeader
     ) {
-      fact =
-        `${player.name} ${achievementVerb} to take the lead.`;
+      fact = `${player.name} ${achievementVerb} to take the outright lead.`;
+    } else if (isJointLeader && (!before || before.points < leaderPoints)) {
+      fact = `${player.name} ${achievementVerb} to join the lead.`;
     } else if (moved > 0) {
-      fact =
-        `${player.name} ${achievementVerb} to move up ${moved} ${moved === 1 ? "place" : "places"} into ${ordinal(after.pos)}.`;
+      fact = `${player.name} ${achievementVerb} to climb into ${ordinal(after.pos)}${gapContext}.`;
     } else {
-      fact =
-        `${player.name} ${achievementVerb} for ${Number(row.points ?? 0)} pts and sits ${ordinal(after.pos)}.`;
+      fact = `${player.name} ${achievementVerb} and sits ${ordinal(after.pos)}${gapContext}.`;
     }
   } else if (
     before &&
     before.pos > 1 &&
     after.pos === 1
   ) {
-    fact =
-      `${player.name} moves into the lead.`;
+    fact = `${player.name} moves into the lead.`;
   } else if (moved > 0) {
-    fact =
-      `${player.name} moves up ${moved} ${moved === 1 ? "place" : "places"} into ${ordinal(after.pos)}.`;
+    fact = `${player.name} moves up ${moved} ${moved === 1 ? "place" : "places"} into ${ordinal(after.pos)}${gapContext}.`;
   } else if (moved < 0) {
-    fact =
-      `${player.name} drops ${Math.abs(moved)} ${Math.abs(moved) === 1 ? "place" : "places"} to ${ordinal(after.pos)}.`;
+    fact = `${player.name} drops ${Math.abs(moved)} ${Math.abs(moved) === 1 ? "place" : "places"} to ${ordinal(after.pos)}.`;
     priority = 35;
   } else {
     return null;
@@ -1822,8 +1831,7 @@ function buildPairPush(
     return null;
   }
 
-  const pairInfo =
-    getPairInfo(row, tournament);
+  const pairInfo = getPairInfo(row, tournament);
 
   if (
     !pairInfo.pairNames ||
@@ -1832,35 +1840,47 @@ function buildPairPush(
     return null;
   }
 
-  const pairKey =
-    pairInfo.playerIds
-      .slice()
-      .sort((a, b) => a - b)
-      .join("-");
+  const isSinglePlayer = pairInfo.playerIds.length === 1;
 
-  const before =
-    pairsBefore.find(
-      (pair) =>
-        pair.pairKey === pairKey
-    );
+  const pairKey = pairInfo.playerIds
+    .slice()
+    .sort((a, b) => a - b)
+    .join("-");
 
-  const after =
-    pairsAfter.find(
-      (pair) =>
-        pair.pairKey === pairKey
-    );
+  const before = pairsBefore.find(
+    (pair) => pair.pairKey === pairKey
+  );
+
+  const after = pairsAfter.find(
+    (pair) => pair.pairKey === pairKey
+  );
 
   if (!after) {
     return null;
   }
 
-  const achievement =
-    scoreAchievement(row, tournament);
+  const achievement = scoreAchievement(row, tournament);
+  const moved = before ? before.pos - after.pos : 0;
+  const leaderPoints = pairsAfter[0]?.points ?? after.points;
+  const gapToLeader = Math.max(0, leaderPoints - after.points);
+  const isJointLeader =
+    after.points === leaderPoints &&
+    pairsAfter.filter((pair) => pair.points === leaderPoints).length > 1;
 
-  const moved =
-    before
-      ? before.pos - after.pos
-      : 0;
+  const achievementVerb =
+    achievement === "eagle"
+      ? isSinglePlayer ? "eagles" : "eagle"
+      : achievement === "birdie"
+        ? isSinglePlayer ? "birdies" : "birdie"
+        : null;
+
+  const sitVerb = isSinglePlayer ? "sits" : "sit";
+  const moveVerb = isSinglePlayer ? "moves" : "move";
+  const takeVerb = isSinglePlayer ? "takes" : "take";
+  const gapContext =
+    gapToLeader > 0
+      ? `, just ${gapToLeader} ${gapToLeader === 1 ? "pt" : "pts"} behind`
+      : "";
 
   let fact = "";
   let priority = 20;
@@ -1879,31 +1899,29 @@ function buildPairPush(
     priority = 60 + Math.min(moved, 10);
   }
 
-  if (achievement) {
+  if (achievementVerb) {
     if (
       before &&
       before.pos > 1 &&
-      after.pos === 1
+      after.pos === 1 &&
+      !isJointLeader
     ) {
-      fact =
-        `${pairInfo.pairNames} ${achievement} to take the lead.`;
+      fact = `${pairInfo.pairNames} ${achievementVerb} to take the outright lead.`;
+    } else if (isJointLeader && (!before || before.points < leaderPoints)) {
+      fact = `${pairInfo.pairNames} ${achievementVerb} to join the lead.`;
     } else if (moved > 0) {
-      fact =
-        `${pairInfo.pairNames} ${achievement} to move up ${moved} ${moved === 1 ? "place" : "places"} into ${ordinal(after.pos)}.`;
+      fact = `${pairInfo.pairNames} ${achievementVerb} to climb into ${ordinal(after.pos)}${gapContext}.`;
     } else {
-      fact =
-        `${pairInfo.pairNames} ${achievement} for ${Number(row.points ?? 0)} pts and sit ${ordinal(after.pos)}.`;
+      fact = `${pairInfo.pairNames} ${achievementVerb} and ${sitVerb} ${ordinal(after.pos)}${gapContext}.`;
     }
   } else if (
     before &&
     before.pos > 1 &&
     after.pos === 1
   ) {
-    fact =
-      `${pairInfo.pairNames} take the lead.`;
+    fact = `${pairInfo.pairNames} ${takeVerb} the lead.`;
   } else if (moved > 0) {
-    fact =
-      `${pairInfo.pairNames} move up ${moved} ${moved === 1 ? "place" : "places"} into ${ordinal(after.pos)}.`;
+    fact = `${pairInfo.pairNames} ${moveVerb} up ${moved} ${moved === 1 ? "place" : "places"} into ${ordinal(after.pos)}${gapContext}.`;
   } else {
     return null;
   }
@@ -2968,6 +2986,41 @@ export async function POST(
     const duplicates = 0;
     let pushed = 0;
 
+    /*
+     * Admin emergency switch.
+     *
+     * Read this directly from Supabase on every refresh rather than trusting
+     * the tournament object supplied by the scoring device. That means an
+     * admin can pause automatic live pushes immediately, even if scorers have
+     * an older/stale copy of the tournament setup open on their phones.
+     *
+     * Results/Admin notifications are sent elsewhere and are not affected.
+     *
+     * If this lookup itself fails, fail safe and suppress automatic live
+     * pushes rather than risk sending alerts while the emergency control
+     * cannot be verified.
+     */
+    const {
+      data: livePushControl,
+      error: livePushControlError,
+    } =
+      await supabase
+        .from("tournaments_v2")
+        .select("live_pushes_enabled")
+        .eq("slug", eventSlug)
+        .maybeSingle();
+
+    if (livePushControlError) {
+      console.error(
+        "Could not load automatic live push setting:",
+        livePushControlError
+      );
+    }
+
+    const livePushesEnabled =
+      !livePushControlError &&
+      livePushControl?.live_pushes_enabled !== false;
+
 
     /*
      * Notification rhythm:
@@ -3136,29 +3189,41 @@ export async function POST(
             );
 
           if (reserved) {
-            try {
-              const result =
-                await sendPushToAll({
-                  title:
-                    `⛳ Hole ${holeNumber}`,
-                  message:
-                    pushMessage,
-                  url:
-                    "/live-centre",
-                  eventSlug,
-                  roundNumber,
-                  category:
-                    "live",
-                });
-
-              if (result.sent > 0) {
-                pushed += 1;
-              }
-            } catch (error) {
-              console.error(
-                "Automatic commentary push failed:",
-                error
+            /*
+             * Even while the emergency switch is OFF we deliberately keep
+             * the checkpoint that was just reserved. This marks this exact
+             * hole/stage as handled, so an old alert cannot suddenly fire
+             * later after notifications are switched back ON.
+             */
+            if (!livePushesEnabled) {
+              console.log(
+                `Automatic live push suppressed for ${eventSlug} — Hole ${holeNumber}, stage ${pushStage.stage}.`
               );
+            } else {
+              try {
+                const result =
+                  await sendPushToAll({
+                    title:
+                      `⛳ Hole ${holeNumber}`,
+                    message:
+                      pushMessage,
+                    url:
+                      "/live-centre",
+                    eventSlug,
+                    roundNumber,
+                    category:
+                      "live",
+                  });
+
+                if (result.sent > 0) {
+                  pushed += 1;
+                }
+              } catch (error) {
+                console.error(
+                  "Automatic commentary push failed:",
+                  error
+                );
+              }
             }
           }
         }
@@ -3184,6 +3249,7 @@ export async function POST(
       duplicates,
 
       pushed,
+      livePushesEnabled,
     });
   }
 

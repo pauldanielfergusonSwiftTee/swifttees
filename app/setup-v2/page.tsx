@@ -130,6 +130,7 @@ const editorRef = useRef<HTMLDivElement | null>(null);
 const [resettingSlug, setResettingSlug] = useState("");
 const [saveMessage, setSaveMessage] = useState("");
 const [useGroups, setUseGroups] = useState(false);
+  const [livePushesEnabled, setLivePushesEnabled] = useState(true);
   useEffect(() => {
     async function loadPage() {
       const data = await getPlayers();
@@ -221,6 +222,7 @@ function getFinalPairHandicap(pair: PairSetup) {
       name: eventName || "Untitled Event",
       teamMode,
       teams: teamMode === "teams" ? teams : [],
+      livePushesEnabled,
       players: selectedPlayers.map((player) => ({
         id: player.id,
         name: player.name,
@@ -392,6 +394,7 @@ const groups = useGroups
     rounds,
     players,
 useGroups,
+  livePushesEnabled,
 ]);
 
   function togglePlayer(playerId: number) {
@@ -598,6 +601,7 @@ function handleNewTournament() {
   setTeamMode("none");
 
   setUseGroups(false);
+  setLivePushesEnabled(true);
   setSaveMessage("New tournament started.");
   openEditor();
 }
@@ -624,6 +628,7 @@ function handleNewTournament() {
   players: tournamentPreview.players,
   team_mode: tournamentPreview.teamMode,
   teams: tournamentPreview.teams,
+  live_pushes_enabled: tournamentPreview.livePushesEnabled,
 });
 
 await setActiveTournamentV2(tournamentPreview.slug);
@@ -654,6 +659,7 @@ await loadSavedTournaments();
     setEditingSlug(tournament.slug ?? "");
     setEventName(tournament.name ?? "");
     setTeamMode(tournament.team_mode ?? tournament.teamMode ?? "none");
+    setLivePushesEnabled(tournament.live_pushes_enabled !== false);
     
 const savedRounds = tournament.rounds ?? [];
 const hasRealGroups = savedRounds.some((round: any) =>
@@ -1026,6 +1032,48 @@ async function handleResetTournament(tournament: any) {
   />
 
   
+</section>
+
+<section className={`rounded-3xl border p-5 shadow-sm ${
+  livePushesEnabled
+    ? "border-green-200 bg-green-50"
+    : "border-red-300 bg-red-50"
+}`}>
+  <div className="flex items-center justify-between gap-4">
+    <div>
+      <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+        Emergency Control
+      </p>
+      <h2 className="mt-1 text-xl font-black text-green-950">
+        🔔 Automatic Live Notifications
+      </h2>
+      <p className={`mt-1 text-sm font-bold ${
+        livePushesEnabled ? "text-green-800" : "text-red-700"
+      }`}>
+        {livePushesEnabled
+          ? "ON — automatic hole updates will be sent."
+          : "OFF — automatic hole updates are paused."}
+      </p>
+      <p className="mt-2 text-xs leading-5 text-slate-500">
+        Scoring, leaderboards, offline sync, Results and manual Admin notifications are unaffected.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      onClick={() => setLivePushesEnabled((current) => !current)}
+      aria-pressed={livePushesEnabled}
+      className={`relative h-9 w-16 shrink-0 rounded-full transition ${
+        livePushesEnabled ? "bg-green-700" : "bg-red-500"
+      }`}
+    >
+      <span
+        className={`absolute top-1 h-7 w-7 rounded-full bg-white shadow transition ${
+          livePushesEnabled ? "left-8" : "left-1"
+        }`}
+      />
+    </button>
+  </div>
 </section>
 
     
