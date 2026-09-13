@@ -1628,6 +1628,15 @@ type PushMessage = {
   subjectKey: string;
 };
 
+type PlayerHistory = {
+  individualWins: number;
+  bestStableford: number;
+};
+
+type StablefordHistory = {
+  allTimeRecord: number;
+};
+
 type PushStage = {
   stage: 1 | 2;
   reportedGroups: number;
@@ -1714,11 +1723,234 @@ function scoreAchievement(
   return null;
 }
 
+function getStablefordRoundPoints(
+  scores: ScoreRow[],
+  playerId: number,
+  roundNumber: number
+) {
+  return scores
+    .filter(
+      (score) =>
+        Number(score.player_id) === playerId &&
+        Number(score.round_number) === roundNumber
+    )
+    .reduce(
+      (total, score) =>
+        total + Number(score.points ?? 0),
+      0
+    );
+}
+
+function getRoundTotalHoles(
+  tournament: TournamentSetup,
+  roundNumber: number
+) {
+  return (
+    getRound(tournament, roundNumber)?.holes?.length ||
+    18
+  );
+}
+
+function getNextHolePar(
+  tournament: TournamentSetup,
+  roundNumber: number,
+  holeNumber: number
+) {
+  const round =
+    getRound(tournament, roundNumber);
+
+  return getHolePar(
+    round,
+    holeNumber + 1
+  );
+}
+
+function addTournamentPhaseContext(
+  text: string,
+  tournament: TournamentSetup,
+  roundNumber: number,
+  holeNumber: number
+) {
+  const totalHoles =
+    getRoundTotalHoles(
+      tournament,
+      roundNumber
+    );
+
+  const remaining =
+    Math.max(
+      0,
+      totalHoles - holeNumber
+    );
+
+  if (remaining === 0) {
+    return `${text} Round complete.`;
+  }
+
+  const nextPar =
+    getNextHolePar(
+      tournament,
+      roundNumber,
+      holeNumber
+    );
+
+  if (remaining === 1) {
+    return nextPar
+      ? `${text} One to play — par ${nextPar} next.`
+      : `${text} One to play.`;
+  }
+
+  if (remaining <= 3) {
+    return `${text} ${remaining} holes to play.`;
+  }
+
+  if (
+    totalHoles >= 18 &&
+    holeNumber === 9
+  ) {
+    return `${text} Through the turn.`;
+  }
+
+  return text;
+}
+
+function buildStablefordHistoryPush(
+  row: ScoreRow,
+  tournament: TournamentSetup,
+  stablefordScoresAfter: ScoreRow[],
+  playerHistory: Record<string, PlayerHistory>,
+  stablefordHistory: StablefordHistory
+): PushMessage | null {
+  if (!row.player_id) {
+    return null;
+  }
+
+  const playerId =
+    Number(row.player_id);
+
+  const player =
+    tournament.players?.find(
+      (candidate) =>
+        Number(candidate.id) === playerId
+    );
+
+  if (!player) {
+    return null;
+  }
+
+  const roundNumber =
+    Number(row.round_number);
+
+  const holeNumber =
+    Number(row.hole_number);
+
+  const totalHoles =
+    getRoundTotalHoles(
+      tournament,
+      roundNumber
+    );
+
+  const holesRemaining =
+    Math.max(
+      0,
+      totalHoles - holeNumber
+    );
+
+  const roundPoints =
+    getStablefordRoundPoints(
+      stablefordScoresAfter,
+      playerId,
+      roundNumber
+    );
+
+  const allTimeRecord =
+    stablefordHistory.allTimeRecord;
+
+  const personalBest =
+    playerHistory[player.name]?.bestStableford ?? 0;
+
+  if (
+    allTimeRecord > 0 &&
+    roundPoints > allTimeRecord
+  ) {
+    return {
+      priority: 115,
+      fact:
+        `${player.name} reaches ${roundPoints} pts — a new Swift Tees Stableford record.`,
+      subjectKey:
+        `stableford-record-${playerId}`,
+    };
+  }
+
+  if (
+    allTimeRecord > 0 &&
+    roundPoints === allTimeRecord
+  ) {
+    return {
+      priority: 110,
+      fact:
+        `${player.name} reaches ${roundPoints} pts — matching the Swift Tees Stableford record.`,
+      subjectKey:
+        `stableford-record-${playerId}`,
+    };
+  }
+
+  if (
+    allTimeRecord > 0 &&
+    holesRemaining <= 3 &&
+    holesRemaining > 0 &&
+    roundPoints === allTimeRecord - 1
+  ) {
+    return {
+      priority: 96,
+      fact:
+        `${player.name} reaches ${roundPoints} pts — one short of the Swift Tees record.`,
+      subjectKey:
+        `stableford-record-chase-${playerId}`,
+    };
+  }
+
+  if (
+    holeNumber === totalHoles &&
+    personalBest > 0 &&
+    roundPoints > personalBest
+  ) {
+    return {
+      priority: 82,
+      fact:
+        `${player.name} finishes on ${roundPoints} pts — a new personal Swift Tees best.`,
+      subjectKey:
+        `stableford-personal-best-${playerId}`,
+    };
+  }
+
+  return null;
+}
+
+function buildPlayerHistoryContext(
+  playerName: string,
+  playerHistory: Record<string, PlayerHistory>
+) {
+  const wins =
+    playerHistory[playerName]?.individualWins ?? 0;
+
+  if (wins <= 0) {
+    return "chasing a first Swift Tees individual win";
+  }
+
+  if (wins === 1) {
+    return "already a Swift Tees winner";
+  }
+
+  return `already a ${wins}-time Swift Tees winner`;
+}
+
 function buildPlayerPush(
   row: ScoreRow,
   tournament: TournamentSetup,
   leaderboardBefore: LeaderboardRow[],
-  leaderboardAfter: LeaderboardRow[]
+  leaderboardAfter: LeaderboardRow[],
+  playerHistory: Record<string, PlayerHistory>
 ): PushMessage | null {
   if (!row.player_id) {
     return null;
@@ -1787,7 +2019,10 @@ function buildPlayerPush(
       after.pos === 1 &&
       !isJointLeader
     ) {
-      fact = `${player.name} ${achievementVerb} to take the outright lead.`;
+      fact = `${player.name} ${achievementVerb} to take the outright lead — ${buildPlayerHistoryContext(
+        player.name,
+        playerHistory
+      )}.`;
     } else if (isJointLeader && (!before || before.points < leaderPoints)) {
       fact = `${player.name} ${achievementVerb} to join the lead.`;
     } else if (moved > 0) {
@@ -1800,7 +2035,10 @@ function buildPlayerPush(
     before.pos > 1 &&
     after.pos === 1
   ) {
-    fact = `${player.name} moves into the lead.`;
+    fact = `${player.name} moves into the lead — ${buildPlayerHistoryContext(
+      player.name,
+      playerHistory
+    )}.`;
   } else if (moved > 0) {
     fact = `${player.name} moves up ${moved} ${moved === 1 ? "place" : "places"} into ${ordinal(after.pos)}${gapContext}.`;
   } else if (moved < 0) {
@@ -2068,6 +2306,9 @@ function buildPushSummary({
   teamsAfter,
   pairsBefore,
   pairsAfter,
+  playerHistory,
+  stablefordScoresAfter,
+  stablefordHistory,
 }: {
   rows: ScoreRow[];
   tournament: TournamentSetup;
@@ -2079,16 +2320,37 @@ function buildPushSummary({
   teamsAfter: TeamStanding[];
   pairsBefore: PairStanding[];
   pairsAfter: PairStanding[];
+  playerHistory: Record<string, PlayerHistory>;
+  stablefordScoresAfter: ScoreRow[];
+  stablefordHistory: StablefordHistory;
 }) {
   const candidates: PushMessage[] = [];
 
   for (const row of rows) {
+    if (row.player_id) {
+      const historyCandidate =
+        buildStablefordHistoryPush(
+          row,
+          tournament,
+          stablefordScoresAfter,
+          playerHistory,
+          stablefordHistory
+        );
+
+      if (historyCandidate) {
+        candidates.push(
+          historyCandidate
+        );
+      }
+    }
+
     const candidate = row.player_id
       ? buildPlayerPush(
           row,
           tournament,
           leaderboardBefore,
-          leaderboardAfter
+          leaderboardAfter,
+          playerHistory
         )
       : buildPairPush(
           row,
@@ -2150,7 +2412,12 @@ function buildPushSummary({
     );
 
   const base =
-    primary.fact;
+    addTournamentPhaseContext(
+      primary.fact,
+      tournament,
+      Number(rows[0]?.round_number ?? 0),
+      holeNumber
+    );
 
   if (!second) {
     return capPushText(base);
@@ -2559,6 +2826,8 @@ export async function POST(
       scoresResult,
       scrambleResult,
       momentsResult,
+      historyWinsResult,
+      historicalStablefordResult,
     ] =
       await Promise.all([
         supabase
@@ -2597,6 +2866,20 @@ export async function POST(
             }
           )
           .limit(20),
+
+        supabase
+          .from("event_achievements")
+          .select("player_name")
+          .eq(
+            "achievement_type",
+            "individual_win"
+          ),
+
+        supabase
+          .from("overall_results")
+          .select(
+            "player_name,stableford_points"
+          ),
       ]);
 
 
@@ -2611,6 +2894,92 @@ export async function POST(
       scrambleResult.error
     ) {
       throw scrambleResult.error;
+    }
+
+
+    const playerHistory: Record<string, PlayerHistory> = {};
+    const stablefordHistory: StablefordHistory = {
+      allTimeRecord: 0,
+    };
+
+    if (historyWinsResult.error) {
+      /*
+       * Historical context is optional enrichment.
+       * If it cannot be loaded, live scoring and pushes
+       * continue normally without blocking the save.
+       */
+      console.error(
+        "Could not load player win history for commentary:",
+        historyWinsResult.error
+      );
+    } else {
+      for (const row of historyWinsResult.data ?? []) {
+        const playerName =
+          normaliseText(row.player_name);
+
+        if (!playerName) {
+          continue;
+        }
+
+        const existing =
+          playerHistory[playerName] ?? {
+            individualWins: 0,
+            bestStableford: 0,
+          };
+
+        playerHistory[playerName] = {
+          ...existing,
+          individualWins:
+            existing.individualWins + 1,
+        };
+      }
+    }
+
+    if (historicalStablefordResult.error) {
+      console.error(
+        "Could not load historical Stableford records for commentary:",
+        historicalStablefordResult.error
+      );
+    } else {
+      for (
+        const row of
+        historicalStablefordResult.data ?? []
+      ) {
+        const playerName =
+          normaliseText(row.player_name);
+
+        const points =
+          Number(row.stableford_points ?? 0);
+
+        if (
+          !playerName ||
+          !Number.isFinite(points) ||
+          points <= 0
+        ) {
+          continue;
+        }
+
+        stablefordHistory.allTimeRecord =
+          Math.max(
+            stablefordHistory.allTimeRecord,
+            points
+          );
+
+        const existing =
+          playerHistory[playerName] ?? {
+            individualWins: 0,
+            bestStableford: 0,
+          };
+
+        playerHistory[playerName] = {
+          ...existing,
+          bestStableford:
+            Math.max(
+              existing.bestStableford,
+              points
+            ),
+        };
+      }
     }
 
 
@@ -3207,6 +3576,10 @@ export async function POST(
               summaryPairsBefore,
             pairsAfter:
               summaryPairsAfter,
+            playerHistory,
+            stablefordScoresAfter:
+              currentStablefordScores,
+            stablefordHistory,
           });
 
         if (pushMessage) {

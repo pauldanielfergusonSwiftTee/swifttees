@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import PageContainer from "@/components/PageContainer";
+import { supabase } from "@/lib/supabase";
 
 type StablefordRound = {
   name: string;
@@ -26,229 +28,332 @@ type TeamWin = {
   event: string;
 };
 
-/* ============================================================
-   REAL SWIFT TEES RECORDS
-   Updated to and including Carden Park 2026
-============================================================ */
+type AchievementRow = {
+  event_slug: string;
+  event_name: string;
+  event_date: string | null;
+  player_id: number | null;
+  player_name: string;
+  achievement_type: string;
+  round_number: number | null;
+  course_name: string | null;
+  detail: string | null;
+};
 
-const attendanceGroups: AttendanceGroup[] = [
-  {
-    trips: 5,
-    players: ["Paul"],
-  },
-  {
-    trips: 4,
-    players: [
-      "Painy",
-      "Ian",
-      "Liam",
-      "Gav",
-      "Stu",
-      "Wrighty",
-      "John",
-    ],
-  },
-  {
-    trips: 3,
-    players: ["Chris Mc"],
-  },
-  {
-    trips: 2,
-    players: ["Dan", "Cal"],
-  },
-  {
-    trips: 1,
-    players: [
-      "Phil",
-      "Adam",
-      "Taz",
-      "Carl",
-      "Chris W",
-      "Alistair",
-      "Rick",
-    ],
-  },
-];
+type AttendanceRow = {
+  event_slug: string;
+  event_name: string;
+  event_date: string | null;
+  player_id: number | null;
+  player_name: string;
+};
 
-const closestToPinWinners: ClosestPinWinner[] = [
-  {
-    player: "Paul",
-    event: "Tarporley 2025",
-  },
-  {
-    player: "Wrighty",
-    event: "Tarporley 2025",
-  },
-  {
-    player: "Stu",
-    event: "Carden Park 2026",
-  },
-  {
-    player: "Adam",
-    event: "Carden Park 2026",
-  },
-  {
-    player: "Dan",
-    event: "Carden Park 2026",
-  },
-  {
-    player: "Liam",
-    event: "Carden Park 2026",
-  },
-  {
-    player: "Painy",
-    event: "Carden Park 2026",
-  },
-  {
-    player: "Gav",
-    event: "Carden Park 2026",
-  },
-];
+type BaselineRow = {
+  player_name: string;
+  legacy_trips: number;
+};
 
-const eventWins = [
-  {
-    player: "Paul",
-    wins: 2,
-    events: ["Tarporley 2025", "Carden Park 2026"],
-  },
-];
+type OverallResultRow = {
+  event_name: string;
+  event_date: string | null;
+  round_number: number;
+  course_name: string | null;
+  player_name: string;
+  stableford_points: number;
+  gross_score: number | null;
+};
 
-const teamWins: TeamWin[] = [
-  {
-    player: "Gav",
-    wins: 1,
-    event: "Carden Park 2026",
-  },
-  {
-    player: "Wrighty",
-    wins: 1,
-    event: "Carden Park 2026",
-  },
-  {
-    player: "Carl",
-    wins: 1,
-    event: "Carden Park 2026",
-  },
-  {
-    player: "Adam",
-    wins: 1,
-    event: "Carden Park 2026",
-  },
-];
+type AchievementSummary = {
+  player: string;
+  wins: number;
+  events: string[];
+};
 
-const longestDriveRecords = [
-  {
-    player: "Paul",
-    wins: 3,
-    events: [
-      "Tarporley 2025 — Day 1",
-      "Tarporley 2025 — Day 2",
-      "Carden Park 2026",
-    ],
-  },
-  {
-    player: "Wrighty",
-    wins: 1,
-    events: ["Carden Park 2026"],
-  },
-];
+function achievementEventLabel(row: AchievementRow) {
+  if (row.detail) {
+    return `${row.event_name} — ${row.detail}`;
+  }
 
-/* ============================================================
-   CARDEN PARK STABLEFORD
-============================================================ */
+  if (row.round_number) {
+    return `${row.event_name} — Round ${row.round_number}`;
+  }
 
-const bestStableford: StablefordRound[] = [
-  {
-    name: "Paul",
-    points: 41,
-    grossScore: 91,
-    event: "Carden Park 2026",
-    course: "Nicklaus",
-  },
-  {
-    name: "Adam",
-    points: 38,
-    grossScore: 109,
-    event: "Carden Park 2026",
-    course: "Nicklaus",
-  },
-  {
-    name: "Stu",
-    points: 36,
-    grossScore: 100,
-    event: "Carden Park 2026",
-    course: "Nicklaus",
-  },
-  {
-    name: "Dan",
-    points: 34,
-    grossScore: 94,
-    event: "Carden Park 2026",
-    course: "Nicklaus",
-  },
-  {
-    name: "Wrighty",
-    points: 34,
-    grossScore: 99,
-    event: "Carden Park 2026",
-    course: "Nicklaus",
-  },
-  {
-    name: "Ian",
-    points: 32,
-    grossScore: 105,
-    event: "Carden Park 2026",
-    course: "Nicklaus",
-  },
-  {
-    name: "Liam",
-    points: 32,
-    grossScore: 108,
-    event: "Carden Park 2026",
-    course: "Nicklaus",
-  },
-  {
-    name: "Painy",
-    points: 29,
-    grossScore: 101,
-    event: "Carden Park 2026",
-    course: "Nicklaus",
-  },
-  {
-    name: "Gav",
-    points: 28,
-    grossScore: 100,
-    event: "Carden Park 2026",
-    course: "Nicklaus",
-  },
-  {
-    name: "Carl",
-    points: 27,
-    grossScore: 113,
-    event: "Carden Park 2026",
-    course: "Nicklaus",
-  },
-  {
-    name: "Phil",
-    points: 17,
-    grossScore: 130,
-    event: "Carden Park 2026",
-    course: "Nicklaus",
-  },
-  {
-    name: "Taz",
-    points: 16,
-    grossScore: 150,
-    event: "Carden Park 2026",
-    course: "Nicklaus",
-  },
-];
+  return row.event_name;
+}
+
+function summariseAchievements(
+  rows: AchievementRow[],
+  achievementType: string
+): AchievementSummary[] {
+  const grouped = new Map<string, AchievementSummary>();
+
+  rows
+    .filter((row) => row.achievement_type === achievementType)
+    .forEach((row) => {
+      const current = grouped.get(row.player_name) ?? {
+        player: row.player_name,
+        wins: 0,
+        events: [],
+      };
+
+      current.wins += 1;
+      current.events.push(achievementEventLabel(row));
+      grouped.set(row.player_name, current);
+    });
+
+  return Array.from(grouped.values()).sort(
+    (a, b) =>
+      b.wins - a.wins ||
+      a.player.localeCompare(b.player)
+  );
+}
 
 /* ============================================================
    PAGE
 ============================================================ */
 
 export default function HallOfFamePage() {
+  const [achievements, setAchievements] = useState<AchievementRow[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
+  const [baselines, setBaselines] = useState<BaselineRow[]>([]);
+  const [overallResults, setOverallResults] = useState<OverallResultRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadHallOfFame() {
+      setLoading(true);
+      setLoadError("");
+
+      const [
+        achievementsResult,
+        attendanceResult,
+        baselinesResult,
+        overallResultsResult,
+      ] = await Promise.all([
+        supabase
+          .from("event_achievements")
+          .select(
+            "event_slug,event_name,event_date,player_id,player_name,achievement_type,round_number,course_name,detail"
+          ),
+        supabase
+          .from("event_attendance")
+          .select(
+            "event_slug,event_name,event_date,player_id,player_name"
+          ),
+        supabase
+          .from("player_history_baseline")
+          .select("player_name,legacy_trips"),
+        supabase
+          .from("overall_results")
+          .select(
+            "event_name,event_date,round_number,course_name,player_name,stableford_points,gross_score"
+          ),
+      ]);
+
+      if (cancelled) return;
+
+      const error =
+        achievementsResult.error ||
+        attendanceResult.error ||
+        baselinesResult.error ||
+        overallResultsResult.error;
+
+      if (error) {
+        console.error("Hall of Fame load failed:", error);
+        setLoadError(error.message);
+        setLoading(false);
+        return;
+      }
+
+      setAchievements(
+        (achievementsResult.data ?? []) as AchievementRow[]
+      );
+      setAttendance(
+        (attendanceResult.data ?? []) as AttendanceRow[]
+      );
+      setBaselines(
+        (baselinesResult.data ?? []) as BaselineRow[]
+      );
+      setOverallResults(
+        (overallResultsResult.data ?? []) as OverallResultRow[]
+      );
+      setLoading(false);
+    }
+
+    void loadHallOfFame();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const attendanceGroups = useMemo<AttendanceGroup[]>(() => {
+    const totals = new Map<string, number>();
+
+    baselines.forEach((row) => {
+      totals.set(
+        row.player_name,
+        Number(row.legacy_trips) || 0
+      );
+    });
+
+    attendance.forEach((row) => {
+      totals.set(
+        row.player_name,
+        (totals.get(row.player_name) ?? 0) + 1
+      );
+    });
+
+    const grouped = new Map<number, string[]>();
+
+    totals.forEach((trips, player) => {
+      if (trips <= 0) return;
+
+      const players = grouped.get(trips) ?? [];
+      players.push(player);
+      grouped.set(trips, players);
+    });
+
+    return Array.from(grouped.entries())
+      .map(([trips, players]) => ({
+        trips,
+        players: players.sort((a, b) =>
+          a.localeCompare(b)
+        ),
+      }))
+      .sort((a, b) => b.trips - a.trips);
+  }, [attendance, baselines]);
+
+  const closestToPinWinners = useMemo<ClosestPinWinner[]>(
+    () =>
+      achievements
+        .filter(
+          (row) => row.achievement_type === "closest_to_pin"
+        )
+        .map((row) => ({
+          player: row.player_name,
+          event: achievementEventLabel(row),
+        })),
+    [achievements]
+  );
+
+  const eventWins = useMemo(
+    () => summariseAchievements(achievements, "individual_win"),
+    [achievements]
+  );
+
+  const teamWins = useMemo<TeamWin[]>(
+    () =>
+      summariseAchievements(achievements, "team_win").map(
+        (row) => ({
+          player: row.player,
+          wins: row.wins,
+          event: row.events.join(" · "),
+        })
+      ),
+    [achievements]
+  );
+
+  const longestDriveRecords = useMemo(
+    () => summariseAchievements(achievements, "longest_drive"),
+    [achievements]
+  );
+
+  const bestStableford = useMemo<StablefordRound[]>(
+    () =>
+      overallResults
+        .filter((row) => Number(row.stableford_points) > 0)
+        .map((row) => ({
+          name: row.player_name,
+          points: Number(row.stableford_points),
+          grossScore: Number(row.gross_score ?? 0),
+          event: row.event_name,
+          course: row.course_name || "Course",
+        }))
+        .sort(
+          (a, b) =>
+            b.points - a.points ||
+            a.name.localeCompare(b.name)
+        ),
+    [overallResults]
+  );
+
+  const playerCount = useMemo(() => {
+    const players = new Set<string>();
+
+    baselines.forEach((row) => {
+      if (Number(row.legacy_trips) > 0) {
+        players.add(row.player_name);
+      }
+    });
+
+    attendance.forEach((row) => {
+      players.add(row.player_name);
+    });
+
+    return players.size;
+  }, [attendance, baselines]);
+
+  const latestEventName = useMemo(() => {
+    const datedEvents = [
+      ...attendance.map((row) => ({
+        name: row.event_name,
+        date: row.event_date,
+      })),
+      ...overallResults.map((row) => ({
+        name: row.event_name,
+        date: row.event_date,
+      })),
+      ...achievements.map((row) => ({
+        name: row.event_name,
+        date: row.event_date,
+      })),
+    ]
+      .filter((row) => row.date)
+      .sort((a, b) =>
+        String(b.date).localeCompare(String(a.date))
+      );
+
+    return datedEvents[0]?.name ?? "latest recorded event";
+  }, [achievements, attendance, overallResults]);
+
+  const maxTrips = Math.max(
+    1,
+    ...attendanceGroups.map((group) => group.trips)
+  );
+
+  const stablefordRecord = bestStableford[0] ?? null;
+
+  if (loading) {
+    return (
+      <PageContainer className="bg-[#f2f0e9] text-slate-900">
+        <div className="rounded-[2rem] bg-[#06140f] p-8 text-white shadow-xl">
+          <p className="text-sm font-black text-lime-300">
+            Loading Hall of Fame...
+          </p>
+        </div>
+      </PageContainer>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <PageContainer className="bg-[#f2f0e9] text-slate-900">
+        <div className="rounded-[2rem] border border-red-200 bg-red-50 p-6">
+          <p className="font-black text-red-900">
+            Hall of Fame data could not be loaded.
+          </p>
+          <p className="mt-2 text-sm font-semibold text-red-700">
+            {loadError}
+          </p>
+        </div>
+      </PageContainer>
+    );
+  }
+
   return (
     <PageContainer className="bg-[#f2f0e9] text-slate-900">
       {/* ======================================================
@@ -313,11 +418,11 @@ export default function HallOfFamePage() {
 
               <div>
                 <p className="text-sm font-black text-white">
-                  18 Participants so far...
+                  {playerCount} Participants so far...
                 </p>
 
                 <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.13em] text-white/55">
-                  Through to Carden Park 2026
+                  Through to {latestEventName}
                 </p>
               </div>
             </div>
@@ -366,7 +471,7 @@ export default function HallOfFamePage() {
                 </p>
 
                 <p className="mt-1 text-5xl font-black tracking-tight md:text-7xl">
-                  {eventWins[0].player}
+                  {eventWins[0]?.player ?? "—"}
                 </p>
 
                 <p className="mt-2 text-sm font-semibold text-white/65">
@@ -374,7 +479,7 @@ export default function HallOfFamePage() {
                 </p>
 
                 <div className="mt-5 flex flex-wrap gap-2">
-                  {eventWins[0].events.map((event) => (
+                  {(eventWins[0]?.events ?? []).map((event) => (
                     <span
                       key={event}
                       className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.07] px-3 py-2 text-[11px] font-black text-white"
@@ -388,7 +493,7 @@ export default function HallOfFamePage() {
 
               <div className="text-left md:text-right">
                 <p className="text-8xl font-black leading-none text-lime-300 md:text-9xl">
-                  {eventWins[0].wins}
+                  {eventWins[0]?.wins ?? 0}
                 </p>
 
                 <p className="mt-1 text-[10px] font-black uppercase tracking-[0.22em] text-green-200">
@@ -429,7 +534,7 @@ export default function HallOfFamePage() {
           <div className="grid grid-cols-2 md:grid-cols-4">
             {teamWins.map((winner, index) => (
               <div
-                key={winner.player}
+                key={`${winner.player}-${winner.event}-${index}`}
                 className={`relative p-5 md:p-6 ${
                   index % 2 === 0
                     ? "border-r border-slate-100"
@@ -501,7 +606,7 @@ export default function HallOfFamePage() {
 
                   <div className="text-right">
                     <p className="text-5xl font-black leading-none text-lime-300">
-                      {longestDriveRecords[0].wins}
+                      {longestDriveRecords[0]?.wins ?? 0}
                     </p>
 
                     <p className="text-[8px] font-black uppercase tracking-[0.15em] text-green-200">
@@ -516,11 +621,11 @@ export default function HallOfFamePage() {
                   </p>
 
                   <p className="mt-1 text-4xl font-black">
-                    {longestDriveRecords[0].player}
+                    {longestDriveRecords[0]?.player ?? "—"}
                   </p>
 
                   <div className="mt-4 flex flex-wrap gap-2">
-                    {longestDriveRecords[0].events.map((event) => (
+                    {(longestDriveRecords[0]?.events ?? []).map((event) => (
                       <RecordTag key={event}>
                         {event}
                       </RecordTag>
@@ -537,17 +642,17 @@ export default function HallOfFamePage() {
                 </p>
 
                 <p className="mt-1 text-3xl font-black text-green-950">
-                  {longestDriveRecords[1].player}
+                  {longestDriveRecords[1]?.player ?? "—"}
                 </p>
 
                 <p className="mt-1 text-[10px] font-semibold text-slate-500">
-                  {longestDriveRecords[1].events[0]}
+                  {longestDriveRecords[1]?.events[0] ?? "No other winner yet"}
                 </p>
               </div>
 
               <div className="text-right">
                 <p className="text-5xl font-black leading-none text-green-900">
-                  {longestDriveRecords[1].wins}
+                  {longestDriveRecords[1]?.wins ?? 0}
                 </p>
 
                 <p className="mt-1 text-[8px] font-black uppercase tracking-[0.15em] text-emerald-700">
@@ -577,8 +682,9 @@ export default function HallOfFamePage() {
                 </h2>
 
                 <p className="mt-2 max-w-lg text-xs font-semibold leading-5 text-slate-500">
-                  Eight different winners so far. Nobody has managed
-                  to become the first two-time champion.
+                  {new Set(
+                    closestToPinWinners.map((winner) => winner.player)
+                  ).size} different winners so far.
                 </p>
               </div>
             </div>
@@ -587,7 +693,7 @@ export default function HallOfFamePage() {
           <div className="grid grid-cols-2 md:grid-cols-4">
             {closestToPinWinners.map((winner, index) => (
               <div
-                key={winner.player}
+                key={`${winner.player}-${winner.event}-${index}`}
                 className={`p-4 md:p-5 ${
                   index % 2 === 0
                     ? "border-r border-slate-100"
@@ -641,21 +747,25 @@ export default function HallOfFamePage() {
               </p>
 
               <p className="mt-2 text-3xl font-black">
-                Paul
+                {stablefordRecord?.name ?? "—"}
               </p>
 
               <p className="mt-1 text-xs font-semibold text-slate-400">
-                Carden Park 2026 · Nicklaus
+                {stablefordRecord
+                  ? `${stablefordRecord.event} · ${stablefordRecord.course}`
+                  : "No recorded round"}
               </p>
 
               <p className="mt-2 text-[10px] font-black uppercase tracking-[0.14em] text-slate-300">
-                91 shots
+                {stablefordRecord?.grossScore
+                  ? `${stablefordRecord.grossScore} shots`
+                  : "Gross score unavailable"}
               </p>
             </div>
 
             <div className="text-right">
               <p className="text-6xl font-black leading-none text-lime-300">
-                41
+                {stablefordRecord?.points ?? "—"}
               </p>
 
               <p className="mt-1 text-[9px] font-black uppercase tracking-[0.18em] text-green-200">
@@ -683,7 +793,7 @@ export default function HallOfFamePage() {
               key={group.trips}
               trips={group.trips}
               players={group.players}
-              maxTrips={5}
+              maxTrips={maxTrips}
             />
           ))}
         </div>
