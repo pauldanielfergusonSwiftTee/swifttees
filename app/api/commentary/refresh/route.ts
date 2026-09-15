@@ -88,6 +88,15 @@ type TournamentHole = {
   number?: number | string;
   hole_number?: number | string;
   par?: number | string;
+  yards?: number | string;
+  strokeIndex?: number | string;
+  stroke_index?: number | string;
+};
+
+type TournamentBonusHole = {
+  hole?: number | string;
+  type?: string;
+  points?: number | string;
 };
 
 
@@ -100,6 +109,8 @@ type TournamentRound = {
 
   holes?: TournamentHole[];
   groups?: TournamentGroup[];
+  bonusHoles?: TournamentBonusHole[];
+  bonus_holes?: TournamentBonusHole[];
 };
 
 
@@ -275,6 +286,66 @@ function getHolePar(
     : undefined;
 }
 
+
+function getHoleDetails(
+  tournament: TournamentSetup,
+  roundNumber: number,
+  holeNumber: number
+) {
+  const round = getRound(tournament, roundNumber);
+  const hole = round?.holes?.find(
+    (candidate) => getHoleNumber(candidate) === holeNumber
+  );
+
+  if (!hole) return null;
+
+  const par = toNumber(hole.par);
+  const yards = toNumber(hole.yards);
+  const strokeIndex = toNumber(
+    hole.strokeIndex ?? hole.stroke_index
+  );
+
+  const bonusHoles = round?.bonusHoles ?? round?.bonus_holes ?? [];
+  const bonusTypes = bonusHoles
+    .filter((bonus) => toNumber(bonus.hole) === holeNumber)
+    .map((bonus) => normaliseText(bonus.type).toLowerCase());
+
+  return {
+    holeNumber,
+    par: par > 0 ? par : undefined,
+    yards: yards > 0 ? yards : undefined,
+    strokeIndex: strokeIndex > 0 ? strokeIndex : undefined,
+    isLongestDrive: bonusTypes.some((type) => type.includes("longest")),
+    isClosestToPin: bonusTypes.some(
+      (type) => type.includes("nearest") || type.includes("closest")
+    ),
+  };
+}
+
+function buildCourseContext(
+  tournament: TournamentSetup,
+  roundNumber: number,
+  holeNumber: number,
+  mode: "current" | "next" = "current"
+) {
+  const targetHole = mode === "next" ? holeNumber + 1 : holeNumber;
+  const details = getHoleDetails(tournament, roundNumber, targetHole);
+  if (!details) return "";
+
+  const parts: string[] = [];
+  if (details.par) parts.push(`par ${details.par}`);
+  if (details.yards) parts.push(`${details.yards} yds`);
+
+  // Use stroke index as a factual course descriptor, not a claim that it is
+  // objectively the hardest/easiest hole.
+  if (details.strokeIndex === 1) parts.push("SI 1");
+
+  if (details.isLongestDrive) parts.push("Longest Drive");
+  if (details.isClosestToPin) parts.push("Nearest Pin");
+
+  if (parts.length === 0) return "";
+  return `${mode === "next" ? "Next" : `Hole ${targetHole}`}: ${parts.join(" · ")}.`;
+}
 
 function getTournamentPlayers(
   tournament: TournamentSetup
@@ -853,6 +924,44 @@ function buildTeams(
       ...team,
       pos: index + 1,
     }));
+}
+
+
+/*
+ * Team totals used by the visible Swift Tees leaderboard.
+ *
+ * The on-screen team race is the sum of each player's displayed points.
+ * Keep Hole Complete commentary tied to that same authoritative total so
+ * the notification can never show a different gap from Live Centre.
+ */
+function buildDisplayedTeamTotals(
+  rows: LeaderboardRow[]
+): TeamStanding[] {
+  const teams: Record<string, { team: string; points: number; through: number }> = {};
+
+  rows.forEach((player) => {
+    const teamName = player.team || "No Team";
+
+    if (!teams[teamName]) {
+      teams[teamName] = { team: teamName, points: 0, through: 0 };
+    }
+
+    teams[teamName].points += Number(player.points ?? 0);
+  });
+
+  Object.values(teams).forEach((team) => {
+    const teamPlayers = rows.filter(
+      (player) => (player.team || "No Team") === team.team
+    );
+
+    team.through = teamPlayers.length
+      ? Math.min(...teamPlayers.map((player) => player.through))
+      : 0;
+  });
+
+  return Object.values(teams)
+    .sort((a, b) => b.points - a.points)
+    .map((team, index) => ({ ...team, pos: index + 1 }));
 }
 
 
@@ -1629,12 +1738,18 @@ type PushMessage = {
 };
 
 type PlayerHistory = {
-  individualWins: number;
-  bestStableford: number;
+  individualWins?: number;
+  bestStableford?: number;
+  bestFinish?: number;
+  tripsAttended?: number;
+  longestDrives?: number;
+  closestToPins?: number;
+  previousStablefordScores?: number[];
 };
 
 type StablefordHistory = {
-  allTimeRecord: number;
+  allTimeRecord?: number;
+  loaded: boolean;
 };
 
 type PushStage = {
@@ -1756,13 +1871,7 @@ function getNextHolePar(
   roundNumber: number,
   holeNumber: number
 ) {
-  const round =
-    getRound(tournament, roundNumber);
-
-  return getHolePar(
-    round,
-    holeNumber + 1
-  );
+  return getHoleDetails(tournament, roundNumber, holeNumber + 1)?.par;
 }
 
 function addTournamentPhaseContext(
@@ -1771,156 +1880,109 @@ function addTournamentPhaseContext(
   roundNumber: number,
   holeNumber: number
 ) {
-  const totalHoles =
-    getRoundTotalHoles(
-      tournament,
-      roundNumber
-    );
+  const totalHoles = getRoundTotalHoles(tournament, roundNumber);
+  const remaining = Math.max(0, totalHoles - holeNumber);
+  const next = getHoleDetails(tournament, roundNumber, holeNumber + 1);
 
-  const remaining =
-    Math.max(
-      0,
-      totalHoles - holeNumber
-    );
-
-  if (remaining === 0) {
-    return `${text} Round complete.`;
-  }
-
-  const nextPar =
-    getNextHolePar(
-      tournament,
-      roundNumber,
-      holeNumber
-    );
+  if (remaining === 0) return `${text} Round complete.`;
 
   if (remaining === 1) {
-    return nextPar
-      ? `${text} One to play — par ${nextPar} next.`
+    const nextBits = [
+      next?.par ? `par ${next.par}` : "",
+      next?.yards ? `${next.yards} yds` : "",
+      next?.isLongestDrive ? "Longest Drive" : "",
+      next?.isClosestToPin ? "Nearest Pin" : "",
+    ].filter(Boolean);
+    return nextBits.length
+      ? `${text} One to play — ${nextBits.join(", ")} on 18.`
       : `${text} One to play.`;
   }
 
-  if (remaining <= 3) {
-    return `${text} ${remaining} holes to play.`;
-  }
-
-  if (
-    totalHoles >= 18 &&
-    holeNumber === 9
-  ) {
-    return `${text} Through the turn.`;
-  }
-
+  if (remaining <= 3) return `${text} ${remaining} holes to play.`;
+  if (totalHoles >= 18 && holeNumber === 9) return `${text} Through the turn.`;
   return text;
 }
 
 function buildStablefordHistoryPush(
   row: ScoreRow,
   tournament: TournamentSetup,
+  stablefordScoresBefore: ScoreRow[],
   stablefordScoresAfter: ScoreRow[],
   playerHistory: Record<string, PlayerHistory>,
   stablefordHistory: StablefordHistory
 ): PushMessage | null {
-  if (!row.player_id) {
-    return null;
-  }
+  if (!row.player_id || !stablefordHistory.loaded) return null;
 
-  const playerId =
-    Number(row.player_id);
+  const playerId = Number(row.player_id);
+  const player = tournament.players?.find(
+    (candidate) => Number(candidate.id) === playerId
+  );
+  if (!player) return null;
 
-  const player =
-    tournament.players?.find(
-      (candidate) =>
-        Number(candidate.id) === playerId
-    );
+  const roundNumber = Number(row.round_number);
+  const holeNumber = Number(row.hole_number);
+  const totalHoles = getRoundTotalHoles(tournament, roundNumber);
+  const holesRemaining = Math.max(0, totalHoles - holeNumber);
 
-  if (!player) {
-    return null;
-  }
+  const beforePoints = getStablefordRoundPoints(
+    stablefordScoresBefore, playerId, roundNumber
+  );
+  const roundPoints = getStablefordRoundPoints(
+    stablefordScoresAfter, playerId, roundNumber
+  );
 
-  const roundNumber =
-    Number(row.round_number);
+  const allTimeRecord = stablefordHistory.allTimeRecord ?? 0;
+  const personalBest = playerHistory[player.name]?.bestStableford ?? 0;
 
-  const holeNumber =
-    Number(row.hole_number);
-
-  const totalHoles =
-    getRoundTotalHoles(
-      tournament,
-      roundNumber
-    );
-
-  const holesRemaining =
-    Math.max(
-      0,
-      totalHoles - holeNumber
-    );
-
-  const roundPoints =
-    getStablefordRoundPoints(
-      stablefordScoresAfter,
-      playerId,
-      roundNumber
-    );
-
-  const allTimeRecord =
-    stablefordHistory.allTimeRecord;
-
-  const personalBest =
-    playerHistory[player.name]?.bestStableford ?? 0;
-
+  // Announce records only when this score actually crosses/reaches the mark.
+  // This prevents the same record message repeating on every later hole.
   if (
     allTimeRecord > 0 &&
+    beforePoints <= allTimeRecord &&
     roundPoints > allTimeRecord
   ) {
     return {
       priority: 115,
-      fact:
-        `${player.name} reaches ${roundPoints} pts — a new Swift Tees Stableford record.`,
-      subjectKey:
-        `stableford-record-${playerId}`,
+      fact: `${player.name} reaches ${roundPoints} pts — a new Swift Tees Stableford record.`,
+      subjectKey: `stableford-record-${playerId}-${roundPoints}`,
     };
   }
 
   if (
     allTimeRecord > 0 &&
+    beforePoints < allTimeRecord &&
     roundPoints === allTimeRecord
   ) {
     return {
       priority: 110,
-      fact:
-        `${player.name} reaches ${roundPoints} pts — matching the Swift Tees Stableford record.`,
-      subjectKey:
-        `stableford-record-${playerId}`,
+      fact: `${player.name} reaches ${roundPoints} pts — matching the Swift Tees Stableford record.`,
+      subjectKey: `stableford-record-match-${playerId}-${roundPoints}`,
     };
   }
 
   if (
     allTimeRecord > 0 &&
-    holesRemaining <= 3 &&
-    holesRemaining > 0 &&
+    holesRemaining <= 3 && holesRemaining > 0 &&
+    beforePoints < allTimeRecord - 1 &&
     roundPoints === allTimeRecord - 1
   ) {
     return {
       priority: 96,
-      fact:
-        `${player.name} reaches ${roundPoints} pts — one short of the Swift Tees record.`,
-      subjectKey:
-        `stableford-record-chase-${playerId}`,
+      fact: `${player.name} reaches ${roundPoints} pts — one short of the Swift Tees record.`,
+      subjectKey: `stableford-record-chase-${playerId}-${roundPoints}`,
     };
   }
 
   if (
     holeNumber === totalHoles &&
     personalBest > 0 &&
+    beforePoints <= personalBest &&
     roundPoints > personalBest
   ) {
     return {
       priority: 82,
-      fact:
-        `${player.name} finishes on ${roundPoints} pts — a new personal Swift Tees best.`,
-      subjectKey:
-        `stableford-personal-best-${playerId}`,
+      fact: `${player.name} finishes on ${roundPoints} pts — a new personal Swift Tees best.`,
+      subjectKey: `stableford-personal-best-${playerId}-${roundPoints}`,
     };
   }
 
@@ -1931,18 +1993,50 @@ function buildPlayerHistoryContext(
   playerName: string,
   playerHistory: Record<string, PlayerHistory>
 ) {
-  const wins =
-    playerHistory[playerName]?.individualWins ?? 0;
+  const history = playerHistory[playerName];
+  if (!history || history.individualWins === undefined) return "";
 
-  if (wins <= 0) {
+  if (history.individualWins === 0) {
     return "chasing a first Swift Tees individual win";
   }
+  if (history.individualWins === 1) return "already a Swift Tees winner";
+  return `already a ${history.individualWins}-time Swift Tees winner`;
+}
 
-  if (wins === 1) {
-    return "already a Swift Tees winner";
+function gapToPlayerAhead(
+  standing: { pos: number; points: number },
+  field: Array<{ pos: number; points: number; name?: string; pairNames?: string }>
+) {
+  if (standing.pos <= 1) return null;
+  const ahead = field
+    .filter((candidate) => candidate.pos < standing.pos)
+    .sort((a, b) => b.pos - a.pos)[0];
+  if (!ahead) return null;
+  return {
+    gap: Math.max(0, ahead.points - standing.points),
+    name: ahead.name ?? ahead.pairNames ?? "",
+    pos: ahead.pos,
+  };
+}
+
+function buildRaceGapContext(
+  standing: { pos: number; points: number },
+  field: Array<{ pos: number; points: number; name?: string; pairNames?: string }>
+) {
+  const leaderPoints = field[0]?.points ?? standing.points;
+  const gapToLeader = Math.max(0, leaderPoints - standing.points);
+  if (gapToLeader === 0) return "";
+
+  if (standing.pos === 2) {
+    return `, ${gapToLeader} ${gapToLeader === 1 ? "pt" : "pts"} off the lead`;
   }
 
-  return `already a ${wins}-time Swift Tees winner`;
+  const ahead = gapToPlayerAhead(standing, field);
+  if (ahead && ahead.gap > 0 && ahead.name) {
+    return `, ${ahead.gap} ${ahead.gap === 1 ? "pt" : "pts"} behind ${ahead.name} in ${ordinal(ahead.pos)}`;
+  }
+
+  return `, ${gapToLeader} ${gapToLeader === 1 ? "pt" : "pts"} off the lead`;
 }
 
 function buildPlayerPush(
@@ -1952,107 +2046,59 @@ function buildPlayerPush(
   leaderboardAfter: LeaderboardRow[],
   playerHistory: Record<string, PlayerHistory>
 ): PushMessage | null {
-  if (!row.player_id) {
-    return null;
-  }
+  if (!row.player_id) return null;
 
   const playerId = Number(row.player_id);
-
   const player = tournament.players?.find(
     (candidate) => Number(candidate.id) === playerId
   );
-
-  const before = leaderboardBefore.find(
-    (candidate) => candidate.id === playerId
-  );
-
-  const after = leaderboardAfter.find(
-    (candidate) => candidate.id === playerId
-  );
-
-  if (!player || !after) {
-    return null;
-  }
+  const before = leaderboardBefore.find((candidate) => candidate.id === playerId);
+  const after = leaderboardAfter.find((candidate) => candidate.id === playerId);
+  if (!player || !after) return null;
 
   const achievement = scoreAchievement(row, tournament);
-
-  const achievementVerb =
-    achievement === "eagle"
-      ? "eagles"
-      : achievement === "birdie"
-        ? "birdies"
-        : null;
+  const achievementVerb = achievement === "eagle"
+    ? "eagles"
+    : achievement === "birdie" ? "birdies" : null;
 
   const moved = before ? before.pos - after.pos : 0;
   const leaderPoints = leaderboardAfter[0]?.points ?? after.points;
-  const gapToLeader = Math.max(0, leaderPoints - after.points);
   const isJointLeader =
     after.points === leaderPoints &&
     leaderboardAfter.filter((candidate) => candidate.points === leaderPoints).length > 1;
-
-  const gapContext =
-    gapToLeader > 0
-      ? `, just ${gapToLeader} ${gapToLeader === 1 ? "pt" : "pts"} behind`
-      : "";
+  const wasJointLeader = before
+    ? leaderboardBefore.filter((candidate) => candidate.points === before.points).length > 1 && before.pos === 1
+    : false;
+  const gapContext = buildRaceGapContext(after, leaderboardAfter);
+  const historyContext = buildPlayerHistoryContext(player.name, playerHistory);
 
   let fact = "";
-  let priority = 20;
-
-  if (achievement === "eagle") {
-    priority = 100;
-  } else if (achievement === "birdie") {
-    priority = 90;
-  } else if (
-    before &&
-    before.pos > 1 &&
-    after.pos === 1
-  ) {
-    priority = 85;
-  } else if (moved > 0) {
-    priority = 60 + Math.min(moved, 10);
-  }
+  let priority = achievement === "eagle" ? 100 : achievement === "birdie" ? 90 : 20;
 
   if (achievementVerb) {
-    if (
-      before &&
-      before.pos > 1 &&
-      after.pos === 1 &&
-      !isJointLeader
-    ) {
-      fact = `${player.name} ${achievementVerb} to take the outright lead — ${buildPlayerHistoryContext(
-        player.name,
-        playerHistory
-      )}.`;
-    } else if (isJointLeader && (!before || before.points < leaderPoints)) {
+    if (before && before.pos > 1 && after.pos === 1 && !isJointLeader) {
+      fact = `${player.name} ${achievementVerb} to take the outright lead${historyContext ? ` — ${historyContext}` : ""}.`;
+    } else if (isJointLeader && !wasJointLeader) {
       fact = `${player.name} ${achievementVerb} to join the lead.`;
     } else if (moved > 0) {
       fact = `${player.name} ${achievementVerb} to climb into ${ordinal(after.pos)}${gapContext}.`;
     } else {
       fact = `${player.name} ${achievementVerb} and sits ${ordinal(after.pos)}${gapContext}.`;
     }
-  } else if (
-    before &&
-    before.pos > 1 &&
-    after.pos === 1
-  ) {
-    fact = `${player.name} moves into the lead — ${buildPlayerHistoryContext(
-      player.name,
-      playerHistory
-    )}.`;
+  } else if (before && before.pos > 1 && after.pos === 1) {
+    priority = 85;
+    fact = `${player.name} moves into the lead${historyContext ? ` — ${historyContext}` : ""}.`;
   } else if (moved > 0) {
+    priority = 60 + Math.min(moved, 10);
     fact = `${player.name} moves up ${moved} ${moved === 1 ? "place" : "places"} into ${ordinal(after.pos)}${gapContext}.`;
   } else if (moved < 0) {
-    fact = `${player.name} drops ${Math.abs(moved)} ${Math.abs(moved) === 1 ? "place" : "places"} to ${ordinal(after.pos)}.`;
     priority = 35;
+    fact = `${player.name} drops ${Math.abs(moved)} ${Math.abs(moved) === 1 ? "place" : "places"} to ${ordinal(after.pos)}.`;
   } else {
     return null;
   }
 
-  return {
-    priority,
-    fact,
-    subjectKey: `player-${playerId}`,
-  };
+  return { priority, fact, subjectKey: `player-${playerId}` };
 }
 
 function buildPairPush(
@@ -2061,114 +2107,59 @@ function buildPairPush(
   pairsBefore: PairStanding[],
   pairsAfter: PairStanding[]
 ): PushMessage | null {
-  if (
-    row.player_id ||
-    !row.group_number ||
-    !row.pair_number
-  ) {
-    return null;
-  }
+  if (row.player_id || !row.group_number || !row.pair_number) return null;
 
   const pairInfo = getPairInfo(row, tournament);
-
-  if (
-    !pairInfo.pairNames ||
-    pairInfo.playerIds.length === 0
-  ) {
-    return null;
-  }
+  if (!pairInfo.pairNames || pairInfo.playerIds.length === 0) return null;
 
   const isSinglePlayer = pairInfo.playerIds.length === 1;
-
-  const pairKey = pairInfo.playerIds
-    .slice()
-    .sort((a, b) => a - b)
-    .join("-");
-
-  const before = pairsBefore.find(
-    (pair) => pair.pairKey === pairKey
-  );
-
-  const after = pairsAfter.find(
-    (pair) => pair.pairKey === pairKey
-  );
-
-  if (!after) {
-    return null;
-  }
+  const pairKey = pairInfo.playerIds.slice().sort((a, b) => a - b).join("-");
+  const before = pairsBefore.find((pair) => pair.pairKey === pairKey);
+  const after = pairsAfter.find((pair) => pair.pairKey === pairKey);
+  if (!after) return null;
 
   const achievement = scoreAchievement(row, tournament);
   const moved = before ? before.pos - after.pos : 0;
   const leaderPoints = pairsAfter[0]?.points ?? after.points;
-  const gapToLeader = Math.max(0, leaderPoints - after.points);
   const isJointLeader =
     after.points === leaderPoints &&
     pairsAfter.filter((pair) => pair.points === leaderPoints).length > 1;
+  const wasJointLeader = before
+    ? pairsBefore.filter((pair) => pair.points === before.points).length > 1 && before.pos === 1
+    : false;
+  const gapContext = buildRaceGapContext(after, pairsAfter);
 
-  const achievementVerb =
-    achievement === "eagle"
-      ? isSinglePlayer ? "eagles" : "eagle"
-      : achievement === "birdie"
-        ? isSinglePlayer ? "birdies" : "birdie"
-        : null;
-
+  const achievementVerb = achievement === "eagle"
+    ? (isSinglePlayer ? "eagles" : "eagle")
+    : achievement === "birdie" ? (isSinglePlayer ? "birdies" : "birdie") : null;
   const sitVerb = isSinglePlayer ? "sits" : "sit";
   const moveVerb = isSinglePlayer ? "moves" : "move";
   const takeVerb = isSinglePlayer ? "takes" : "take";
-  const gapContext =
-    gapToLeader > 0
-      ? `, just ${gapToLeader} ${gapToLeader === 1 ? "pt" : "pts"} behind`
-      : "";
 
   let fact = "";
-  let priority = 20;
-
-  if (achievement === "eagle") {
-    priority = 100;
-  } else if (achievement === "birdie") {
-    priority = 90;
-  } else if (
-    before &&
-    before.pos > 1 &&
-    after.pos === 1
-  ) {
-    priority = 85;
-  } else if (moved > 0) {
-    priority = 60 + Math.min(moved, 10);
-  }
+  let priority = achievement === "eagle" ? 100 : achievement === "birdie" ? 90 : 20;
 
   if (achievementVerb) {
-    if (
-      before &&
-      before.pos > 1 &&
-      after.pos === 1 &&
-      !isJointLeader
-    ) {
+    if (before && before.pos > 1 && after.pos === 1 && !isJointLeader) {
       fact = `${pairInfo.pairNames} ${achievementVerb} to take the outright lead.`;
-    } else if (isJointLeader && (!before || before.points < leaderPoints)) {
+    } else if (isJointLeader && !wasJointLeader) {
       fact = `${pairInfo.pairNames} ${achievementVerb} to join the lead.`;
     } else if (moved > 0) {
       fact = `${pairInfo.pairNames} ${achievementVerb} to climb into ${ordinal(after.pos)}${gapContext}.`;
     } else {
       fact = `${pairInfo.pairNames} ${achievementVerb} and ${sitVerb} ${ordinal(after.pos)}${gapContext}.`;
     }
-  } else if (
-    before &&
-    before.pos > 1 &&
-    after.pos === 1
-  ) {
+  } else if (before && before.pos > 1 && after.pos === 1) {
+    priority = 85;
     fact = `${pairInfo.pairNames} ${takeVerb} the lead.`;
   } else if (moved > 0) {
+    priority = 60 + Math.min(moved, 10);
     fact = `${pairInfo.pairNames} ${moveVerb} up ${moved} ${moved === 1 ? "place" : "places"} into ${ordinal(after.pos)}${gapContext}.`;
   } else {
     return null;
   }
 
-  return {
-    priority,
-    fact,
-    subjectKey: `pair-${pairKey}`,
-  };
+  return { priority, fact, subjectKey: `pair-${pairKey}` };
 }
 
 function buildTeamLeadPush(
@@ -2307,6 +2298,7 @@ function buildPushSummary({
   pairsBefore,
   pairsAfter,
   playerHistory,
+  stablefordScoresBefore,
   stablefordScoresAfter,
   stablefordHistory,
 }: {
@@ -2321,6 +2313,7 @@ function buildPushSummary({
   pairsBefore: PairStanding[];
   pairsAfter: PairStanding[];
   playerHistory: Record<string, PlayerHistory>;
+  stablefordScoresBefore: ScoreRow[];
   stablefordScoresAfter: ScoreRow[];
   stablefordHistory: StablefordHistory;
 }) {
@@ -2332,6 +2325,7 @@ function buildPushSummary({
         buildStablefordHistoryPush(
           row,
           tournament,
+          stablefordScoresBefore,
           stablefordScoresAfter,
           playerHistory,
           stablefordHistory
@@ -2411,13 +2405,26 @@ function buildPushSummary({
         : null
     );
 
-  const base =
-    addTournamentPhaseContext(
-      primary.fact,
-      tournament,
-      Number(rows[0]?.round_number ?? 0),
-      holeNumber
-    );
+  const roundNumber = Number(rows[0]?.round_number ?? 0);
+  let contextualFact = primary.fact;
+  const currentHole = getHoleDetails(tournament, roundNumber, holeNumber);
+
+  // Course context is deliberately selective so lock-screen pushes stay useful.
+  // Bonus holes and SI 1 are notable enough to surface immediately.
+  if (currentHole?.isLongestDrive) {
+    contextualFact = `${contextualFact} Longest Drive hole.`;
+  } else if (currentHole?.isClosestToPin) {
+    contextualFact = `${contextualFact} Nearest Pin hole.`;
+  } else if (currentHole?.strokeIndex === 1 && currentHole.par) {
+    contextualFact = `${contextualFact} Par ${currentHole.par}, SI 1.`;
+  }
+
+  const base = addTournamentPhaseContext(
+    contextualFact,
+    tournament,
+    roundNumber,
+    holeNumber
+  );
 
   if (!second) {
     return capPushText(base);
@@ -2431,6 +2438,64 @@ function buildPushSummary({
   }
 
   return capPushText(base);
+}
+
+
+function buildGroupPushSummary({
+  rows,
+  tournament,
+  holeNumber,
+}: {
+  rows: ScoreRow[];
+  tournament: TournamentSetup;
+  holeNumber: number;
+}) {
+  const facts: string[] = [];
+
+  for (const row of rows) {
+    const gross = Number(row.gross_score ?? 0);
+    if (!gross) continue;
+
+    const round = getRound(tournament, Number(row.round_number));
+    const par = getHolePar(round, holeNumber);
+    const achievement = scoreAchievement(row, tournament);
+
+    let subject = "";
+    let singular = true;
+
+    if (row.player_id) {
+      const player = tournament.players?.find(
+        (candidate) => Number(candidate.id) === Number(row.player_id)
+      );
+      subject = player?.name ?? "";
+    } else {
+      const pairInfo = getPairInfo(row, tournament);
+      subject = pairInfo.pairNames;
+      singular = pairInfo.playerIds.length === 1;
+    }
+
+    if (!subject) continue;
+
+    let result = "";
+    if (achievement === "eagle") {
+      result = singular ? "eagles" : "eagle";
+    } else if (achievement === "birdie") {
+      result = singular ? "birdies" : "birdie";
+    } else if (par && gross === par) {
+      result = singular ? "makes par" : "make par";
+    } else if (par && gross === par + 1) {
+      result = singular ? "makes bogey" : "make bogey";
+    } else if (par && gross === par + 2) {
+      result = singular ? "makes double bogey" : "make double bogey";
+    } else {
+      result = singular ? `scores ${gross}` : `score ${gross}`;
+    }
+
+    facts.push(`${subject} ${result}.`);
+  }
+
+  if (!facts.length) return null;
+  return capPushText(facts.join(" "));
 }
 
 function getRoundTotalGroups(
@@ -2493,6 +2558,70 @@ function getReportedGroupNumbers(
   });
 
   return groups;
+}
+
+function getCompletedGroupNumbers(
+  tournament: TournamentSetup,
+  stablefordScores: ScoreRow[],
+  scrambleScores: ScoreRow[],
+  roundNumber: number,
+  holeNumber: number
+) {
+  const round = getRound(tournament, roundNumber);
+  const completed = new Set<number>();
+
+  for (const group of round?.groups ?? []) {
+    const groupNumber = getGroupNumber(group);
+    if (groupNumber <= 0) continue;
+
+    const expectedPairs = (group.pairs ?? [])
+      .map(getPairNumber)
+      .filter((pairNumber) => pairNumber > 0);
+
+    if (expectedPairs.length > 0) {
+      const savedPairs = new Set(
+        scrambleScores
+          .filter(
+            (row) =>
+              Number(row.round_number) === roundNumber &&
+              Number(row.hole_number) === holeNumber &&
+              Number(row.group_number) === groupNumber
+          )
+          .map((row) => Number(row.pair_number))
+          .filter((pairNumber) => pairNumber > 0)
+      );
+
+      if (expectedPairs.every((pairNumber) => savedPairs.has(pairNumber))) {
+        completed.add(groupNumber);
+      }
+
+      continue;
+    }
+
+    const expectedPlayers = (group.players ?? [])
+      .map((player) => Number(player.player_id ?? player.id))
+      .filter((playerId) => Number.isFinite(playerId) && playerId > 0);
+
+    if (expectedPlayers.length > 0) {
+      const savedPlayers = new Set(
+        stablefordScores
+          .filter(
+            (row) =>
+              Number(row.round_number) === roundNumber &&
+              Number(row.hole_number) === holeNumber &&
+              Number(row.group_number) === groupNumber
+          )
+          .map((row) => Number(row.player_id))
+          .filter((playerId) => Number.isFinite(playerId) && playerId > 0)
+      );
+
+      if (expectedPlayers.every((playerId) => savedPlayers.has(playerId))) {
+        completed.add(groupNumber);
+      }
+    }
+  }
+
+  return completed;
 }
 
 function getPushStage({
@@ -2592,20 +2721,20 @@ async function reservePushCheckpoint(
     eventSlug,
     roundNumber,
     holeNumber,
-    stage,
+    checkpointKey,
     message,
   }: {
     eventSlug: string;
     roundNumber: number;
     holeNumber: number;
-    stage: 1 | 2;
+    checkpointKey: string;
     message: string;
   }
 ) {
   const checkpoint: LiveMomentRow = {
     event_slug: eventSlug,
     moment_key:
-      `push-hole-${roundNumber}-${holeNumber}-stage-${stage}`,
+      `push-hole-${roundNumber}-${holeNumber}-${checkpointKey}`,
     moment_type:
       "push_checkpoint",
     player_id: null,
@@ -2803,20 +2932,15 @@ export async function POST(
       );
 
 
-    if (
-      changedRows.length === 0
-    ) {
-      return NextResponse.json({
-        success: true,
-
-        message:
-          "No scoring changes detected",
-
-        changedRows: 0,
-        createdMoments: 0,
-        pushed: 0,
-      });
-    }
+    /*
+     * Do not return early when a score is re-saved unchanged.
+     *
+     * Push publication is recovered from the authoritative rows currently
+     * in Supabase plus durable checkpoints. This means a completed group
+     * whose push was missed can be published on the next refresh without
+     * changing the golf score again. Normal commentary moments still use
+     * changedRows, so unchanged scores do not create duplicate moments.
+     */
 
 
     /*
@@ -2826,8 +2950,10 @@ export async function POST(
       scoresResult,
       scrambleResult,
       momentsResult,
-      historyWinsResult,
+      historyAchievementsResult,
       historicalStablefordResult,
+      attendanceResult,
+      baselineResult,
     ] =
       await Promise.all([
         supabase
@@ -2869,17 +2995,19 @@ export async function POST(
 
         supabase
           .from("event_achievements")
-          .select("player_name")
-          .eq(
-            "achievement_type",
-            "individual_win"
-          ),
+          .select("player_name,achievement_type"),
 
         supabase
           .from("overall_results")
-          .select(
-            "player_name,stableford_points"
-          ),
+          .select("event_slug,round_number,player_name,stableford_points"),
+
+        supabase
+          .from("event_attendance")
+          .select("event_slug,player_name"),
+
+        supabase
+          .from("player_history_baseline")
+          .select("player_name,legacy_trips"),
       ]);
 
 
@@ -2899,39 +3027,32 @@ export async function POST(
 
     const playerHistory: Record<string, PlayerHistory> = {};
     const stablefordHistory: StablefordHistory = {
-      allTimeRecord: 0,
+      allTimeRecord: undefined,
+      loaded: !historicalStablefordResult.error,
     };
 
-    if (historyWinsResult.error) {
-      /*
-       * Historical context is optional enrichment.
-       * If it cannot be loaded, live scoring and pushes
-       * continue normally without blocking the save.
-       */
+    const ensureHistory = (playerName: string) => {
+      if (!playerHistory[playerName]) playerHistory[playerName] = {};
+      return playerHistory[playerName];
+    };
+
+    if (historyAchievementsResult.error) {
       console.error(
-        "Could not load player win history for commentary:",
-        historyWinsResult.error
+        "Could not load achievement history for commentary:",
+        historyAchievementsResult.error
       );
     } else {
-      for (const row of historyWinsResult.data ?? []) {
-        const playerName =
-          normaliseText(row.player_name);
+      const knownPlayers = getTournamentPlayers(tournament).map((player) => player.name);
+      for (const playerName of knownPlayers) ensureHistory(playerName).individualWins = 0;
 
-        if (!playerName) {
-          continue;
-        }
-
-        const existing =
-          playerHistory[playerName] ?? {
-            individualWins: 0,
-            bestStableford: 0,
-          };
-
-        playerHistory[playerName] = {
-          ...existing,
-          individualWins:
-            existing.individualWins + 1,
-        };
+      for (const row of historyAchievementsResult.data ?? []) {
+        const playerName = normaliseText(row.player_name);
+        const type = normaliseText(row.achievement_type);
+        if (!playerName) continue;
+        const history = ensureHistory(playerName);
+        if (type === "individual_win") history.individualWins = (history.individualWins ?? 0) + 1;
+        if (type === "longest_drive") history.longestDrives = (history.longestDrives ?? 0) + 1;
+        if (type === "closest_to_pin") history.closestToPins = (history.closestToPins ?? 0) + 1;
       }
     }
 
@@ -2941,47 +3062,62 @@ export async function POST(
         historicalStablefordResult.error
       );
     } else {
-      for (
-        const row of
-        historicalStablefordResult.data ?? []
-      ) {
-        const playerName =
-          normaliseText(row.player_name);
+      const rounds = new Map<string, Array<{ playerName: string; points: number }>>();
 
-        const points =
-          Number(row.stableford_points ?? 0);
+      for (const row of historicalStablefordResult.data ?? []) {
+        const playerName = normaliseText(row.player_name);
+        const points = Number(row.stableford_points ?? 0);
+        if (!playerName || !Number.isFinite(points) || points <= 0) continue;
 
-        if (
-          !playerName ||
-          !Number.isFinite(points) ||
-          points <= 0
-        ) {
-          continue;
+        stablefordHistory.allTimeRecord = Math.max(stablefordHistory.allTimeRecord ?? 0, points);
+        const history = ensureHistory(playerName);
+        history.bestStableford = Math.max(history.bestStableford ?? 0, points);
+        history.previousStablefordScores = [...(history.previousStablefordScores ?? []), points];
+
+        const key = `${normaliseText(row.event_slug)}-${Number(row.round_number ?? 0)}`;
+        const roundRows = rounds.get(key) ?? [];
+        roundRows.push({ playerName, points });
+        rounds.set(key, roundRows);
+      }
+
+      for (const roundRows of rounds.values()) {
+        const sorted = [...roundRows].sort((a, b) => b.points - a.points);
+        for (const item of sorted) {
+          const position = 1 + sorted.filter((other) => other.points > item.points).length;
+          const history = ensureHistory(item.playerName);
+          history.bestFinish = history.bestFinish
+            ? Math.min(history.bestFinish, position)
+            : position;
         }
-
-        stablefordHistory.allTimeRecord =
-          Math.max(
-            stablefordHistory.allTimeRecord,
-            points
-          );
-
-        const existing =
-          playerHistory[playerName] ?? {
-            individualWins: 0,
-            bestStableford: 0,
-          };
-
-        playerHistory[playerName] = {
-          ...existing,
-          bestStableford:
-            Math.max(
-              existing.bestStableford,
-              points
-            ),
-        };
       }
     }
 
+    if (attendanceResult.error) {
+      console.error("Could not load attendance history for commentary:", attendanceResult.error);
+    } else {
+      const attended = new Map<string, Set<string>>();
+      for (const row of attendanceResult.data ?? []) {
+        const playerName = normaliseText(row.player_name);
+        const event = normaliseText(row.event_slug);
+        if (!playerName || !event) continue;
+        if (!attended.has(playerName)) attended.set(playerName, new Set());
+        attended.get(playerName)!.add(event);
+      }
+      for (const [playerName, events] of attended) {
+        ensureHistory(playerName).tripsAttended = events.size;
+      }
+    }
+
+    if (baselineResult.error) {
+      console.error("Could not load legacy trip history for commentary:", baselineResult.error);
+    } else {
+      for (const row of baselineResult.data ?? []) {
+        const playerName = normaliseText(row.player_name);
+        if (!playerName) continue;
+        const history = ensureHistory(playerName);
+        history.tripsAttended = (history.tripsAttended ?? 0) + Number(row.legacy_trips ?? 0);
+      }
+    }
 
     const currentStablefordScores =
       (
@@ -3428,252 +3564,301 @@ export async function POST(
 
 
     /*
-     * Notification rhythm:
+     * Notification rhythm — one published update per scoring group,
+     * followed by one separate hole-complete summary.
      *
-     * 1 tee time:
-     *   -> one notification for the hole.
+     * Examples:
+     *   1 group  -> Group 1, Hole Complete
+     *   2 groups -> Group 1, Group 2, Hole Complete
+     *   3 groups -> Group 1, Group 2, Group 3, Hole Complete
      *
-     * 2 or 3 tee times:
-     *   -> first update after the first group reports.
-     *   -> second/final update only after every group
-     *      has reported the hole.
-     *
-     * For 3 tee times, the middle group deliberately sends no push.
+     * Each item has its own durable checkpoint, so re-saving/editing scores
+     * for a group cannot resend that group's notification. The final summary
+     * has a different checkpoint and is only available once every configured
+     * group has reported on the hole.
      */
-    if (changedRows.length > 0) {
-      const pushStage =
-        getPushStage({
+    {
+      const totalGroups =
+        getRoundTotalGroups(
           tournament,
+          roundNumber
+        );
+
+      /*
+       * A group is complete only when every configured scoring unit for
+       * that group has an authoritative saved row on this hole. For the
+       * Worsley scramble this means every configured pair number exists in
+       * scramble_scores. This deliberately does not infer completion from
+       * how many other groups have reported.
+       */
+      const completedGroupNumbers =
+        getCompletedGroupNumbers(
+          tournament,
+          currentStablefordScores,
+          currentScrambleScores,
           roundNumber,
-          holeNumber,
-          stablefordScores:
-            currentStablefordScores,
-          scrambleScores:
-            currentScrambleScores,
-        });
+          holeNumber
+        );
 
-      if (pushStage) {
-        let summaryRows =
-          changedRows;
+      let groupPushPublishedThisRequest = false;
 
-        let summaryLeaderboardBefore =
-          leaderboardBefore;
-
-        let summaryLeaderboardAfter =
-          leaderboardAfter;
-
-        let summaryTeamsBefore =
-          teamsBefore;
-
-        let summaryTeamsAfter =
-          teamsAfter;
-
-        let summaryPairsBefore =
-          pairsBefore;
-
-        let summaryPairsAfter =
-          pairsAfter;
-
-        /*
-         * The final notification compares the whole
-         * field before Hole X with the whole field
-         * after Hole X. That lets it summarise all
-         * tee times, rather than only the final group.
-         */
-        if (pushStage.isFinal) {
-          const stablefordAtHoleStart =
-            rowsBeforeWholeHole(
-              currentStablefordScores,
+      const publishPush = async ({
+        checkpointKey,
+        archiveKey,
+        title,
+        message,
+      }: {
+        checkpointKey: string;
+        archiveKey: string;
+        title: string;
+        message: string;
+      }) => {
+        const reserved =
+          await reservePushCheckpoint(
+            supabase,
+            {
+              eventSlug,
               roundNumber,
-              holeNumber
-            );
+              holeNumber,
+              checkpointKey,
+              message,
+            }
+          );
 
-          const scrambleAtHoleStart =
-            rowsBeforeWholeHole(
-              currentScrambleScores,
-              roundNumber,
-              holeNumber
-            );
-
-          const leaderboardAtHoleStart =
-            buildLeaderboard(
-              stablefordAtHoleStart,
-              scrambleAtHoleStart,
-              tournament,
-              roundNumber
-            );
-
-          const leaderboardAtHoleEnd =
-            addMovements(
-              leaderboardAfterBase,
-              leaderboardAtHoleStart
-            );
-
-          summaryLeaderboardBefore =
-            leaderboardAtHoleStart;
-
-          summaryLeaderboardAfter =
-            leaderboardAtHoleEnd;
-
-          summaryTeamsBefore =
-            teamEvent
-              ? buildTeams(
-                  leaderboardAtHoleStart
-                )
-              : [];
-
-          summaryTeamsAfter =
-            teamEvent
-              ? buildTeams(
-                  leaderboardAtHoleEnd
-                )
-              : [];
-
-          summaryPairsBefore =
-            buildPairStandings(
-              scrambleAtHoleStart,
-              tournament,
-              roundNumber
-            );
-
-          summaryPairsAfter =
-            buildPairStandings(
-              currentScrambleScores,
-              tournament,
-              roundNumber
-            );
-
-          summaryRows = [
-            ...rowsOnHole(
-              currentStablefordScores,
-              roundNumber,
-              holeNumber
-            ),
-            ...rowsOnHole(
-              currentScrambleScores,
-              roundNumber,
-              holeNumber
-            ),
-          ];
+        if (!reserved) {
+          return;
         }
 
-        const pushMessage =
+        /*
+         * Keep the checkpoint even while the emergency switch is OFF.
+         * That prevents an old group/final alert firing later when live
+         * notifications are switched back on.
+         */
+        if (!livePushesEnabled) {
+          console.log(
+            `Automatic live push suppressed for ${eventSlug} — Hole ${holeNumber}, ${checkpointKey}.`
+          );
+          return;
+        }
+
+        await saveMoment(
+          supabase,
+          {
+            event_slug: eventSlug,
+            moment_key:
+              `push-notification-${roundNumber}-${holeNumber}-${archiveKey}`,
+            moment_type:
+              "push_notification",
+            player_id: null,
+            player_name: null,
+            team: null,
+            round_number: roundNumber,
+            hole_number: holeNumber,
+            icon: "⛳",
+            title,
+            text: message,
+            rarity: "common",
+          }
+        );
+
+        try {
+          const result =
+            await sendPushToAll({
+              title: `⛳ ${title}`,
+              message,
+              url: "/live-centre",
+              eventSlug,
+              roundNumber,
+              category: "live",
+            });
+
+          console.log(
+            `Automatic live push ${checkpointKey} for ${eventSlug} Hole ${holeNumber}:`,
+            result
+          );
+
+          if (result.sent > 0) {
+            pushed += 1;
+          }
+        } catch (error) {
+          console.error(
+            "Automatic commentary push failed:",
+            error
+          );
+        }
+      };
+
+      /*
+       * GROUP UPDATE
+       *
+       * The Save Hole request is a single round/group/hole batch, so the
+       * changed rows describe the group that has just reported. This update
+       * uses the normal before/after context and therefore talks about what
+       * that group has just done and its immediate leaderboard/team impact.
+       */
+      for (const groupNumber of [...completedGroupNumbers].sort((a, b) => a - b)) {
+        const groupRows = [
+          ...currentStablefordScores,
+          ...currentScrambleScores,
+        ].filter(
+          (row) =>
+            Number(row.round_number) === roundNumber &&
+            Number(row.hole_number) === holeNumber &&
+            Number(row.group_number) === groupNumber
+        );
+
+        const groupMessage =
+          buildGroupPushSummary({
+            rows: groupRows,
+            tournament,
+            holeNumber,
+          });
+
+        if (groupMessage) {
+          const pushedBefore = pushed;
+
+          await publishPush({
+            checkpointKey: `group-${groupNumber}`,
+            archiveKey: `group-${groupNumber}`,
+            title: `Hole ${holeNumber} · Group ${groupNumber}`,
+            message: groupMessage,
+          });
+
+          if (pushed > pushedBefore) {
+            groupPushPublishedThisRequest = true;
+          }
+        }
+      }
+
+      /*
+       * HOLE-COMPLETE UPDATE
+       *
+       * This is deliberately a separate publication from the final group's
+       * update. It compares the whole field before this hole with the whole
+       * field after it, then labels the message as the hole conclusion. This
+       * gives the phone/archive a clear group-by-group story followed by the
+       * overall state of the tournament.
+       */
+      if (
+        totalGroups > 0 &&
+        completedGroupNumbers.size >= totalGroups
+      ) {
+        const stablefordAtHoleStart =
+          rowsBeforeWholeHole(
+            currentStablefordScores,
+            roundNumber,
+            holeNumber
+          );
+
+        const scrambleAtHoleStart =
+          rowsBeforeWholeHole(
+            currentScrambleScores,
+            roundNumber,
+            holeNumber
+          );
+
+        const leaderboardAtHoleStart =
+          buildLeaderboard(
+            stablefordAtHoleStart,
+            scrambleAtHoleStart,
+            tournament,
+            roundNumber
+          );
+
+        const leaderboardAtHoleEnd =
+          addMovements(
+            leaderboardAfterBase,
+            leaderboardAtHoleStart
+          );
+
+        const teamsAtHoleStart =
+          teamEvent
+            ? buildDisplayedTeamTotals(
+                leaderboardAtHoleStart
+              )
+            : [];
+
+        const teamsAtHoleEnd =
+          teamEvent
+            ? buildDisplayedTeamTotals(
+                leaderboardAtHoleEnd
+              )
+            : [];
+
+        const pairsAtHoleStart =
+          buildPairStandings(
+            scrambleAtHoleStart,
+            tournament,
+            roundNumber
+          );
+
+        const pairsAtHoleEnd =
+          buildPairStandings(
+            currentScrambleScores,
+            tournament,
+            roundNumber
+          );
+
+        const wholeHoleRows = [
+          ...rowsOnHole(
+            currentStablefordScores,
+            roundNumber,
+            holeNumber
+          ),
+          ...rowsOnHole(
+            currentScrambleScores,
+            roundNumber,
+            holeNumber
+          ),
+        ];
+
+        const finalSummary =
           buildPushSummary({
-            rows:
-              summaryRows,
+            rows: wholeHoleRows,
             tournament,
             holeNumber,
             teamEvent,
             leaderboardBefore:
-              summaryLeaderboardBefore,
+              leaderboardAtHoleStart,
             leaderboardAfter:
-              summaryLeaderboardAfter,
+              leaderboardAtHoleEnd,
             teamsBefore:
-              summaryTeamsBefore,
+              teamsAtHoleStart,
             teamsAfter:
-              summaryTeamsAfter,
+              teamsAtHoleEnd,
             pairsBefore:
-              summaryPairsBefore,
+              pairsAtHoleStart,
             pairsAfter:
-              summaryPairsAfter,
+              pairsAtHoleEnd,
             playerHistory,
+            stablefordScoresBefore:
+              stablefordAtHoleStart,
             stablefordScoresAfter:
               currentStablefordScores,
             stablefordHistory,
           });
 
-        if (pushMessage) {
-          const reserved =
-            await reservePushCheckpoint(
-              supabase,
-              {
-                eventSlug,
-                roundNumber,
-                holeNumber,
-                stage:
-                  pushStage.stage,
-                message:
-                  pushMessage,
-              }
+        if (finalSummary) {
+          if (groupPushPublishedThisRequest) {
+            await new Promise((resolve) => setTimeout(resolve, 1200));
+          }
+
+          const finalMessage =
+            capPushText(
+              `Hole ${holeNumber} complete. ${finalSummary}`
             );
 
-          if (reserved) {
-            /*
-             * Even while the emergency switch is OFF we deliberately keep
-             * the checkpoint that was just reserved. This marks this exact
-             * hole/stage as handled, so an old alert cannot suddenly fire
-             * later after notifications are switched back ON.
-             */
-            if (!livePushesEnabled) {
-              console.log(
-                `Automatic live push suppressed for ${eventSlug} — Hole ${holeNumber}, stage ${pushStage.stage}.`
-              );
-            } else {
-              /*
-               * Save the exact published notification text as the permanent
-               * tournament commentary archive. Internal push_checkpoint rows
-               * stay separate and hidden from the Live Centre feed.
-               */
-              await saveMoment(
-                supabase,
-                {
-                  event_slug:
-                    eventSlug,
-                  moment_key:
-                    `push-notification-${roundNumber}-${holeNumber}-stage-${pushStage.stage}`,
-                  moment_type:
-                    "push_notification",
-                  player_id:
-                    null,
-                  player_name:
-                    null,
-                  team:
-                    null,
-                  round_number:
-                    roundNumber,
-                  hole_number:
-                    holeNumber,
-                  icon:
-                    "⛳",
-                  title:
-                    `Hole ${holeNumber}`,
-                  text:
-                    pushMessage,
-                  rarity:
-                    "common",
-                }
-              );
-
-              try {
-                const result =
-                  await sendPushToAll({
-                    title:
-                      `⛳ Hole ${holeNumber}`,
-                    message:
-                      pushMessage,
-                    url:
-                      "/live-centre",
-                    eventSlug,
-                    roundNumber,
-                    category:
-                      "live",
-                  });
-
-                if (result.sent > 0) {
-                  pushed += 1;
-                }
-              } catch (error) {
-                console.error(
-                  "Automatic commentary push failed:",
-                  error
-                );
-              }
-            }
-          }
+          await publishPush({
+            checkpointKey: "complete",
+            archiveKey: "complete",
+            title:
+              `Hole ${holeNumber} Complete`,
+            message:
+              finalMessage,
+          });
         }
       }
     }
-
 
     return NextResponse.json({
       success: true,

@@ -29,7 +29,7 @@ const moreLinks = [
     icon: "🔊",
   },
   {
-    title: "Notifications",
+    title: "Manage Notifications",
     description:
       "Choose which tournaments and rounds send alerts to this device.",
     href: "/notifications",
