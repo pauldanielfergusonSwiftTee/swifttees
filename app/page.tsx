@@ -70,7 +70,7 @@ export default function Home() {
           <div className="flex items-center justify-between gap-4">
             <Image src="/swiftteeslogo.png" alt="Swift Tees" width={100} height={50} priority className="h-auto w-24" />
             <span className="rounded-full border border-green-300/40 bg-green-800/85 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.16em] backdrop-blur-sm sm:text-xs">
-              Our next escape
+              Up Next...
             </span>
           </div>
 
@@ -81,7 +81,7 @@ export default function Home() {
                 Worsley <span className="block text-green-300">Park.</span>
               </h1>
               <div className="max-w-sm lg:pb-2">
-                <p className="text-xl font-semibold leading-snug sm:text-2xl">Two rounds. One night away.<br />Another weekend together.</p>
+                <p className="text-xl font-semibold leading-snug sm:text-2xl">Two rounds. One Weekend.<br />Who will top the Leaderboard?</p>
                 <p className="mt-3 text-sm leading-6 text-white/70">The teams are drawn. The first tee is waiting.</p>
               </div>
             </div>
@@ -96,7 +96,7 @@ export default function Home() {
               <p className="text-xs text-white/70">Sunday · 13:00 UK time</p>
             </div>
             {hasStarted ? (
-              <p className="py-3 text-3xl font-black tracking-tight sm:text-5xl">Time to make some memories.</p>
+              <p className="py-3 text-3xl font-black tracking-tight sm:text-5xl">Time to enjoy the weekend.</p>
             ) : (
               <div role="timer" aria-label="Time until the first tee" className="grid grid-cols-4 divide-x divide-white/20">
                 <CountdownNumber value={countdown?.days} label="Days" />
@@ -108,7 +108,7 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col gap-5 pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-white/75">36 holes <span className="mx-2 text-white/35">/</span> 3 teams <span className="mx-2 text-white/35">/</span> 1 night away</p>
+            <p className="text-sm text-white/75">36 holes <span className="mx-2 text-white/35">/</span> 3 teams <span className="mx-2 text-white/35">/</span> 1 weekend</p>
             <a href="/events/worsley-park-september-2026" className="inline-flex items-center justify-between gap-10 rounded-xl bg-green-400 px-6 py-4 font-bold text-[#092e24] transition hover:bg-green-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
               Weekend details <span aria-hidden="true">↗</span>
             </a>
@@ -160,7 +160,7 @@ export default function Home() {
                 And that&apos;s before we get to the 309-yard
                 longest drive, Liam&apos;s evolving relationship with
                 beer, Adam&apos;s steak-related medical emergency
-                and the environmental incident involving Wrighty
+                and the environmental incidents involving Wrighty
                 and Phil.
               </p>
 
@@ -206,7 +206,7 @@ export default function Home() {
 
               <div className="absolute bottom-5 left-5">
                 <span className="rounded-full bg-white px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-950 shadow">
-                  🏆 White Team Champions
+                  🏆 THe Champions
                 </span>
               </div>
 
@@ -234,7 +234,7 @@ export default function Home() {
 
               <p className="mt-2 max-w-2xl text-slate-600">
                 A few moments from two days of golf,
-                questionable decisions and another memorable
+                questionable golf and another memorable
                 Swift Tees weekend.
               </p>
 
@@ -278,7 +278,7 @@ export default function Home() {
                   <p className="mt-2 max-w-xl text-2xl font-black leading-tight text-white md:text-4xl">
                     The golf mattered.
                     <span className="block text-lime-300">
-                      The weekend mattered more.
+                      Seeing your mates mattered more.
                     </span>
                   </p>
 
