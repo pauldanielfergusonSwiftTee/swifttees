@@ -1290,13 +1290,11 @@ const scramblePairStandings =
       const icon = bonusIconForType(bonus.bonus_type);
 
       if (icon) {
-        bonusIconsByPlayerName[bonus.winner_player_name] = Array.from(
-          new Set([
-            ...(bonusIconsByPlayerName[bonus.winner_player_name] ?? []),
-            icon,
-          ])
-        );
-      }
+  bonusIconsByPlayerName[bonus.winner_player_name] = [
+    ...(bonusIconsByPlayerName[bonus.winner_player_name] ?? []),
+    icon,
+  ];
+}
     });
 
     scrambleScores.forEach((scrambleScore: any) => {
