@@ -278,7 +278,7 @@ export default function Home() {
                   <p className="mt-2 max-w-xl text-2xl font-black leading-tight text-white md:text-4xl">
                     The golf mattered.
                     <span className="block text-lime-300">
-                      Seeing your mates mattered more.
+                      The Weekend mattered more.
                     </span>
                   </p>
 
@@ -388,7 +388,7 @@ export default function Home() {
               {
                 title: "Hall of Fame",
                 description: "Champions, records, legends and achievements of varying credibility.",
-                action: "Enter the Hall",
+                action: "See the Winners",
                 href: "/hall-of-fame",
                 image: "/images/carden-park-2026/winnerswhites.jpg",
                 theme: "bg-[#112820] text-white border-green-900 hover:border-green-400",
