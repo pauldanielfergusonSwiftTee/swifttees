@@ -1707,48 +1707,62 @@ export default function LiveScoringPage() {
         ====================================================== */}
 
         <section className="overflow-hidden rounded-[1.7rem] bg-[#043b25] text-white shadow-[0_10px_30px_rgba(3,46,30,0.15)] ring-1 ring-green-950/10">
-          {/* HOLE INFO */}
+        {/* HOLE INFO */}
 
-          <div className="px-3 pb-2 pt-3">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-green-300">
-                  {currentRound.course.replace(
-                    " Course",
-                    ""
-                  )}
-                </p>
+<div className="px-3 pb-2 pt-3">
 
-                <h2 className="mt-0.5 text-[30px] font-black leading-none tracking-[-0.04em]">
-                  Hole {hole}
-                </h2>
-              </div>
+  {/* COURSE + FORMAT */}
+  <div className="flex items-center justify-between">
+    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-300">
+      {currentRound.course.replace(
+        " Course",
+        ""
+      )}
+    </p>
 
-              <div className="flex shrink-0 items-center gap-1.5">
-                <HoleStat
-                  label="PAR"
-                  value={
-                    currentHole.par
-                  }
-                />
+    <div className="rounded-full bg-emerald-500/15 px-3 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-emerald-200 ring-1 ring-emerald-300/20">
+      {isScramble
+        ? "Scramble"
+        : "Stableford"}
+    </div>
+  </div>
 
-                <HoleStat
-                  label="SI"
-                  value={
-                    currentHole.strokeIndex
-                  }
-                />
+  {/* CURRENT HOLE */}
+  <div className="mt-1 text-center">
+    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-emerald-200">
+      Hole
+    </p>
 
-                {currentHole.yards ? (
-                  <HoleStat
-                    label="YDS"
-                    value={
-                      currentHole.yards
-                    }
-                  />
-                ) : null}
-              </div>
-            </div>
+    <p className="mt-[-2px] text-[52px] font-black leading-none tracking-[-0.07em] text-white">
+      {hole}
+    </p>
+
+    <p className="mt-0.5 text-[9px] font-black uppercase tracking-[0.2em] text-white/55">
+      {hole} of 18
+    </p>
+  </div>
+
+  {/* PAR / SI / YARDS */}
+  <div className="mt-2 grid grid-cols-3 divide-x divide-slate-200 overflow-hidden rounded-xl bg-white shadow-sm">
+    <HoleStat
+      label="PAR"
+      value={currentHole.par}
+    />
+
+    <HoleStat
+      label="SI"
+      value={currentHole.strokeIndex}
+    />
+
+    <HoleStat
+      label="YARDS"
+      value={
+        currentHole.yards
+          ? currentHole.yards
+          : "—"
+      }
+    />
+  </div>
 
             {/* HOLE PICKER */}
 
@@ -2253,17 +2267,15 @@ function HoleStat({
   value,
 }: {
   label: string;
-  value:
-    | string
-    | number;
+  value: string | number;
 }) {
   return (
-    <div className="min-w-[42px] rounded-lg bg-white/[0.09] px-2 py-1 text-center ring-1 ring-white/5">
-      <p className="text-[7px] font-black uppercase tracking-[0.12em] text-green-300">
+    <div className="px-2 py-2 text-center">
+      <p className="text-[8px] font-black uppercase tracking-[0.14em] text-emerald-700">
         {label}
       </p>
 
-      <p className="mt-0.5 text-[12px] font-black leading-none text-white">
+      <p className="mt-0.5 text-[22px] font-black leading-none text-green-950">
         {value}
       </p>
     </div>
