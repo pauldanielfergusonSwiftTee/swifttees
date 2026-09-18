@@ -1525,23 +1525,6 @@ export default function LiveScoringPage() {
             {tournament.name}
           </h1>
 
-          <p className="mt-0.5 text-[11px] font-bold text-slate-500 md:text-sm">
-            {currentRound.day}
-
-            <span className="mx-1 text-slate-300">
-              •
-            </span>
-
-            {currentRound.course}
-
-            <span className="mx-1 text-slate-300">
-              •
-            </span>
-
-            {isScramble
-              ? "Scramble Pairs"
-              : "Stableford"}
-          </p>
         </header>
 
         {/* ======================================================
@@ -1615,9 +1598,7 @@ export default function LiveScoringPage() {
                             : "text-slate-500"
                         }`}
                       >
-                        {
-                          round.day
-                        }
+                        Round {round.roundNumber ?? round.id}
                         {
                           " • "
                         }
@@ -1709,60 +1690,40 @@ export default function LiveScoringPage() {
         <section className="overflow-hidden rounded-[1.7rem] bg-[#043b25] text-white shadow-[0_10px_30px_rgba(3,46,30,0.15)] ring-1 ring-green-950/10">
         {/* HOLE INFO */}
 
-<div className="px-3 pb-2 pt-3">
+        <div className="px-3 pb-2 pt-3">
+          {/* CURRENT HOLE + PAR / SI / YARDS */}
+          <div className="grid grid-cols-[92px_minmax(0,1fr)] gap-2">
+            <div className="flex h-[70px] flex-col items-center justify-center rounded-2xl bg-emerald-950/45 ring-1 ring-white/10">
+              <p className="text-[8px] font-black uppercase tracking-[0.3em] text-emerald-300">
+                Hole
+              </p>
 
-  {/* COURSE + FORMAT */}
-  <div className="flex items-center justify-between">
-    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-300">
-      {currentRound.course.replace(
-        " Course",
-        ""
-      )}
-    </p>
+              <p className="mt-0.5 text-[40px] font-black leading-[0.85] tracking-[-0.07em] text-white">
+                {hole}
+              </p>
+            </div>
 
-    <div className="rounded-full bg-emerald-500/15 px-3 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-emerald-200 ring-1 ring-emerald-300/20">
-      {isScramble
-        ? "Scramble"
-        : "Stableford"}
-    </div>
-  </div>
+            <div className="grid h-[58px] self-end grid-cols-3 divide-x divide-slate-200 overflow-hidden rounded-2xl bg-[#f8faf7] shadow-sm ring-1 ring-white/20">
+              <HoleStat
+                label="PAR"
+                value={currentHole.par}
+              />
 
-  {/* CURRENT HOLE */}
-  <div className="mt-1 text-center">
-    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-emerald-200">
-      Hole
-    </p>
+              <HoleStat
+                label="SI"
+                value={currentHole.strokeIndex}
+              />
 
-    <p className="mt-[-2px] text-[52px] font-black leading-none tracking-[-0.07em] text-white">
-      {hole}
-    </p>
-
-    <p className="mt-0.5 text-[9px] font-black uppercase tracking-[0.2em] text-white/55">
-      {hole} of 18
-    </p>
-  </div>
-
-  {/* PAR / SI / YARDS */}
-  <div className="mt-2 grid grid-cols-3 divide-x divide-slate-200 overflow-hidden rounded-xl bg-white shadow-sm">
-    <HoleStat
-      label="PAR"
-      value={currentHole.par}
-    />
-
-    <HoleStat
-      label="SI"
-      value={currentHole.strokeIndex}
-    />
-
-    <HoleStat
-      label="YARDS"
-      value={
-        currentHole.yards
-          ? currentHole.yards
-          : "—"
-      }
-    />
-  </div>
+              <HoleStat
+                label="YARDS"
+                value={
+                  currentHole.yards
+                    ? currentHole.yards
+                    : "—"
+                }
+              />
+            </div>
+          </div>
 
             {/* HOLE PICKER */}
 
@@ -1989,15 +1950,17 @@ export default function LiveScoringPage() {
                       </p>
 
                       <p className="mt-0.5 truncate text-[16px] font-black leading-tight">
-                        {
-                          pair.player1
-                        }{" "}
-                        <span className="text-slate-300">
-                          +
-                        </span>{" "}
-                        {
-                          pair.player2
-                        }
+                        {pair.player1}
+
+                        {pair.player2 && (
+                          <>
+                            {" "}
+                            <span className="text-slate-300">
+                              +
+                            </span>{" "}
+                            {pair.player2}
+                          </>
+                        )}
                       </p>
 
                       <p className="mt-0.5 text-[9px] font-bold text-slate-400">
@@ -2270,7 +2233,7 @@ function HoleStat({
   value: string | number;
 }) {
   return (
-    <div className="px-2 py-2 text-center">
+    <div className="flex h-[58px] flex-col items-center justify-center px-1.5 text-center">
       <p className="text-[8px] font-black uppercase tracking-[0.14em] text-emerald-700">
         {label}
       </p>
