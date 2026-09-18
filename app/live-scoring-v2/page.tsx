@@ -1,1903 +1,2234 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import PageContainer from "@/components/PageContainer";
-import { getPlayers } from "@/lib/players";
-import { useActiveTournament } from "../hooks/useActiveTournament";
 import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  saveHoleScores,
+  deleteHoleScores,
+  saveBonusWinner,
+  checkTournamentResults,
   getScores,
   getScrambleScores,
   getBonusWinners,
 } from "@/lib/scores";
 
-import { supabase } from "@/lib/supabase";
-import { getLiveMoments, saveLiveMoment } from "@/lib/liveMoments";
 import {
-  buildStablefordEvent,
-  buildScrambleEvent,
-} from "@/lib/commentary/eventBuilders";
-import { buildCommentary } from "@/lib/commentary/commentaryEngine";
-import type {
-  CommentaryTier,
-  CommentaryEventType,
-} from "@/lib/commentary/types";
+  getOfflineScoreQueue,
+  getOfflineQueueCount,
+  queueOfflineHoleSave,
+  removeOfflineQueueItem,
+} from "@/lib/offlineScoreQueue";
 
-function getPositionStorageKey(eventSlug: string) {
-  return `swift-tees-${eventSlug}-live-centre-positions`;
-}
-
-function getMovementStorageKey(eventSlug: string) {
-  return `swift-tees-${eventSlug}-live-centre-movement`;
-}
-
-function getScoreSignatureStorageKey(eventSlug: string) {
-  return `swift-tees-${eventSlug}-live-centre-score-signature`;
-}
-function getCopiedMomentsStorageKey(eventSlug: string) {
-  return `swift-tees-${eventSlug}-copied-moments`;
-}
-
-function getStoredCopiedMoments(eventSlug: string): string[] {
-  if (typeof window === "undefined") return [];
-
-  try {
-    return JSON.parse(
-      localStorage.getItem(getCopiedMomentsStorageKey(eventSlug)) ?? "[]"
-    );
-  } catch {
-    return [];
-  }
-}
-
-function saveStoredCopiedMoments(
-  eventSlug: string,
-  copiedMomentKeys: string[]
-) {
-  if (typeof window === "undefined") return;
-
-  localStorage.setItem(
-    getCopiedMomentsStorageKey(eventSlug),
-    JSON.stringify(copiedMomentKeys)
-  );
-}
-let EVENT_SLUG = "";
-type Movement = {
-  icon: string;
-  text: string;
-};
-
-type LeaderboardRow = {
-  pos: number;
-  id: number;
-  name: string;
-  team: string;
-  points: number;
-  through: number;
-  movement: Movement;
-  bonusIcons: string[];
-  liveIcon: string;
-};
-
-type TeamStanding = {
-  team: string;
-  points: number;
-  through: number;
-  icon: string;
-};
-
-type Moment = {
-  icon: string;
-  title: string;
-  text: string;
-  rarity: "common" | "rare" | "major";
-};
-
-type LiveMomentRow = Moment & {
-  id?: number;
-  event_slug: string;
-  moment_key: string;
-  moment_type: string;
-  player_id?: number | null;
-  player_name?: string | null;
-  team?: string | null;
-  round_number?: number | null;
-  hole_number?: number | null;
-  created_at?: string;
-};
-
-type LatestScrambleInfo = {
-  playerIds: number[];
-  pairNames: string;
-  icon: string;
-  holeNumber: number;
-  points: number;
-  roundNumber: number;
-};
-
-type ScramblePairStanding = {
-  pairKey: string;
-  playerIds: number[];
-  pairNames: string;
-  points: number;
-  through: number;
-  pos: number;
-};
-
-function movementStyle(icon: string) {
-  if (icon === "▲") return "text-green-700";
-  if (icon === "▼") return "text-red-600";
-  return "text-slate-400";
-}
+import { calculateStablefordPoints } from "@/lib/stableford";
+import { supabase } from "@/lib/supabase";
+import { useActiveTournament } from "../hooks/useActiveTournament";
 
 function teamDot(team: string) {
   if (team === "Blue") return "bg-blue-500";
   if (team === "Green") return "bg-green-500";
+  if (team === "White") {
+    return "bg-white border border-slate-400";
+  }
   if (team === "Red") return "bg-red-500";
-  if (team === "White") return "bg-white border border-slate-400";
-  return "bg-slate-300";
+
+  return "bg-slate-300 border border-slate-400";
 }
 
-function formatOrdinal(position: number) {
-  const remainder100 = position % 100;
-
-  if (remainder100 >= 11 && remainder100 <= 13) {
-    return `${position}th`;
-  }
-
-  switch (position % 10) {
-    case 1:
-      return `${position}st`;
-
-    case 2:
-      return `${position}nd`;
-
-    case 3:
-      return `${position}rd`;
-
-    default:
-      return `${position}th`;
-  }
-}
-
-function progressText(through: number) {
-  if (through >= 18) return "✅ Complete";
-  return `Thru ${through}`;
-}
-
-function formatLiveRoundDate(dateValue: string) {
-  if (!dateValue) return "";
-
-  const date = new Date(`${dateValue}T12:00:00`);
-
-  if (Number.isNaN(date.getTime())) return "";
-
-  return date.toLocaleDateString("en-GB", {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-});
-}
-
-function getRoundNumber(round: any) {
-  return Number(round.roundNumber ?? round.round_number ?? round.id);
-}
-
-function getGroupNumber(group: any) {
-  return Number(group.groupNumber ?? group.group_number ?? group.id);
-}
-
-function getCurrentRoundInfo(
-  tournamentSetup: any,
-  scores: any[],
-  scrambleScores: any[]
-) {
-  const allRows = [
-    ...scores.map((score: any) => ({
-      round_number: score.round_number,
-      updated_at: score.updated_at,
-    })),
-    ...scrambleScores.map((score: any) => ({
-      round_number: score.round_number,
-      updated_at: score.updated_at,
-    })),
-  ];
-
-
-
-
-  const latestRow = allRows
-    .filter((row: any) => row.round_number)
-    .sort(
-      (a: any, b: any) =>
-        new Date(b.updated_at ?? 0).getTime() -
-        new Date(a.updated_at ?? 0).getTime()
-    )[0];
-
-  const fallbackRound = tournamentSetup?.rounds?.[0];
-
-  const currentRound =
-    tournamentSetup?.rounds?.find(
-      (round: any) => getRoundNumber(round) === Number(latestRow?.round_number)
-    ) ?? fallbackRound;
-
-  return {
-    round: currentRound,
-    roundNumber: getRoundNumber(currentRound),
-  };
-}
-
-function getHolePar(round: any, holeNumber: number) {
-  const hole = round?.holes?.find(
-    (hole: any) =>
-      Number(hole.hole ?? hole.number ?? hole.hole_number) === holeNumber
-  );
-
-  return Number(hole?.par ?? 0);
-}
-
-function getScoreIconFromGross(gross: number, par: number) {
-  if (!par || !gross) return "";
-
-  const scoreToPar = gross - par;
-
-  if (scoreToPar <= -2) return "🦅";
-  if (scoreToPar === -1) return "🐦";
-
-  return "";
-}
-
-function normaliseBonusType(type: string) {
-  const value = String(type ?? "").toLowerCase();
-
-  if (value.includes("longest")) return "Longest Drive";
-  if (value.includes("nearest") || value.includes("closest")) return "Nearest Pin";
-
-  return type || "Bonus";
-}
-
-function bonusIconForType(type: string) {
-  const value = String(type ?? "").toLowerCase();
-
-  if (value.includes("longest")) return "🚀";
-  if (value.includes("nearest") || value.includes("closest")) return "🎯";
-
-  return "";
-}
-
-function getStoredPositions(eventSlug: string) {
-  if (typeof window === "undefined") return {};
-
-  try {
-    return JSON.parse(localStorage.getItem(getPositionStorageKey(eventSlug)) ?? "{}");
-  } catch {
-    return {};
-  }
-}
-
-function getStoredPairStandings(eventSlug: string) {
-  if (typeof window === "undefined") return {};
-
-  try {
-    return JSON.parse(
-      localStorage.getItem(
-        `swift-tees-${eventSlug}-pair-positions`
-      ) ?? "{}"
-    );
-  } catch {
-    return {};
-  }
-}
-
-function saveStoredPairStandings(
-  standings: ScramblePairStanding[],
-  eventSlug: string
-) {
-  if (typeof window === "undefined") return;
-
-  const data = Object.fromEntries(
-    standings.map((pair) => [
-      pair.pairKey,
-      {
-        pos: pair.pos,
-        points: pair.points,
-      },
-    ])
-  );
-
-  localStorage.setItem(
-    `swift-tees-${eventSlug}-pair-positions`,
-    JSON.stringify(data)
+function getBonusHoleNumber(bonus: any) {
+  return Number(
+    bonus.hole ??
+      bonus.holeNumber ??
+      bonus.hole_number
   );
 }
 
-function saveStoredPositions(
-  rows: LeaderboardRow[],
-  eventSlug: string
-) {
-  if (typeof window === "undefined") return;
-
-  const positions = Object.fromEntries(
-    rows.map((player) => [player.id, player.pos])
-  );
-
-  localStorage.setItem(
-    getPositionStorageKey(eventSlug),
-    JSON.stringify(positions)
+function getBonusType(bonus: any) {
+  return (
+    bonus.type ??
+    bonus.bonusType ??
+    bonus.bonus_type ??
+    "Bonus"
   );
 }
 
-function getStoredMovement(eventSlug: string): Record<string, Movement> {
-  if (typeof window === "undefined") return {};
+export default function LiveScoringPage() {
+  const [tournamentSetup, setTournamentSetup] =
+    useState<any>(null);
 
-  try {
-    return JSON.parse(
-      localStorage.getItem(getMovementStorageKey(eventSlug)) ?? "{}"
-    );
-  } catch {
-    return {};
-  }
-}
+  const [roundId, setRoundId] = useState<
+    number | string | null
+  >(null);
 
-function saveStoredMovement(
-  rows: LeaderboardRow[],
-  eventSlug: string
-) {
-  if (typeof window === "undefined") return;
+  const [selectedGroupId, setSelectedGroupId] =
+    useState<number | string | null>(null);
 
-  const movement = Object.fromEntries(
-    rows.map((player) => [String(player.id), player.movement])
-  );
+  const [hole, setHole] = useState(1);
 
-  localStorage.setItem(
-    getMovementStorageKey(eventSlug),
-    JSON.stringify(movement)
-  );
-}
+  const [scores, setScores] = useState<
+    Record<string, number>
+  >({});
 
-function clearStoredLeaderboardState(eventSlug: string) {
-  if (typeof window === "undefined") return;
+  const [bonusWinners, setBonusWinners] =
+    useState<Record<string, string>>({});
 
-  localStorage.removeItem(getPositionStorageKey(eventSlug));
-  localStorage.removeItem(getMovementStorageKey(eventSlug));
-  localStorage.removeItem(getScoreSignatureStorageKey(eventSlug));
-  localStorage.removeItem(getCopiedMomentsStorageKey(eventSlug));
-  localStorage.removeItem(
-  `swift-tees-${eventSlug}-pair-positions`
-);
-}
+  const [savedMessage, setSavedMessage] =
+    useState("");
 
-function buildScoreSignature(
-  scores: any[],
-  scrambleScores: any[],
-  bonusWinners: any[]
-) {
-  const stablefordSignature = scores
-    .map(
-      (score: any) =>
-        [
-          score.id,
-          score.round_number,
-          score.player_id,
-          score.hole_number,
-          score.gross_score,
-          score.points,
-          score.updated_at,
-        ].join("-")
-    )
-    .sort()
-    .join("|");
+  const [isSaving, setIsSaving] =
+    useState(false);
 
-  const scrambleSignature = scrambleScores
-    .map(
-      (score: any) =>
-        [
-          score.id,
-          score.round_number,
-          score.group_number,
-          score.pair_number,
-          score.hole_number,
-          score.gross_score,
-          score.points,
-          score.updated_at,
-        ].join("-")
-    )
-    .sort()
-    .join("|");
+  const [isOnline, setIsOnline] =
+    useState(true);
 
-  const bonusSignature = bonusWinners
-    .map(
-      (bonus: any) =>
-        [
-          bonus.id,
-          bonus.round_number,
-          bonus.hole,
-          bonus.bonus_type,
-          bonus.winner_player_name,
-          bonus.points,
-          bonus.updated_at,
-        ].join("-")
-    )
-    .sort()
-    .join("|");
+  const [
+    pendingOfflineCount,
+    setPendingOfflineCount,
+  ] = useState(0);
 
-  return `${stablefordSignature}::${scrambleSignature}::${bonusSignature}`;
-}
+  const [
+    isSyncingOffline,
+    setIsSyncingOffline,
+  ] = useState(false);
 
+  const offlineSyncRunning =
+    useRef(false);
 
+  const { tournament, loading } =
+    useActiveTournament();
 
-function getLatestStablefordScore(scores: any[]) {
-  return scores
-    .filter((score: any) => score.score_type === "stableford" && score.player_id)
-    .sort(
-      (a: any, b: any) =>
-        new Date(b.updated_at ?? 0).getTime() -
-        new Date(a.updated_at ?? 0).getTime()
-    )[0];
-}
+  const EVENT_SLUG =
+    tournament?.slug ?? "";
 
-function getLatestScrambleScore(scrambleScores: any[]) {
-  return scrambleScores
-    .slice()
-    .sort(
-      (a: any, b: any) =>
-        new Date(b.updated_at ?? 0).getTime() -
-        new Date(a.updated_at ?? 0).getTime()
-    )[0];
-}
+  /* ============================================================
+     LOAD TOURNAMENT + SAVED SCORES
+  ============================================================ */
 
-function getPairInfoForScrambleScore(
-  scrambleScore: any,
-  tournamentSetup: any,
-  players: any[]
-) {
-  if (!scrambleScore) {
-    return {
-      playerIds: [],
-      pairNames: "",
-      round: null,
-    };
-  }
+  const loadScoringPageData =
+    useCallback(async () => {
+      try {
+        if (!tournament) return;
 
-  const roundNumber = Number(scrambleScore.round_number);
-  const groupNumber = Number(scrambleScore.group_number);
-  const pairNumber = Number(scrambleScore.pair_number);
+        const setup = {
+          ...tournament,
 
-  const round = tournamentSetup.rounds?.find(
-    (round: any) => getRoundNumber(round) === roundNumber
-  );
+          rounds:
+            tournament.rounds?.map(
+              (
+                round: any,
+                roundIndex: number
+              ) => ({
+                ...round,
 
-  const group = round?.groups?.find(
-    (group: any) => getGroupNumber(group) === groupNumber
-  );
+                id:
+                  round.roundNumber ??
+                  round.id ??
+                  roundIndex + 1,
 
-  const pair = group?.pairs?.find(
-    (pair: any) => Number(pair.pairNumber) === pairNumber
-  );
+                roundNumber:
+                  round.roundNumber ??
+                  round.id ??
+                  roundIndex + 1,
 
-  const playerIds = [pair?.player1_id, pair?.player2_id]
-    .map((id: any) => Number(id))
-    .filter(Boolean);
+                day:
+                  round.day ??
+                  `Round ${
+                    round.roundNumber ??
+                    round.id ??
+                    roundIndex + 1
+                  }`,
 
-  const pairNames = playerIds
-    .map((id: number) => players.find((player: any) => Number(player.id) === id)?.name)
-    .filter(Boolean)
-    .join(" & ");
+                course:
+                  round.course ??
+                  round.courseName ??
+                  "Course",
 
-  return {
-    playerIds,
-    pairNames,
-    round,
-  };
-}
+                format:
+                  round.format ===
+                    "scramble" ||
+                  round.format ===
+                    "scramblePairs"
+                    ? "scramblePairs"
+                    : "stableford",
 
-function getLatestScrambleInfo(
-  latestScrambleScore: any,
-  tournamentSetup: any,
-  players: any[]
-): LatestScrambleInfo | null {
-  if (!latestScrambleScore) return null;
+                groups:
+                  round.groups?.map(
+                    (
+                      group: any,
+                      groupIndex: number
+                    ) => ({
+                      ...group,
 
-  const holeNumber = Number(latestScrambleScore.hole_number);
-  const gross = Number(latestScrambleScore.gross_score ?? 0);
-  const points = Number(latestScrambleScore.points ?? 0);
-  const roundNumber = Number(latestScrambleScore.round_number);
+                      id:
+                        group.id ??
+                        group.groupNumber ??
+                        groupIndex + 1,
 
-  const pairInfo = getPairInfoForScrambleScore(
-    latestScrambleScore,
-    tournamentSetup,
-    players
-  );
+                      groupNumber:
+                        group.groupNumber ??
+                        group.id ??
+                        groupIndex + 1,
 
-  if (!pairInfo.pairNames) return null;
+                      name:
+                        group.name ??
+                        `Group ${
+                          groupIndex + 1
+                        }`,
 
-  const par = getHolePar(pairInfo.round, holeNumber);
-  const icon = getScoreIconFromGross(gross, par);
+                      teeTime:
+                        group.teeTime ??
+                        "",
 
-  return {
-    playerIds: pairInfo.playerIds,
-    pairNames: pairInfo.pairNames,
-    icon,
-    holeNumber,
-    points,
-    roundNumber,
-  };
-}
+                      players:
+                        group.players
+                          ?.length
+                          ? group.players
+                          : tournament.players?.map(
+                              (
+                                player: any
+                              ) => ({
+                                player_id:
+                                  player.id,
 
-function buildScramblePairStandings(
-  scrambleScores: any[],
-  tournamentSetup: any,
-  players: any[],
-  currentRoundNumber: number
-): ScramblePairStanding[] {
-  const pairs: Record<
-    string,
-    Omit<ScramblePairStanding, "pos">
-  > = {};
+                                name:
+                                  player.name,
 
-  scrambleScores
-    .filter(
-      (score: any) =>
-        Number(score.round_number) ===
-        Number(currentRoundNumber)
-    )
-    .forEach((score: any) => {
-      const pairInfo = getPairInfoForScrambleScore(
-        score,
-        tournamentSetup,
-        players
-      );
+                                team:
+                                  player.eventTeam ??
+                                  "",
 
+                                eventHandicap:
+                                  player.stablefordHandicap ??
+                                  player.eventHandicap ??
+                                  0,
+
+                                stablefordHandicap:
+                                  player.stablefordHandicap ??
+                                  player.eventHandicap ??
+                                  0,
+
+                                scrambleHandicap:
+                                  player.scrambleHandicap ??
+                                  0,
+                              })
+                            ) ?? [],
+
+                      pairs:
+                        group.pairs?.map(
+                          (
+                            pair: any,
+                            pairIndex: number
+                          ) => {
+                            const player1 =
+                              tournament.players?.find(
+                                (
+                                  player: any
+                                ) =>
+                                  Number(
+                                    player.id
+                                  ) ===
+                                  Number(
+                                    pair.player1_id
+                                  )
+                              );
+
+                            const player2 =
+                              tournament.players?.find(
+                                (
+                                  player: any
+                                ) =>
+                                  Number(
+                                    player.id
+                                  ) ===
+                                  Number(
+                                    pair.player2_id
+                                  )
+                              );
+
+                            return {
+                              ...pair,
+
+                              id:
+                                pair.id ??
+                                `${
+                                  round.roundNumber ??
+                                  roundIndex +
+                                    1
+                                }-${
+                                  group.groupNumber ??
+                                  groupIndex +
+                                    1
+                                }-${
+                                  pair.pairNumber ??
+                                  pairIndex +
+                                    1
+                                }`,
+
+                              pairNumber:
+                                pair.pairNumber ??
+                                pairIndex +
+                                  1,
+
+                              player1_id:
+                                pair.player1_id ??
+                                null,
+
+                              player2_id:
+                                pair.player2_id ??
+                                null,
+
+                              player1:
+                                pair.player1 ??
+                                player1?.name ??
+                                "",
+
+                              player2:
+                                pair.player2 ??
+                                player2?.name ??
+                                "",
+
+                              finalHandicap:
+                                pair.finalHandicap ??
+                                pair.calculatedHandicap ??
+                                0,
+                            };
+                          }
+                        ) ?? [],
+                    })
+                  ) ?? [],
+              })
+            ) ?? [],
+        };
+
+        setTournamentSetup(setup);
+
+        const firstRound =
+          setup.rounds?.[0];
+
+        setRoundId(
+          (currentRoundId) =>
+            currentRoundId ??
+            firstRound?.id ??
+            null
+        );
+
+        setSelectedGroupId(
+          (currentGroupId) =>
+            currentGroupId ??
+            firstRound?.groups?.[0]
+              ?.id ??
+            null
+        );
+
+        const savedScores =
+          await getScores(
+            EVENT_SLUG
+          );
+
+        const savedScrambleScores =
+          await getScrambleScores(
+            EVENT_SLUG
+          );
+
+        const savedBonuses =
+          await getBonusWinners(
+            EVENT_SLUG
+          );
+
+        const loadedScores: Record<
+          string,
+          number
+        > = {};
+
+        savedScores.forEach(
+          (row: any) => {
+            const round =
+              setup.rounds.find(
+                (item: any) =>
+                  Number(
+                    item.roundNumber ??
+                      item.id
+                  ) ===
+                  Number(
+                    row.round_number
+                  )
+              );
+
+            if (!round) return;
+
+            const group =
+              round.groups.find(
+                (item: any) =>
+                  Number(
+                    item.groupNumber ??
+                      item.id
+                  ) ===
+                  Number(
+                    row.group_number
+                  )
+              );
+
+            if (!group) return;
+
+            const player =
+              group.players?.find(
+                (item: any) =>
+                  Number(
+                    item.player_id
+                  ) ===
+                  Number(
+                    row.player_id
+                  )
+              );
+
+            if (!player) return;
+
+            loadedScores[
+              `${round.id}-${group.id}-${row.hole_number}-${player.name}`
+            ] = row.gross_score;
+          }
+        );
+
+        savedScrambleScores.forEach(
+          (row: any) => {
+            const round =
+              setup.rounds.find(
+                (item: any) =>
+                  Number(
+                    item.roundNumber ??
+                      item.id
+                  ) ===
+                  Number(
+                    row.round_number
+                  )
+              );
+
+            if (!round) return;
+
+            const group =
+              round.groups.find(
+                (item: any) =>
+                  Number(
+                    item.groupNumber ??
+                      item.id
+                  ) ===
+                  Number(
+                    row.group_number
+                  )
+              );
+
+            if (!group) return;
+
+            const pair =
+              group.pairs?.find(
+                (item: any) =>
+                  Number(
+                    item.pairNumber
+                  ) ===
+                  Number(
+                    row.pair_number
+                  )
+              );
+
+            if (!pair) return;
+
+            loadedScores[
+              `${round.id}-${group.id}-${row.hole_number}-${pair.id}`
+            ] = row.gross_score;
+          }
+        );
+
+        const loadedBonuses: Record<
+          string,
+          string
+        > = {};
+
+        savedBonuses.forEach(
+          (row: any) => {
+            const round =
+              setup.rounds.find(
+                (item: any) =>
+                  Number(
+                    item.roundNumber ??
+                      item.id
+                  ) ===
+                  Number(
+                    row.round_number
+                  )
+              );
+
+            if (!round) return;
+
+            const winnerName =
+              String(
+                row.winner_player_name ??
+                  ""
+              )
+                .trim()
+                .toLowerCase();
+
+            const winnerPlayer =
+              round.groups
+                .flatMap(
+                  (group: any) =>
+                    group.players
+                )
+                .find(
+                  (player: any) =>
+                    String(
+                      player.name ??
+                        ""
+                    )
+                      .trim()
+                      .toLowerCase() ===
+                    winnerName
+                );
+
+            if (
+              winnerPlayer?.player_id
+            ) {
+              loadedBonuses[
+                `${round.id}-${row.hole}`
+              ] = String(
+                winnerPlayer.player_id
+              );
+            }
+          }
+        );
+
+        setScores(
+          loadedScores
+        );
+
+        setBonusWinners(
+          loadedBonuses
+        );
+      } catch (error) {
+        console.error(
+          "Could not load scoring page data:",
+          error
+        );
+      }
+    }, [
+      tournament,
+      EVENT_SLUG,
+    ]);
+
+  useEffect(() => {
+    if (
+      !loading &&
+      tournament
+    ) {
+      loadScoringPageData();
+    }
+  }, [
+    loading,
+    tournament,
+    loadScoringPageData,
+  ]);
+
+  /* ============================================================
+     OFFLINE SCORE SYNC
+  ============================================================ */
+
+  const syncOfflineScores =
+    useCallback(async () => {
       if (
-        pairInfo.playerIds.length === 0 ||
-        !pairInfo.pairNames
+        typeof window ===
+          "undefined" ||
+        !navigator.onLine ||
+        offlineSyncRunning.current
       ) {
         return;
       }
 
-      const pairKey = pairInfo.playerIds
-        .slice()
-        .sort((a, b) => a - b)
-        .join("-");
+      const queue =
+        getOfflineScoreQueue();
 
-      if (!pairs[pairKey]) {
-        pairs[pairKey] = {
-          pairKey,
-          playerIds: pairInfo.playerIds,
-          pairNames: pairInfo.pairNames,
-          points: 0,
-          through: 0,
+      setPendingOfflineCount(
+        queue.length
+      );
+
+      if (!queue.length) {
+        return;
+      }
+
+      offlineSyncRunning.current =
+        true;
+
+      setIsSyncingOffline(
+        true
+      );
+
+      try {
+        for (const item of queue) {
+          if (!navigator.onLine) {
+            break;
+          }
+
+          try {
+            if (
+              item.rowsToDelete
+                .length > 0
+            ) {
+              await deleteHoleScores(
+                item.rowsToDelete
+              );
+            }
+
+            if (
+              item.rowsToSave
+                .length > 0
+            ) {
+              await saveHoleScores(
+                item.rowsToSave,
+                {
+                  tournament:
+                    item.tournament,
+                }
+              );
+            }
+
+            if (
+              item.bonusWinner
+            ) {
+              await saveBonusWinner(
+                item.bonusWinner
+              );
+            }
+
+            await checkTournamentResults(
+              item.tournament
+            );
+
+            removeOfflineQueueItem(
+              item.id
+            );
+
+            setPendingOfflineCount(
+              getOfflineQueueCount()
+            );
+          } catch (error) {
+            console.error(
+              "Could not sync offline score:",
+              item,
+              error
+            );
+
+            break;
+          }
+        }
+      } finally {
+        offlineSyncRunning.current =
+          false;
+
+        setIsSyncingOffline(
+          false
+        );
+
+        setPendingOfflineCount(
+          getOfflineQueueCount()
+        );
+      }
+    }, []);
+
+  useEffect(() => {
+    if (
+      typeof window ===
+      "undefined"
+    ) {
+      return;
+    }
+
+    const updateOnlineStatus =
+      () => {
+        const online =
+          navigator.onLine;
+
+        setIsOnline(
+          online
+        );
+
+        setPendingOfflineCount(
+          getOfflineQueueCount()
+        );
+
+        if (online) {
+          void syncOfflineScores();
+        }
+      };
+
+    const handleOnline = () => {
+      setIsOnline(true);
+
+      void syncOfflineScores();
+    };
+
+    const handleOffline =
+      () => {
+        setIsOnline(false);
+
+        setPendingOfflineCount(
+          getOfflineQueueCount()
+        );
+      };
+
+    updateOnlineStatus();
+
+    window.addEventListener(
+      "online",
+      handleOnline
+    );
+
+    window.addEventListener(
+      "offline",
+      handleOffline
+    );
+
+    return () => {
+      window.removeEventListener(
+        "online",
+        handleOnline
+      );
+
+      window.removeEventListener(
+        "offline",
+        handleOffline
+      );
+    };
+  }, [syncOfflineScores]);
+
+  /* ============================================================
+     REALTIME
+  ============================================================ */
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(
+        "live-scoring-realtime"
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "scores",
+        },
+        () =>
+          setTimeout(
+            loadScoringPageData,
+            200
+          )
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table:
+            "scramble_scores",
+        },
+        () =>
+          setTimeout(
+            loadScoringPageData,
+            200
+          )
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table:
+            "bonus_winners",
+        },
+        () =>
+          setTimeout(
+            loadScoringPageData,
+            200
+          )
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(
+        channel
+      );
+    };
+  }, [
+    loadScoringPageData,
+  ]);
+
+  /* ============================================================
+     LOADING STATES
+  ============================================================ */
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#f4f6f2] p-4 text-slate-900">
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <div className="text-center">
+            <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-green-800" />
+
+            <p className="mt-3 font-black text-green-950">
+              Loading tournament...
+            </p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!tournament) {
+    return (
+      <main className="min-h-screen bg-[#f4f6f2] p-4 text-slate-900">
+        No active tournament
+        selected. Go to Setup V2
+        and set one active.
+      </main>
+    );
+  }
+
+  if (
+    !tournamentSetup ||
+    !roundId ||
+    !selectedGroupId
+  ) {
+    return (
+      <main className="min-h-screen bg-[#f4f6f2] p-4 text-slate-900">
+        Loading tournament
+        setup...
+      </main>
+    );
+  }
+
+  /* ============================================================
+     CURRENT ROUND / GROUP / HOLE
+  ============================================================ */
+
+  const currentRound =
+    tournamentSetup.rounds.find(
+      (round: any) =>
+        String(round.id) ===
+        String(roundId)
+    );
+
+  if (!currentRound) {
+    return (
+      <main className="min-h-screen bg-[#f4f6f2] p-4 text-slate-900">
+        Round not found.
+      </main>
+    );
+  }
+
+  const selectedGroup =
+    currentRound.groups.find(
+      (group: any) =>
+        String(group.id) ===
+        String(
+          selectedGroupId
+        )
+    ) ??
+    currentRound.groups[0];
+
+  const isScramble =
+    currentRound.format ===
+    "scramblePairs";
+
+  const currentHole =
+    currentRound.holes.find(
+      (item: any) =>
+        Number(item.hole) ===
+        Number(hole)
+    ) ??
+    currentRound.holes[0];
+
+  const roundBonusHoles =
+    currentRound.bonusHoles ??
+    currentRound.bonus_holes ??
+    currentRound.bonuses ??
+    [];
+
+  const bonusHole =
+    roundBonusHoles.find(
+      (bonus: any) =>
+        getBonusHoleNumber(
+          bonus
+        ) === hole
+    );
+
+  const allRoundPlayers =
+    currentRound.groups
+      .flatMap(
+        (group: any) =>
+          group.players
+      )
+      .filter(
+        (player: any) =>
+          player?.player_id
+      );
+
+  const uniqueRoundPlayers =
+    Array.from(
+      new Map(
+        allRoundPlayers.map(
+          (player: any) => [
+            String(
+              player.player_id
+            ),
+            player,
+          ]
+        )
+      ).values()
+    );
+
+  /* ============================================================
+     HELPERS
+  ============================================================ */
+
+  function getPlayerNameById(
+    playerId: string
+  ) {
+    const foundPlayer =
+      uniqueRoundPlayers.find(
+        (player: any) =>
+          String(
+            player.player_id
+          ) ===
+          String(playerId)
+      ) as any;
+
+    return (
+      foundPlayer?.name ??
+      ""
+    );
+  }
+
+  function validPlayerId(
+    playerId: any
+  ) {
+    return (
+      Number.isInteger(
+        Number(playerId)
+      ) &&
+      String(playerId) !==
+        "undefined"
+    );
+  }
+
+  function scoreKeyFor(
+    groupId:
+      | string
+      | number,
+    id: string,
+    holeNumber: number
+  ) {
+    return `${roundId}-${groupId}-${holeNumber}-${id}`;
+  }
+
+  function scoreKey(
+    id: string,
+    holeNumber = hole
+  ) {
+    return scoreKeyFor(
+      selectedGroup.id,
+      id,
+      holeNumber
+    );
+  }
+
+  function bonusKey(
+    holeNumber = hole
+  ) {
+    return `${roundId}-${holeNumber}`;
+  }
+
+  function getScore(
+    id: string
+  ) {
+    return (
+      scores[
+        scoreKey(id)
+      ] || 0
+    );
+  }
+
+  function changeScore(
+    id: string,
+    amount: number
+  ) {
+    const key =
+      scoreKey(id);
+
+    const currentScore =
+      scores[key] || 0;
+
+    const newScore =
+      Math.max(
+        0,
+        currentScore +
+          amount
+      );
+
+    setScores(
+      (current) => {
+        const updated = {
+          ...current,
+        };
+
+        if (
+          newScore === 0
+        ) {
+          delete updated[key];
+        } else {
+          updated[key] =
+            newScore;
+        }
+
+        return updated;
+      }
+    );
+  }
+
+  function setScore(
+    id: string,
+    value: string
+  ) {
+    const key =
+      scoreKey(id);
+
+    const numberValue =
+      Number(value);
+
+    setScores(
+      (current) => {
+        const updated = {
+          ...current,
+        };
+
+        if (
+          !value ||
+          numberValue <= 0
+        ) {
+          delete updated[key];
+        } else {
+          updated[key] =
+            numberValue;
+        }
+
+        return updated;
+      }
+    );
+  }
+
+  function setBonusWinner(
+    playerId: string
+  ) {
+    setBonusWinners(
+      (current) => ({
+        ...current,
+        [bonusKey()]:
+          playerId,
+      })
+    );
+  }
+
+  function getBonusWinner(
+    holeNumber = hole
+  ) {
+    return (
+      bonusWinners[
+        bonusKey(
+          holeNumber
+        )
+      ] || ""
+    );
+  }
+
+  /* ============================================================
+     SAVE
+  ============================================================ */
+
+  async function saveHole() {
+    setIsSaving(true);
+    setSavedMessage("");
+
+    let rowsToSave: any[] =
+      [];
+
+    const rowsToDelete:
+      any[] = [];
+
+    let bonusWinnerToSave:
+      | any
+      | null = null;
+
+    const roundNumber =
+      Number(
+        currentRound.roundNumber ??
+          currentRound.id
+      );
+
+    const groupNumber =
+      Number(
+        selectedGroup.groupNumber ??
+          selectedGroup.id
+      );
+
+    function moveToNextHole() {
+      if (hole < 18) {
+        setTimeout(() => {
+          setHole(
+            (current) =>
+              current + 1
+          );
+
+          setSavedMessage(
+            ""
+          );
+        }, 800);
+      }
+    }
+
+    try {
+      if (isScramble) {
+        rowsToSave =
+          selectedGroup.pairs
+            ?.map(
+              (pair: any) => {
+                const grossScore =
+                  getScore(
+                    pair.id
+                  );
+
+                if (
+                  !grossScore
+                ) {
+                  rowsToDelete.push(
+                    {
+                      event_slug:
+                        EVENT_SLUG,
+
+                      round_number:
+                        roundNumber,
+
+                      hole_number:
+                        hole,
+
+                      group_number:
+                        groupNumber,
+
+                      pair_number:
+                        pair.pairNumber,
+                    }
+                  );
+
+                  return null;
+                }
+
+                return {
+                  event_slug:
+                    EVENT_SLUG,
+
+                  round_number:
+                    roundNumber,
+
+                  player_id:
+                    null,
+
+                  hole_number:
+                    hole,
+
+                  gross_score:
+                    grossScore,
+
+                  group_number:
+                    groupNumber,
+
+                  pair_number:
+                    pair.pairNumber,
+
+                  score_type:
+                    "scramblePairs",
+
+                  points:
+                    calculateStablefordPoints(
+                      grossScore,
+                      currentHole.par,
+                      currentHole.strokeIndex,
+                      pair.finalHandicap
+                    ),
+
+                  event_handicap:
+                    pair.finalHandicap,
+                };
+              }
+            )
+            .filter(Boolean) ??
+          [];
+      } else {
+        rowsToSave =
+          selectedGroup.players
+            .map(
+              (
+                player: any
+              ) => {
+                const grossScore =
+                  getScore(
+                    player.name
+                  );
+
+                if (
+                  !grossScore
+                ) {
+                  if (
+                    validPlayerId(
+                      player.player_id
+                    )
+                  ) {
+                    rowsToDelete.push(
+                      {
+                        event_slug:
+                          EVENT_SLUG,
+
+                        round_number:
+                          roundNumber,
+
+                        player_id:
+                          player.player_id,
+
+                        hole_number:
+                          hole,
+                      }
+                    );
+                  }
+
+                  return null;
+                }
+
+                if (
+                  !validPlayerId(
+                    player.player_id
+                  )
+                ) {
+                  return null;
+                }
+
+                return {
+                  event_slug:
+                    EVENT_SLUG,
+
+                  round_number:
+                    roundNumber,
+
+                  player_id:
+                    player.player_id,
+
+                  hole_number:
+                    hole,
+
+                  gross_score:
+                    grossScore,
+
+                  group_number:
+                    groupNumber,
+
+                  pair_number:
+                    null,
+
+                  score_type:
+                    "stableford",
+
+                  points:
+                    calculateStablefordPoints(
+                      grossScore,
+                      currentHole.par,
+                      currentHole.strokeIndex,
+                      player.eventHandicap
+                    ),
+
+                  event_handicap:
+                    player.eventHandicap,
+                };
+              }
+            )
+            .filter(
+              Boolean
+            );
+      }
+
+      if (
+        bonusHole &&
+        getBonusWinner()
+      ) {
+        bonusWinnerToSave = {
+          event_slug:
+            EVENT_SLUG,
+
+          round_number:
+            roundNumber,
+
+          hole,
+
+          bonus_type:
+            getBonusType(
+              bonusHole
+            ),
+
+          winner_player_name:
+            getPlayerNameById(
+              getBonusWinner()
+            ),
+
+          points:
+            bonusHole.points ??
+            0,
         };
       }
 
-      pairs[pairKey].points += Number(score.points ?? 0);
-
-      pairs[pairKey].through = Math.max(
-        pairs[pairKey].through,
-        Number(score.hole_number ?? 0)
-      );
-    });
-
-  return Object.values(pairs)
-    .sort(
-      (a, b) =>
-        b.points - a.points ||
-        b.through - a.through
-    )
-    .map((pair, index) => ({
-      ...pair,
-      pos: index + 1,
-    }));
-}
-
-function formatPlaceMovement(oldPosition: number | undefined, newPosition: number) {
-  if (!oldPosition) {
-    return {
-      icon: "➖",
-      text: "No movement",
-    };
-  }
-
-  const placesMoved = Number(oldPosition) - newPosition;
-
-  if (placesMoved > 0) {
-    return {
-      icon: "▲",
-      text: `Up ${placesMoved}`,
-    };
-  }
-
-  if (placesMoved < 0) {
-    return {
-      icon: "▼",
-      text: `Down ${Math.abs(placesMoved)}`,
-    };
-  }
-
-  return {
-    icon: "➖",
-    text: "No movement",
-  };
-}
-
-function getMovementAmount(movement: Movement) {
-  const number = Number(movement.text.replace("Up ", "").replace("Down ", ""));
-  return Number.isFinite(number) ? number : 0;
-}
-
-function buildTeams(rows: LeaderboardRow[]) {
-  const teams = rows.reduce<Record<string, TeamStanding>>((acc, player) => {
-    const teamName = player.team || "No Team";
-
-    if (!acc[teamName]) {
-      acc[teamName] = {
-        team: teamName,
-        points: 0,
-        through: 0,
-        icon: "",
-      };
-    }
-
-    acc[teamName].points += player.points;
-
-    return acc;
-  }, {});
-
-  Object.values(teams).forEach((team) => {
-    const teamPlayers = rows.filter(
-      (player) => (player.team || "No Team") === team.team
-    );
-
-    team.through =
-      teamPlayers.length > 0
-        ? Math.min(...teamPlayers.map((player) => player.through))
-        : 0;
-  });
-
-  return Object.values(teams)
-    .sort((a, b) => b.points - a.points)
-    .map((team, index) => ({
-      ...team,
-      icon: index === 0 ? "🥇" : index === 1 ? "🥈" : "🥉",
-    }));
-}
-
-function commentaryTierToRarity(
-  tier: CommentaryTier
-): Moment["rarity"] {
-  if (tier === "major" || tier === "rare") {
-    return "major";
-  }
-
-  if (tier === "notable") {
-    return "rare";
-  }
-
-  return "common";
-}
-
-function stablefordMomentType(eventType: CommentaryEventType) {
-  switch (eventType) {
-    case "eagle":
-      return "stableford_eagle";
-
-    case "birdie":
-      return "stableford_birdie";
-
-    case "bogey":
-      return "stableford_bogey";
-
-    case "double_bogey_or_worse":
-      return "stableford_disaster";
-
-    case "par":
-    default:
-      return "stableford_score";
-  }
-}
-
-function formatWhatsAppMoment(moment: Moment) {
-  return `🚨 ${moment.title.toUpperCase()}
-
-${moment.icon} ${moment.text}
-
-#SwiftTees`;
-}
-
-
-
-function formatLeaderboardCopy(
-  leaderboard: LeaderboardRow[],
-  teamStandings: TeamStanding[]
-) {
-  const playerLines = leaderboard
-    .map(
-      (player) =>
-        `${player.pos}. ${player.name} — ${player.points} pts (${progressText(
-          player.through
-        )})`
-    )
-    .join("\n");
-
-  const teamLines = teamStandings
-    .map((team) => `${team.icon} ${team.team} — ${team.points} pts`)
-    .join("\n");
-
-  return `🏆 Swift Tees Leaderboard
-
-${playerLines}
-
-🥊 Team Race
-${teamLines}
-
-#SwiftTees`;
-}
-
-function formatCommentaryArchive(
-  moments: LiveMomentRow[],
-  tournamentName: string
-) {
-  const chronological = moments
-    .slice()
-    .sort(
-      (a, b) =>
-        new Date(a.created_at ?? 0).getTime() -
-        new Date(b.created_at ?? 0).getTime()
-    );
-
-  const lines = chronological.map((moment) => {
-    const roundText = moment.round_number
-      ? `Round ${moment.round_number}`
-      : "";
-
-    const holeText = moment.hole_number
-      ? `Hole ${moment.hole_number}`
-      : "";
-
-    const context = [roundText, holeText]
-      .filter(Boolean)
-      .join(" • ");
-
-    return `${context ? `${context}\n` : ""}${moment.text}`;
-  });
-
-  return `SWIFT TEES — ${tournamentName}
-
-LIVE COMMENTARY ARCHIVE
-
-${lines.join("\n\n")}`;
-}
-
-
-function buildLatestStablefordMoment(
-  latestStablefordScore: any,
-  players: any[],
-  currentRound: any,
-  leaderboard: LeaderboardRow[]
-): LiveMomentRow | null {
-  if (!latestStablefordScore) return null;
-
-  const player = players.find(
-    (item: any) =>
-      Number(item.id) ===
-      Number(latestStablefordScore.player_id)
-  );
-
-  if (!player) return null;
-
-  const leaderboardRow = leaderboard.find(
-    (row) => Number(row.id) === Number(player.id)
-  );
-
-  const commentaryEvent = buildStablefordEvent(
-    latestStablefordScore,
-    {
-      ...player,
-      team: leaderboardRow?.team ?? player.team ?? "",
-    },
-    currentRound
-  );
-
-  if (!commentaryEvent) return null;
-
-  const commentary = buildCommentary(commentaryEvent);
-
-  const roundNumber = commentaryEvent.roundNumber;
-  const holeNumber = commentaryEvent.holeNumber;
-
-  let momentKey = `stableford-score-${roundNumber}-${player.id}-${holeNumber}`;
-
-  if (commentaryEvent.eventType === "birdie") {
-    momentKey = `stableford-birdie-${roundNumber}-${player.id}-${holeNumber}`;
-  }
-
-  if (commentaryEvent.eventType === "eagle") {
-    momentKey = `stableford-eagle-${roundNumber}-${player.id}-${holeNumber}`;
-  }
-
-  return {
-    event_slug: EVENT_SLUG,
-    moment_key: momentKey,
-    moment_type: stablefordMomentType(
-      commentaryEvent.eventType
-    ),
-
-    player_id: Number(player.id),
-    player_name: player.name,
-    team: leaderboardRow?.team ?? player.team ?? null,
-
-    round_number: roundNumber,
-    hole_number: holeNumber,
-
-    icon: commentary.icon,
-    title: commentary.title,
-    text: commentary.text,
-
-    rarity: commentaryTierToRarity(commentary.tier),
-  };
-}
-
-
-
-function buildLatestScrambleMoment(
-  latestScrambleInfo: LatestScrambleInfo | null,
-  pairStandings: ScramblePairStanding[],
-  previousPairStandings: Record<
-    string,
-    {
-      pos: number;
-      points: number;
-    }
-  >,
-  scoreStateChanged: boolean
-): LiveMomentRow | null {
-  if (!scoreStateChanged) return null;
-
-  const commentaryEvent =
-    buildScrambleEvent(latestScrambleInfo);
-
-  if (!commentaryEvent || !latestScrambleInfo) {
-    return null;
-  }
-
-  // Do not create routine scramble score updates.
-  if (commentaryEvent.eventType === "scramble_score") {
-    return null;
-  }
-
-  const commentary = buildCommentary(commentaryEvent);
-
-  const pairKey = latestScrambleInfo.playerIds
-    .slice()
-    .sort((a, b) => a - b)
-    .join("-");
-
-  const currentPair = pairStandings.find(
-    (pair) => pair.pairKey === pairKey
-  );
-
-  const previousPair = previousPairStandings[pairKey];
-
-  const topPoints = pairStandings[0]?.points ?? 0;
-
-  const jointLeaders = pairStandings.filter(
-    (pair) => pair.points === topPoints
-  );
-
-  const isJointLeader =
-    currentPair &&
-    currentPair.points === topPoints &&
-    jointLeaders.length > 1;
-
-  const movedUpBy =
-    previousPair && currentPair
-      ? previousPair.pos - currentPair.pos
-      : 0;
-
-  let title = commentary.title;
-  let text = commentary.text;
-  let icon = commentary.icon;
-  let rarity = commentaryTierToRarity(
-    commentary.tier
-  );
-
-  let momentType =
-    commentaryEvent.eventType === "scramble_eagle"
-      ? "scramble_eagle"
-      : "scramble_birdie";
-
-  if (
-    currentPair &&
-    previousPair &&
-    previousPair.pos > 1 &&
-    currentPair.pos === 1 &&
-    !isJointLeader
-  ) {
-    icon = "🏆";
-    title = "New Leaders";
-    text = `${currentPair.pairNames} ${
-      commentaryEvent.eventType === "scramble_eagle"
-        ? "eagle"
-        : "birdie"
-    } hole ${currentPair.through} to take the outright lead.`;
-    rarity = "major";
-    momentType = "scramble_lead_taken";
-  } else if (
-    currentPair &&
-    isJointLeader &&
-    (!previousPair || previousPair.pos > 1)
-  ) {
-    icon = "⚔️";
-    title = "Tied at the Top";
-    text = `${currentPair.pairNames} ${
-      commentaryEvent.eventType === "scramble_eagle"
-        ? "eagle"
-        : "birdie"
-    } hole ${currentPair.through} to join the lead on ${currentPair.points} points.`;
-    rarity = "major";
-    momentType = "scramble_lead_joined";
-  } else if (
-    currentPair &&
-    previousPair &&
-    movedUpBy >= 1
-  ) {
-    icon = movedUpBy >= 2 ? "🚀" : "🔥";
-    title =
-      movedUpBy >= 2
-        ? "Flying Up the Table"
-        : "Pair on the Move";
-
-    text = `${currentPair.pairNames} ${
-      commentaryEvent.eventType === "scramble_eagle"
-        ? "eagle"
-        : "birdie"
-    } hole ${currentPair.through} and climb ${
-      movedUpBy === 1
-        ? "one place"
-        : `${movedUpBy} places`
-    } into ${formatOrdinal(currentPair.pos)}.`;
-
-    rarity = movedUpBy >= 2 ? "major" : "rare";
-    momentType = "scramble_movement_up";
-  } else if (
-    currentPair &&
-    currentPair.pos === 1 &&
-    pairStandings[1]
-  ) {
-    const lead =
-      currentPair.points - pairStandings[1].points;
-
-    if (lead > 0) {
-      icon = "🏆";
-      title = "Lead Extended";
-      text = `${currentPair.pairNames} ${
-        commentaryEvent.eventType === "scramble_eagle"
-          ? "eagle"
-          : "birdie"
-      } hole ${currentPair.through} to move ${lead} point${
-        lead === 1 ? "" : "s"
-      } clear at the top.`;
-
-      rarity = lead >= 3 ? "major" : "rare";
-      momentType = "scramble_lead_extended";
-    }
-  }
-
-  const momentKey = `${
-    commentaryEvent.eventType === "scramble_eagle"
-      ? "scramble-eagle"
-      : "scramble-birdie"
-  }-${latestScrambleInfo.roundNumber}-${latestScrambleInfo.playerIds.join(
-    "-"
-  )}-${latestScrambleInfo.holeNumber}`;
-
-  return {
-    event_slug: EVENT_SLUG,
-    moment_key: momentKey,
-    moment_type: momentType,
-
-    player_id: null,
-    player_name: latestScrambleInfo.pairNames,
-    team: null,
-
-    round_number: latestScrambleInfo.roundNumber,
-    hole_number: latestScrambleInfo.holeNumber,
-
-    icon,
-    title,
-    text,
-    rarity,
-  };
-}
-
-function buildBonusMoments(bonusWinners: any[]): LiveMomentRow[] {
-  return bonusWinners
-    .filter((bonus: any) => bonus.winner_player_name)
-    .map((bonus: any) => {
-      const bonusType = normaliseBonusType(bonus.bonus_type);
-      const icon = bonusIconForType(bonus.bonus_type) || "🎯";
-      const roundNumber = Number(bonus.round_number ?? 0);
-      const holeNumber = Number(bonus.hole ?? 0);
-
-      return {
-        event_slug: EVENT_SLUG,
-        moment_key: `bonus-${roundNumber}-${bonusType}-${bonus.winner_player_name}-${holeNumber}`,
-        moment_type: "bonus_winner",
-        player_id: null,
-        player_name: bonus.winner_player_name,
-        team: null,
-        round_number: roundNumber,
-        hole_number: holeNumber,
-        icon,
-        title: bonusType,
-        text: `${bonus.winner_player_name} wins ${bonusType}${
-          holeNumber ? ` on hole ${holeNumber}` : ""
-        }.`,
-        rarity: "rare",
-      };
-    });
-}
-
-function buildMovementMoments(leaderboard: LeaderboardRow[]): LiveMomentRow[] {
-  const biggestClimber = leaderboard
-    .filter((player) => player.liveIcon === "🔥")
-    .sort((a, b) => getMovementAmount(b.movement) - getMovementAmount(a.movement))[0];
-
-  const biggestDrop = leaderboard
-    .filter((player) => player.liveIcon === "📉")
-    .sort((a, b) => getMovementAmount(b.movement) - getMovementAmount(a.movement))[0];
-
-  const moments: LiveMomentRow[] = [];
-
-  if (biggestClimber && getMovementAmount(biggestClimber.movement) >= 2) {
-    moments.push({
-      event_slug: EVENT_SLUG,
-      moment_key: `movement-up-${biggestClimber.id}-${biggestClimber.pos}`,
-      moment_type: "movement_up",
-      player_id: biggestClimber.id,
-      player_name: biggestClimber.name,
-      team: biggestClimber.team || null,
-      round_number: null,
-      hole_number: null,
-      icon: "🔥",
-      title: "Big Mover",
-      text: `${biggestClimber.name} moves up ${getMovementAmount(
-        biggestClimber.movement
-      )} places on the leaderboard.`,
-      rarity: "rare",
-    });
-  }
-
-  if (biggestDrop && getMovementAmount(biggestDrop.movement) >= 2) {
-    moments.push({
-      event_slug: EVENT_SLUG,
-      moment_key: `movement-down-${biggestDrop.id}-${biggestDrop.pos}`,
-      moment_type: "movement_down",
-      player_id: biggestDrop.id,
-      player_name: biggestDrop.name,
-      team: biggestDrop.team || null,
-      round_number: null,
-      hole_number: null,
-      icon: "📉",
-      title: "Losing Ground",
-      text: `${biggestDrop.name} drops ${getMovementAmount(
-        biggestDrop.movement
-      )} places on the leaderboard.`,
-      rarity: "rare",
-    });
-  }
-
-  return moments;
-}
-
-function buildBattleMoments(
-  leaderboard: LeaderboardRow[],
-  teamStandings: TeamStanding[],
-  currentRound: any
-): LiveMomentRow[] {
-  if (
-    currentRound?.format === "scramblePairs" ||
-    currentRound?.format === "scramble"
-  ) {
-    return [];
-  }
-
-  const moments: LiveMomentRow[] = [];
-  const leader = leaderboard[0];
-  const second = leaderboard[1];
-  const topTeam = teamStandings[0];
-  const secondTeam = teamStandings[1];
-
-  if (leader && second && leader.points - second.points <= 1) {
-    const gap = leader.points - second.points;
-
-    moments.push({
-      event_slug: EVENT_SLUG,
-      moment_key: `battle-lead-${leader.id}-${second.id}-${leader.points}-${second.points}`,
-      moment_type: "battle_alert",
-      player_id: null,
-      player_name: `${leader.name} & ${second.name}`,
-      team: null,
-      round_number: null,
-      hole_number: null,
-      icon: "⚔️",
-      title: "Battle Alert",
-      text:
-        gap === 0
-          ? `${leader.name} and ${second.name} are level on points.`
-          : `${leader.name} and ${second.name} are separated by just ${gap} point.`,
-      rarity: "rare",
-    });
-  }
-
-  if (topTeam && secondTeam) {
-    const gap = topTeam.points - secondTeam.points;
-
-    if (gap <= 2) {
-      moments.push({
-        event_slug: EVENT_SLUG,
-        moment_key: `team-battle-${topTeam.team}-${secondTeam.team}-${topTeam.points}-${secondTeam.points}`,
-        moment_type: "team_battle",
-        player_id: null,
-        player_name: null,
-        team: topTeam.team,
-        round_number: null,
-        hole_number: null,
-        icon: "🥊",
-        title: "Team Race Tight",
-        text:
-          gap === 0
-            ? `${topTeam.team} and ${secondTeam.team} are level in the team race.`
-            : `${topTeam.team} lead ${secondTeam.team} by only ${gap} point${
-                gap === 1 ? "" : "s"
-              }.`,
-        rarity: "rare",
-      });
-    }
-  }
-
-  return moments;
-}
-
-async function saveGeneratedMoments(moments: LiveMomentRow[]) {
-  await Promise.all(moments.map((moment) => saveLiveMoment(moment)));
-}
-
-export default function LiveCentrePage() {
-  const { tournament, loading } = useActiveTournament();
-EVENT_SLUG = tournament?.slug ?? "";
-  const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
-  const [teamStandings, setTeamStandings] = useState<TeamStanding[]>([]);
-  const [moments, setMoments] = useState<LiveMomentRow[]>([]);
-  
-  const [copiedKey, setCopiedKey] = useState<string | null>(null);
-const [copiedMomentKeys, setCopiedMomentKeys] = useState<string[]>([]);
-const [lastUpdatedAt, setLastUpdatedAt] = useState("");
-const [currentRound, setCurrentRound] = useState<any>(null);
-  async function copyText(text: string, key: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedKey(key);
-
-      setTimeout(() => {
-        setCopiedKey(null);
-      }, 1500);
-    } catch (error) {
-      console.error("Could not copy:", error);
-    }
-  }
-async function copyMoment(moment: LiveMomentRow, index: number) {
-  try {
-    await navigator.clipboard.writeText(
-      formatWhatsAppMoment(moment)
-    );
-
-    const momentKey =
-      moment.moment_key ?? `${moment.title}-${index}`;
-
-    setCopiedKey(`moment-${index}`);
-
-    setCopiedMomentKeys((current) => {
-      const updated = current.includes(momentKey)
-        ? current
-        : [...current, momentKey];
-
-      if (tournament?.slug) {
-        saveStoredCopiedMoments(
-          tournament.slug,
-          updated
+      /*
+       * We already know the phone
+       * has no connection.
+       */
+      if (
+        typeof navigator !==
+          "undefined" &&
+        !navigator.onLine
+      ) {
+        queueOfflineHoleSave({
+          eventSlug:
+            EVENT_SLUG,
+
+          roundNumber,
+
+          groupNumber,
+
+          holeNumber:
+            hole,
+
+          rowsToSave,
+
+          rowsToDelete,
+
+          bonusWinner:
+            bonusWinnerToSave,
+
+          tournament:
+            tournamentSetup,
+        });
+
+        const pending =
+          getOfflineQueueCount();
+
+        setPendingOfflineCount(
+          pending
+        );
+
+        setIsOnline(
+          false
+        );
+
+        setSavedMessage(
+          `📴 Hole ${hole} saved on this phone · ${pending} waiting to sync`
+        );
+
+        moveToNextHole();
+
+        return;
+      }
+
+      /*
+       * Normal online save.
+       */
+      if (
+        rowsToDelete.length >
+        0
+      ) {
+        await deleteHoleScores(
+          rowsToDelete
         );
       }
 
-      return updated;
-    });
-
-    setTimeout(() => {
-      setCopiedKey(null);
-    }, 1500);
-  } catch (error) {
-    console.error("Could not copy moment:", error);
-  }
-}
-
-
-
-
-  const loadLeaderboard = useCallback(async () => {
-    if (!tournament) return;
-  const eventSlug = tournament.slug;
-const tournamentSetup = {
-  rounds: tournament?.rounds ?? [],
-};
-const tournamentPlayerIds = new Set(
-  tournament.players.map((p: any) => Number(p.id))
-);
-const [
-  players,
-  scores,
-  scrambleScores,
-  bonusWinners,
-  savedMoments,
-] = await Promise.all([
-  getPlayers(),
-  getScores(eventSlug),
-getScrambleScores(eventSlug),
-getBonusWinners(eventSlug),
-getLiveMoments(eventSlug),
-]);
-
-    const currentRoundInfo = getCurrentRoundInfo(
-  tournamentSetup,
-  scores,
-  scrambleScores
-);
-setCurrentRound(currentRoundInfo.round ?? null);
-    const stablefordScores = scores.filter(
-      (score: any) => score.score_type === "stableford" && score.player_id
-    );
-
-    const latestStablefordScore = getLatestStablefordScore(stablefordScores);
-    const latestScrambleScore = getLatestScrambleScore(scrambleScores);
-    const latestScrambleInfo = getLatestScrambleInfo(
-      latestScrambleScore,
-      tournamentSetup,
-      players
-    );
-const scramblePairStandings =
-  buildScramblePairStandings(
-    scrambleScores,
-    tournamentSetup,
-    players,
-    currentRoundInfo.roundNumber
-  );
-
-  const previousPairStandings =
-  getStoredPairStandings(eventSlug);
- 
-    const scramblePointsByPlayerId: Record<number, number> = {};
-    const scrambleThroughByPlayerId: Record<number, number> = {};
-    const bonusPointsByPlayerName: Record<string, number> = {};
-    const bonusIconsByPlayerName: Record<string, string[]> = {};
-
-    bonusWinners.forEach((bonus: any) => {
-      if (!bonus.winner_player_name) return;
-
-      bonusPointsByPlayerName[bonus.winner_player_name] =
-        (bonusPointsByPlayerName[bonus.winner_player_name] ?? 0) +
-        Number(bonus.points ?? 0);
-
-      const icon = bonusIconForType(bonus.bonus_type);
-
-      if (icon) {
-  bonusIconsByPlayerName[bonus.winner_player_name] = [
-    ...(bonusIconsByPlayerName[bonus.winner_player_name] ?? []),
-    icon,
-  ];
-}
-    });
-
-    scrambleScores.forEach((scrambleScore: any) => {
-      const roundNumber = Number(scrambleScore.round_number);
-      const holeNumber = Number(scrambleScore.hole_number);
-      const scramblePoints = Number(scrambleScore.points ?? 0);
-
-      const pairInfo = getPairInfoForScrambleScore(
-        scrambleScore,
-        tournamentSetup,
-        players
-      );
-
-      pairInfo.playerIds.forEach((playerId: number) => {
-        scramblePointsByPlayerId[playerId] =
-          (scramblePointsByPlayerId[playerId] ?? 0) + scramblePoints;
-
-        if (roundNumber === currentRoundInfo.roundNumber) {
-          scrambleThroughByPlayerId[playerId] = Math.max(
-            scrambleThroughByPlayerId[playerId] ?? 0,
-            holeNumber
-          );
-        }
-      });
-    });
-
-    const rows = players
-  .filter((player: any) => tournamentPlayerIds.has(Number(player.id)))
-  .map((player: any) => {
-      const playerScores = stablefordScores.filter(
-        (score: any) => Number(score.player_id) === Number(player.id)
-      );
-
-      const stablefordPoints = playerScores.reduce(
-        (total: number, score: any) => total + Number(score.points ?? 0),
-        0
-      );
-
-      const currentRoundPlayerScores = playerScores.filter(
-        (score: any) =>
-          Number(score.round_number) === Number(currentRoundInfo.roundNumber)
-      );
-
-      const stablefordThrough =
-        currentRoundPlayerScores.length > 0
-          ? Math.max(
-              ...currentRoundPlayerScores.map((score: any) =>
-                Number(score.hole_number)
-              )
-            )
-          : 0;
-
-      const scramblePoints = scramblePointsByPlayerId[Number(player.id)] ?? 0;
-      const bonusPoints = bonusPointsByPlayerName[player.name] ?? 0;
-      const scrambleThrough = scrambleThroughByPlayerId[Number(player.id)] ?? 0;
-
-      return {
-        id: player.id,
-        name: player.name,
-        team:
-  tournament.players?.find(
-    (tournamentPlayer: any) =>
-      Number(tournamentPlayer.id) === Number(player.id)
-  )?.eventTeam ??
-  player.team ??
-  "",
-        points: stablefordPoints + scramblePoints + bonusPoints,
-        through: Math.max(stablefordThrough, scrambleThrough),
-        movement: {
-          icon: "➖",
-          text: "No movement",
-        },
-        bonusIcons: bonusIconsByPlayerName[player.name] ?? [],
-        liveIcon: "",
-      };
-    });
-
-    rows.sort((a, b) => b.points - a.points || b.through - a.through);
-
-   const hasScoringActivity =
-  stablefordScores.length > 0 ||
-  scrambleScores.length > 0 ||
-  bonusWinners.length > 0;
-
-const currentScoreSignature = buildScoreSignature(
-  stablefordScores,
-  scrambleScores,
-  bonusWinners
-);
-
-const previousScoreSignature =
-  typeof window !== "undefined"
-    ? localStorage.getItem(getScoreSignatureStorageKey(eventSlug)) ?? ""
-    : "";
-
-const scoreStateChanged =
-  hasScoringActivity &&
-  currentScoreSignature !== previousScoreSignature;
-
-const previousPositions = eventSlug
-  ? getStoredPositions(eventSlug)
-  : {};
-
-const storedMovement = eventSlug
-  ? getStoredMovement(eventSlug)
-  : {};
-
-const rowsWithPositions = rows.map((player, index) => {
-  const newPosition = index + 1;
-
-  const movement = scoreStateChanged
-    ? formatPlaceMovement(previousPositions[player.id], newPosition)
-    : storedMovement[String(player.id)] ?? {
-        icon: "➖",
-        text: "No movement",
-      };
-
-  return {
-    ...player,
-    pos: newPosition,
-    movement,
-  };
-});
-
-
-
-
-    const biggestClimber = rowsWithPositions
-      .filter((player) => player.movement.icon === "▲")
-      .sort((a, b) => getMovementAmount(b.movement) - getMovementAmount(a.movement))[0];
-
-    const biggestDrop = rowsWithPositions
-      .filter((player) => player.movement.icon === "▼")
-      .sort((a, b) => getMovementAmount(b.movement) - getMovementAmount(a.movement))[0];
-
-    const latestStablefordPlayerId = latestStablefordScore
-      ? Number(latestStablefordScore.player_id)
-      : null;
-
-    const latestStablefordIcon = latestStablefordScore
-      ? getScoreIconFromGross(
-          Number(latestStablefordScore.gross_score ?? 0),
-          getHolePar(currentRoundInfo.round, Number(latestStablefordScore.hole_number))
-        )
-      : "";
-
-    const rowsWithLiveIcons = rowsWithPositions.map((player) => {
-      let liveIcon = "";
-
       if (
-        latestStablefordPlayerId &&
-        Number(player.id) === latestStablefordPlayerId &&
-        latestStablefordIcon
+        rowsToSave.length >
+        0
       ) {
-        liveIcon = latestStablefordIcon;
-      } else if (
-        latestScrambleInfo?.playerIds.includes(Number(player.id)) &&
-        latestScrambleInfo.icon
-      ) {
-        liveIcon = latestScrambleInfo.icon;
-      } else if (biggestClimber && player.id === biggestClimber.id) {
-        liveIcon = "🔥";
-      } else if (biggestDrop && player.id === biggestDrop.id) {
-        liveIcon = "📉";
+        await saveHoleScores(
+          rowsToSave,
+          {
+            tournament:
+              tournamentSetup,
+          }
+        );
       }
 
-      return {
-        ...player,
-        liveIcon,
-      };
-    });
+      if (
+        bonusWinnerToSave
+      ) {
+        await saveBonusWinner(
+          bonusWinnerToSave
+        );
+      }
 
-    const featuredLivePlayers = rowsWithLiveIcons
-      .filter((player) => player.liveIcon)
-      .slice(0, 3)
-      .map((player) => player.id);
+      await checkTournamentResults(
+        tournamentSetup
+      );
 
-    const finalRows = rowsWithLiveIcons.map((player) => ({
-      ...player,
-      liveIcon: featuredLivePlayers.includes(player.id) ? player.liveIcon : "",
-    }));
+      const bonusMessage =
+        bonusWinnerToSave
+          ? ` Bonus winner: ${bonusWinnerToSave.winner_player_name}.`
+          : "";
 
-    const hasTeams =
-  tournament.team_mode === "teams" ||
-  tournament.teamMode === "teams";
+      const formatMessage =
+        isScramble
+          ? "scramble scores"
+          : "scorecards";
 
-const sortedTeams = hasTeams ? buildTeams(finalRows) : [];
+      setSavedMessage(
+        `${currentRound.day} ${currentRound.course} — Hole ${hole} ${formatMessage} saved.${bonusMessage}`
+      );
 
-const generatedMoments = hasScoringActivity
-  ? ([
-      buildLatestStablefordMoment(
-        latestStablefordScore,
-        players,
-        currentRoundInfo.round,
-        finalRows
-      ),
-      buildLatestScrambleMoment(
-  latestScrambleInfo,
-  scramblePairStandings,
-  previousPairStandings,
-  scoreStateChanged
-),
-      ...buildBonusMoments(bonusWinners),
-      ...buildMovementMoments(finalRows),
-      ...buildBattleMoments(
-  finalRows,
-  sortedTeams,
-  currentRoundInfo.round
-),
-    ].filter(Boolean) as LiveMomentRow[])
-  : [];
+      moveToNextHole();
+    } catch (
+      error: any
+    ) {
+      console.error(
+        "Online score save failed:",
+        error
+      );
 
-// Notification-only mode:
- // Live Centre no longer saves generated commentary moments.
- // Push notifications are created server-side when scores are saved.
+      /*
+       * If connection disappears
+       * during the save, keep the
+       * complete hole locally.
+       *
+       * Supabase upserts make replay
+       * safe for any part which may
+       * already have reached the DB.
+       */
+      try {
+        queueOfflineHoleSave({
+          eventSlug:
+            EVENT_SLUG,
 
-if (!hasScoringActivity && typeof window !== "undefined") {
-  localStorage.removeItem(getPositionStorageKey(eventSlug));
-}
+          roundNumber,
 
-const refreshedMoments = await getLiveMoments(eventSlug);
+          groupNumber,
 
-const isScrambleRound =
-  currentRoundInfo.round?.format === "scramblePairs" ||
-  currentRoundInfo.round?.format === "scramble";
+          holeNumber:
+            hole,
 
-const visibleMoments = hasScoringActivity
-  ? (refreshedMoments ?? []).filter(
-      (moment: LiveMomentRow) =>
-        moment.moment_type === "push_notification"
-    )
-  : [];
+          rowsToSave,
 
-setLeaderboard(finalRows);
-setTeamStandings(sortedTeams);
-setMoments(visibleMoments);
-    setLastUpdatedAt(
-      new Date().toLocaleTimeString("en-GB", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    );
+          rowsToDelete,
 
-if (eventSlug && hasScoringActivity && scoreStateChanged) {
-  saveStoredPositions(finalRows, eventSlug);
-  saveStoredMovement(finalRows, eventSlug);
-saveStoredPairStandings(
-  scramblePairStandings,
-  eventSlug
-);
-  if (typeof window !== "undefined") {
-    localStorage.setItem(
-      getScoreSignatureStorageKey(eventSlug),
-      currentScoreSignature
+          bonusWinner:
+            bonusWinnerToSave,
+
+          tournament:
+            tournamentSetup,
+        });
+
+        const pending =
+          getOfflineQueueCount();
+
+        setPendingOfflineCount(
+          pending
+        );
+
+        setIsOnline(
+          typeof navigator !==
+            "undefined"
+            ? navigator.onLine
+            : false
+        );
+
+        setSavedMessage(
+          `📴 Hole ${hole} stored safely · ${pending} waiting to sync`
+        );
+
+        moveToNextHole();
+      } catch (
+        queueError
+      ) {
+        console.error(
+          "Could not store offline score:",
+          queueError
+        );
+
+        setSavedMessage(
+          `❌ Could not save Hole ${hole}. Please try again.`
+        );
+      }
+    } finally {
+      setIsSaving(
+        false
+      );
+    }
+  }
+
+  function holeHasScores(
+    holeNumber: number
+  ) {
+    if (isScramble) {
+      return selectedGroup.pairs?.some(
+        (pair: any) =>
+          scores[
+            scoreKeyFor(
+              selectedGroup.id,
+              pair.id,
+              holeNumber
+            )
+          ]
+      );
+    }
+
+    return selectedGroup.players.some(
+      (player: any) =>
+        scores[
+          scoreKeyFor(
+            selectedGroup.id,
+            player.name,
+            holeNumber
+          )
+        ]
     );
   }
-} else if (eventSlug && !hasScoringActivity) {
-  clearStoredLeaderboardState(eventSlug);
-  setCopiedMomentKeys([]);
-}
 
-
-
-  }, [tournament]);
-
- useEffect(() => {
-  if (!loading && tournament) {
-    setLeaderboard([]);
-    setTeamStandings([]);
-    setMoments([]);
-setLastUpdatedAt("");
-setCurrentRound(null);
-
-    setCopiedMomentKeys(
-      getStoredCopiedMoments(tournament.slug)
-    );
-
-    loadLeaderboard();
-  }
-}, [loading, tournament, loadLeaderboard]);
-
-  useEffect(() => {
-  if (!tournament?.slug) return;
-
-  const channel = supabase
-    .channel(`live-centre-${tournament.slug}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "scores" },
-        () => setTimeout(loadLeaderboard, 300)
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "scramble_scores" },
-        () => setTimeout(loadLeaderboard, 300)
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "bonus_winners" },
-        () => setTimeout(loadLeaderboard, 300)
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "live_moments" },
-        () => setTimeout(loadLeaderboard, 300)
-      )
-      .subscribe((status, err) => {
-        if (err) console.error("Realtime subscription error:", err);
-        console.log("Live Centre realtime status:", status);
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [tournament?.slug, loadLeaderboard]);
-
-useEffect(() => {
-  if (!tournament?.slug) return;
-
-  const interval = setInterval(() => {
-    loadLeaderboard();
-  }, 3000);
-
-  return () => clearInterval(interval);
-}, [tournament?.slug, loadLeaderboard]);
-
+  /* ============================================================
+     PAGE
+  ============================================================ */
 
   return (
-    <PageContainer className="!bg-[#f5f4ee] text-slate-900">
-      <div className="mx-auto max-w-3xl">
-        <header className="px-2 pb-5 pt-1 text-center">
-          <div className="mb-4 flex items-center justify-center gap-3">
-            <Image src="/swiftteeslogo.png" alt="" width={48} height={36} className="h-10 w-auto" />
-            <span className="text-sm font-black uppercase tracking-[0.25em] text-green-950">Swift Tees</span>
+    <main className="min-h-screen bg-[#eef2eb] px-2.5 pb-44 pt-2 text-slate-900 md:p-8 md:pb-20">
+      <div className="mx-auto max-w-6xl">
+        {/* ======================================================
+            COMPACT EVENT HEADER
+        ====================================================== */}
+
+        <header className="mb-2 px-1 text-center">
+          <div className="flex items-center justify-center gap-2">
+            <span className="text-xs">
+              ⛳
+            </span>
+
+            <p className="text-[9px] font-black uppercase tracking-[0.28em] text-emerald-700">
+              Swift Tees
+            </p>
           </div>
-          <h1 className="text-3xl font-black tracking-tight text-[#103e30] sm:text-4xl">{tournament?.name ?? "Live Leaderboard"}</h1>
-          {currentRound && (
-  <p className="mt-2 text-sm text-slate-600">
-    {currentRound.date && formatLiveRoundDate(currentRound.date)}
-    {currentRound.date && currentRound.format && " · "}
-    {currentRound.format === "scramblePairs" ||
-    currentRound.format === "scramble"
-      ? "Scramble"
-      : currentRound.format === "stableford"
-        ? "Stableford"
-        : ""}
-  </p>
-)}
-          <p className="mt-3 inline-flex items-center gap-2 text-[11px] font-semibold text-green-800">
-            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-green-600" />
-            {loading ? "Loading tournament…" : "Live leaderboard"}
-            {lastUpdatedAt && <span className="font-normal text-slate-500"> · Updated {lastUpdatedAt}</span>}
-          </p>
+
+          <h1 className="mt-0.5 truncate text-[24px] font-black leading-tight tracking-[-0.035em] text-green-950 md:text-4xl">
+            {tournament.name}
+          </h1>
+
         </header>
 
-        {teamStandings.length > 0 && (
-          <section
-            aria-label="Team standings"
-            className="mb-4 rounded-2xl border border-green-950/10 bg-white px-3 pb-3 pt-3 shadow-sm"
-          >
-            <div className="mb-3 text-center">
-              <h2 className="text-sm font-black text-green-950">
-                Team Leaderboard
-              </h2>
-              <p className="mt-0.5 text-[10px] text-slate-500">
-                Live team standings
+        {/* ======================================================
+            ROUND + GROUP SWITCHERS
+        ====================================================== */}
+
+        <div className="mb-2 space-y-1.5">
+          {tournamentSetup
+            .rounds.length >
+            1 && (
+            <div
+              className="grid w-full gap-1.5"
+              style={{
+                gridTemplateColumns:
+                  `repeat(${tournamentSetup.rounds.length}, minmax(0, 1fr))`,
+              }}
+            >
+              {tournamentSetup.rounds.map(
+                (
+                  round: any
+                ) => {
+                  const active =
+                    String(
+                      roundId
+                    ) ===
+                    String(
+                      round.id
+                    );
+
+                  return (
+                    <button
+                      key={
+                        round.id
+                      }
+                      onClick={() => {
+                        setRoundId(
+                          round.id
+                        );
+
+                        setSelectedGroupId(
+                          round
+                            .groups?.[0]
+                            ?.id ??
+                            null
+                        );
+
+                        setHole(
+                          1
+                        );
+
+                        setSavedMessage(
+                          ""
+                        );
+                      }}
+                      className={`min-w-0 rounded-xl border px-2 py-1.5 text-center transition active:scale-[0.98] ${
+                        active
+                          ? "border-green-950 bg-green-950 text-white shadow-sm"
+                          : "border-slate-200 bg-white text-green-950"
+                      }`}
+                    >
+                      <span className="block truncate text-[12px] font-black">
+                        {
+                          round.course
+                        }
+                      </span>
+
+                      <span
+                        className={`mt-0.5 block truncate text-[8px] font-bold ${
+                          active
+                            ? "text-green-200"
+                            : "text-slate-500"
+                        }`}
+                      >
+                        Round {round.roundNumber ?? round.id}
+                        {
+                          " • "
+                        }
+                        {round.format ===
+                        "scramblePairs"
+                          ? "Scramble"
+                          : "Stableford"}
+                      </span>
+                    </button>
+                  );
+                }
+              )}
+            </div>
+          )}
+
+          {currentRound.groups
+            .length >
+            1 && (
+            <div
+              className="grid w-full gap-1.5"
+              style={{
+                gridTemplateColumns:
+                  `repeat(${currentRound.groups.length}, minmax(0, 1fr))`,
+              }}
+            >
+              {currentRound.groups.map(
+                (
+                  group: any
+                ) => {
+                  const active =
+                    String(
+                      selectedGroupId
+                    ) ===
+                    String(
+                      group.id
+                    );
+
+                  return (
+                    <button
+                      key={
+                        group.id
+                      }
+                      onClick={() => {
+                        setSelectedGroupId(
+                          group.id
+                        );
+
+                        setSavedMessage(
+                          ""
+                        );
+                      }}
+                      className={`min-w-0 rounded-xl border px-2 py-1.5 text-center text-[12px] font-black transition active:scale-[0.98] ${
+                        active
+                          ? "border-green-950 bg-green-950 text-white shadow-sm"
+                          : "border-slate-200 bg-white text-green-950"
+                      }`}
+                    >
+                      <span className="block truncate">
+                        {
+                          group.name
+                        }
+                      </span>
+
+                      {group.teeTime && (
+                        <span
+                          className={`mt-0.5 block text-[8px] font-bold ${
+                            active
+                              ? "text-green-200"
+                              : "text-slate-400"
+                          }`}
+                        >
+                          {
+                            group.teeTime
+                          }
+                        </span>
+                      )}
+                    </button>
+                  );
+                }
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ======================================================
+            MAIN SCORING PANEL
+        ====================================================== */}
+
+        <section className="overflow-hidden rounded-[1.7rem] bg-[#043b25] text-white shadow-[0_10px_30px_rgba(3,46,30,0.15)] ring-1 ring-green-950/10">
+        {/* HOLE INFO */}
+
+        <div className="px-3 pb-2 pt-3">
+          {/* CURRENT HOLE + PAR / SI / YARDS */}
+          <div className="grid grid-cols-[minmax(0,1fr)_104px] gap-2">
+            <div className="flex h-[82px] flex-col items-center justify-center rounded-2xl bg-emerald-950/45 ring-1 ring-white/10">
+              <p className="text-[8px] font-black uppercase tracking-[0.3em] text-emerald-300">
+                Hole
+              </p>
+
+              <p className="mt-0.5 text-[48px] font-black leading-[0.85] tracking-[-0.07em] text-white">
+                {hole}
               </p>
             </div>
 
-            <div
-              className={`grid items-end gap-2 ${
-                teamStandings.length === 2
-                  ? "grid-cols-2"
-                  : "grid-cols-3"
-              }`}
-            >
-              {teamStandings.map((team, index) => {
-                const teamPlayers = leaderboard
-                  .filter(
-                    (player) =>
-                      (player.team || "No Team") === team.team
-                  )
-                  .sort(
-                    (a, b) =>
-                      b.points - a.points ||
-                      a.name.localeCompare(b.name)
-                  );
+            <div className="flex h-[82px] flex-col justify-center overflow-hidden rounded-xl bg-[#f8faf7] px-3 shadow-sm ring-1 ring-white/20">
+              <HoleStatRow label="PAR" value={currentHole.par} />
+              <HoleStatRow label="SI" value={currentHole.strokeIndex} />
+              <HoleStatRow
+                label="YARDS"
+                value={currentHole.yards ? currentHole.yards : "—"}
+              />
+            </div>
+          </div>
 
-                return (
+            {/* HOLE PICKER */}
+
+            <div className="mt-2 grid grid-cols-9 gap-1">
+              {currentRound.holes.map(
+                (
+                  item: any
+                ) => {
+                  const holeNumber =
+                    Number(
+                      item.hole
+                    );
+
+                  const hasScores =
+                    holeHasScores(
+                      holeNumber
+                    );
+
+                  const hasBonus =
+                    roundBonusHoles.some(
+                      (
+                        bonus: any
+                      ) =>
+                        getBonusHoleNumber(
+                          bonus
+                        ) ===
+                        holeNumber
+                    );
+
+                  const selected =
+                    hole ===
+                    holeNumber;
+
+                  return (
+                    <button
+                      key={
+                        holeNumber
+                      }
+                      onClick={() => {
+                        setHole(
+                          holeNumber
+                        );
+
+                        setSavedMessage(
+                          ""
+                        );
+                      }}
+                      className={`relative flex h-8 items-center justify-center rounded-lg border text-[11px] font-black transition active:scale-95 ${
+                        selected
+                          ? "border-white bg-white text-green-950 shadow-sm"
+                          : hasScores
+                          ? "border-emerald-400 bg-emerald-500 text-white"
+                          : "border-white/10 bg-white/[0.08] text-white"
+                      }`}
+                    >
+                      {
+                        holeNumber
+                      }
+
+                      {hasBonus && (
+                        <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-yellow-300 ring-1 ring-green-950" />
+                      )}
+                    </button>
+                  );
+                }
+              )}
+            </div>
+          </div>
+
+          {/* BONUS HOLE */}
+
+          {bonusHole && (
+            <div className="mx-2.5 mb-2 rounded-xl bg-yellow-300 p-2 text-green-950">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] font-black">
+                  ⭐{" "}
+                  {getBonusType(
+                    bonusHole
+                  )}
+                  {bonusHole.points
+                    ? ` · ${bonusHole.points} pts`
+                    : ""}
+                </p>
+
+                <span className="rounded-full bg-yellow-400 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider">
+                  Bonus hole
+                </span>
+              </div>
+
+              <select
+                value={
+                  getBonusWinner()
+                }
+                onChange={(
+                  event
+                ) =>
+                  setBonusWinner(
+                    event.target
+                      .value
+                  )
+                }
+                className="mt-1.5 h-9 w-full rounded-lg border border-yellow-500 bg-white px-2 text-[12px] font-black text-green-950 outline-none"
+              >
+                <option value="">
+                  Select winner
+                </option>
+
+                {uniqueRoundPlayers.map(
+                  (
+                    player: any
+                  ) => (
+                    <option
+                      key={
+                        player.player_id
+                      }
+                      value={String(
+                        player.player_id
+                      )}
+                    >
+                      {
+                        player.name
+                      }
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
+          )}
+
+          {/* ======================================================
+              PLAYERS
+          ====================================================== */}
+
+          <div className="space-y-1.5 px-2.5 pb-2.5">
+            {!isScramble &&
+              selectedGroup.players.map(
+                (
+                  player: any
+                ) => (
                   <div
-                    key={team.team}
-                    className={`relative overflow-hidden rounded-2xl border px-2 pb-2.5 pt-3 text-center shadow-sm ${
-                      index === 0
-                        ? "border-emerald-300 bg-gradient-to-b from-[#eaf8e9] to-white"
-                        : "border-slate-200 bg-gradient-to-b from-slate-50 to-white"
-                    }`}
+                    key={
+                      player.name
+                    }
+                    className="flex min-h-[58px] items-center justify-between gap-2 rounded-xl bg-white px-2.5 py-1.5 text-green-950 shadow-sm"
                   >
-                    <div className="flex items-center justify-center gap-1.5">
+                    <div className="flex min-w-0 items-center gap-2">
                       <span
-                        aria-hidden="true"
-                        className={`h-2.5 w-2.5 shrink-0 rounded-full ${teamDot(team.team)}`}
+                        className={`h-2.5 w-2.5 shrink-0 rounded-full ${teamDot(
+                          player.team
+                        )}`}
                       />
-                      <p className="truncate text-[12px] font-black text-green-950">
-                        {team.team}
+
+                      <div className="min-w-0">
+                        <p className="truncate text-[15px] font-black leading-tight">
+                          {
+                            player.name
+                          }
+                        </p>
+
+                        <p className="mt-0.5 truncate text-[9px] font-bold text-slate-400">
+                          {player.team
+                            ? `${player.team} · `
+                            : ""}
+                          HCP{" "}
+                          {
+                            player.eventHandicap
+                          }
+                        </p>
+                      </div>
+                    </div>
+
+                    <ScoreControl
+                      value={
+                        getScore(
+                          player.name
+                        ) || ""
+                      }
+                      onMinus={() =>
+                        changeScore(
+                          player.name,
+                          -1
+                        )
+                      }
+                      onPlus={() =>
+                        changeScore(
+                          player.name,
+                          1
+                        )
+                      }
+                      onChange={(
+                        value
+                      ) =>
+                        setScore(
+                          player.name,
+                          value
+                        )
+                      }
+                    />
+                  </div>
+                )
+              )}
+
+            {/* ======================================================
+                SCRAMBLE PAIRS
+            ====================================================== */}
+
+            {isScramble &&
+              selectedGroup.pairs?.map(
+                (
+                  pair: any
+                ) => (
+                  <div
+                    key={
+                      pair.id
+                    }
+                    className="flex min-h-[62px] items-center justify-between gap-2 rounded-xl bg-white px-2.5 py-1.5 text-green-950 shadow-sm"
+                  >
+                    <div className="min-w-0 pr-1">
+                      <p className="text-[9px] font-black uppercase tracking-[0.1em] text-emerald-700">
+                        👥 Pair{" "}
+                        {
+                          pair.pairNumber
+                        }
+                      </p>
+
+                      <p className="mt-0.5 truncate text-[16px] font-black leading-tight">
+                        {pair.player1}
+
+                        {pair.player2 && (
+                          <>
+                            {" "}
+                            <span className="text-slate-300">
+                              +
+                            </span>{" "}
+                            {pair.player2}
+                          </>
+                        )}
+                      </p>
+
+                      <p className="mt-0.5 text-[9px] font-bold text-slate-400">
+                        {
+                          pair.finalHandicap
+                        }{" "}
+                        HCP
                       </p>
                     </div>
 
-                    <p className="mt-1 text-[26px] font-black leading-none tabular-nums text-green-900">
-                      {team.points}
-                    </p>
-                    <p className="mt-1 text-[9px] font-semibold text-slate-500">
-                      {progressText(team.through)}
-                    </p>
-
-                    {teamPlayers.length > 0 && (
-                      <div className="mt-2 space-y-1 border-t border-green-950/10 pt-2">
-                        {teamPlayers.map((player) => (
-                          <div
-                            key={player.id}
-                            className="flex min-w-0 items-center justify-between gap-1 text-[9px]"
-                          >
-                            <span className="truncate font-semibold text-slate-600">
-                              {player.name}
-                            </span>
-                            <span className="shrink-0 font-black tabular-nums text-green-800">
-                              {player.points}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <ScoreControl
+                      value={
+                        getScore(
+                          pair.id
+                        ) || ""
+                      }
+                      onMinus={() =>
+                        changeScore(
+                          pair.id,
+                          -1
+                        )
+                      }
+                      onPlus={() =>
+                        changeScore(
+                          pair.id,
+                          1
+                        )
+                      }
+                      onChange={(
+                        value
+                      ) =>
+                        setScore(
+                          pair.id,
+                          value
+                        )
+                      }
+                    />
                   </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
-        <section aria-label="Individual standings" className="mb-4 overflow-hidden rounded-2xl border border-green-950/10 bg-white shadow-sm">
-          <div className="flex items-center justify-between px-4 py-3">
-            <h2 className="text-sm font-bold text-green-950">Individual Leaderboard</h2>
-            <button type="button" onClick={() => copyText(formatLeaderboardCopy(leaderboard, teamStandings), "leaderboard")} className="rounded-full border border-green-800/20 px-3 py-1.5 text-xs font-bold text-green-800 hover:bg-green-50">
-              {copiedKey === "leaderboard" ? "Copied" : "Copy"}
-            </button>
+                )
+              )}
           </div>
-          <table className="w-full table-fixed text-left text-sm">
-            <thead className="border-y border-slate-100 text-[11px] text-slate-500">
-              <tr>
-                <th scope="col" className="w-11 py-3 text-center">#</th>
-                <th scope="col" className="py-3">Player</th>
-                <th scope="col" className="w-[62px] py-3 pr-4 text-right">Points</th>
-              </tr>
-            </thead>
-            <tbody>
-              {leaderboard.map((player) => (
-                <tr key={player.id} className={`border-b border-slate-100 last:border-0 ${player.pos === 1 ? "bg-[#eaf8e9]" : "hover:bg-[#f7faf6]"}`}>
-                  <td className="py-3 text-center text-sm font-black tabular-nums text-slate-500">{player.pos}</td>
-                  <th scope="row" className="py-3 pr-1 font-semibold text-green-950">
-                    <div className="flex items-center gap-1.5"><span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${teamDot(player.team)}`} /><span className="break-words">{player.name}</span></div>
-                    <div className="mt-0.5 flex min-h-[16px] items-center gap-1.5 pl-3.5 text-[10px] font-medium text-slate-400">
-                      <span>{progressText(player.through)}</span>
-                      <span
-                        title={player.movement.text}
-                        aria-label={player.movement.text}
-                        className={`font-semibold ${movementStyle(player.movement.icon)}`}
-                      >
-                        {player.movement.icon}
-                      </span>
-                      {(player.bonusIcons.length > 0 || player.liveIcon) && (
-                        <span className="text-xs" title="Bonus awards and live moment">
-                          {player.bonusIcons.join("")} {player.liveIcon}
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                  <td className="py-3 pr-4 text-right"><span className="text-lg font-black tabular-nums text-green-900">{player.points}</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {leaderboard.length === 0 && <p className="px-5 py-8 text-center text-sm text-slate-500">{loading ? "Loading standings…" : "Standings will appear when tournament scores are available."}</p>}
         </section>
 
-           {moments.length > 0 && (
-        <section className="mt-2.5 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="text-lg font-black text-green-950">
-                🎙️ Live Commentary
-              </h2>
+        {/* ======================================================
+            CONNECTION / OFFLINE STATUS
+        ====================================================== */}
 
-              <p className="mt-0.5 text-xs text-slate-500">
-                The tournament story as it happens
-              </p>
+        <div className="mt-2">
+          {isSyncingOffline ? (
+            <div className="rounded-xl bg-amber-100 px-3 py-2 text-center text-[11px] font-black text-amber-900 ring-1 ring-amber-200">
+              🔄 Syncing{" "}
+              {
+                pendingOfflineCount
+              }{" "}
+              saved hole
+              {pendingOfflineCount ===
+              1
+                ? ""
+                : "s"}
+              ...
             </div>
-
+          ) : pendingOfflineCount >
+            0 ? (
             <button
               type="button"
               onClick={() =>
-                copyText(
-                  formatCommentaryArchive(
-                    moments,
-                    tournament?.name ?? "Swift Tees"
-                  ),
-                  "commentary-archive"
-                )
+                void syncOfflineScores()
               }
-              className="shrink-0 rounded-full bg-green-950 px-3 py-1.5 text-[10px] font-black text-white"
+              disabled={
+                !isOnline
+              }
+              className="w-full rounded-xl bg-amber-100 px-3 py-2 text-center text-[11px] font-black text-amber-900 ring-1 ring-amber-200 disabled:opacity-70"
             >
-              {copiedKey === "commentary-archive"
-                ? "Copied"
-                : "Copy All"}
+              {isOnline
+                ? `📤 ${pendingOfflineCount} saved hole${
+                    pendingOfflineCount ===
+                    1
+                      ? ""
+                      : "s"
+                  } waiting · Tap to sync`
+                : `📴 Offline · ${pendingOfflineCount} saved hole${
+                    pendingOfflineCount ===
+                    1
+                      ? ""
+                      : "s"
+                  } waiting`}
             </button>
+          ) : (
+            <div className="rounded-xl bg-white px-3 py-1.5 text-center text-[10px] font-black text-slate-500 ring-1 ring-slate-200">
+              {isOnline
+                ? "🟢 Online · Scores syncing normally"
+                : "📴 Offline · Scores will be saved on this phone"}
+            </div>
+          )}
+        </div>
+
+        {/* ======================================================
+            SAVE STATUS
+        ====================================================== */}
+
+        {savedMessage && (
+          <div
+            className={`mt-2 rounded-xl px-3 py-2 text-center text-[11px] font-black ${
+              savedMessage.startsWith(
+                "❌"
+              )
+                ? "bg-red-100 text-red-800 ring-1 ring-red-200"
+                : savedMessage.startsWith(
+                    "📴"
+                  )
+                ? "bg-amber-100 text-amber-900 ring-1 ring-amber-200"
+                : "bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200"
+            }`}
+          >
+            {savedMessage.startsWith(
+              "❌"
+            ) ||
+            savedMessage.startsWith(
+              "📴"
+            )
+              ? savedMessage
+              : `✅ ${savedMessage}`}
           </div>
+        )}
 
-          <div className="space-y-2">
-            {moments.map((moment, index) => {
-              const momentKey =
-                moment.moment_key ??
-                `${moment.title}-${index}`;
+        {/* ======================================================
+            SECONDARY LINKS
+        ====================================================== */}
 
-              return (
-                <div
-                  key={momentKey}
-                  className="rounded-2xl bg-slate-50 px-3 py-3"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-base">
-                          {moment.icon || "⛳"}
-                        </span>
+        <section className="mt-2 grid grid-cols-2 gap-1.5">
+  <a
+    href="/live-centre"
+    className="flex h-10 items-center justify-center rounded-xl bg-white text-center text-[10px] font-black text-green-950 shadow-sm ring-1 ring-slate-200"
+  >
+    🏆 Leaderboard
+  </a>
 
-                        <p className="text-xs font-black uppercase tracking-wide text-green-950">
-                          {moment.title}
-                        </p>
-
-                        {moment.round_number && (
-                          <span className="text-[10px] font-bold text-slate-400">
-                            R{moment.round_number}
-                          </span>
-                        )}
-                      </div>
-
-                      <p className="mt-1.5 text-sm font-semibold leading-snug text-slate-700">
-                        {moment.text}
-                      </p>
-
-                      {moment.created_at && (
-                        <p className="mt-1.5 text-[10px] font-semibold text-slate-400">
-                          {new Date(moment.created_at).toLocaleTimeString(
-                            "en-GB",
-                            {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }
-                          )}
-                        </p>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        copyMoment(moment, index)
-                      }
-                      className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-black text-green-950"
-                    >
-                      {copiedKey === `moment-${index}`
-                        ? "Copied"
-                        : copiedMomentKeys.includes(momentKey)
-                          ? "Copy ✓"
-                          : "Copy"}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
-
-<section className="mt-2.5 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-  <div className="flex items-center justify-between gap-3">
-    <div className="min-w-0">
-      <h2 className="text-lg font-black text-green-950">
-        📝 Live Scoring
-      </h2>
-
-      <p className="mt-0.5 text-xs text-slate-500">
-        Enter your group&apos;s scores
-      </p>
-    </div>
-
-    <Link
-      href="/live-scoring-v2"
-      className="shrink-0 rounded-xl bg-green-700 px-4 py-2.5 text-sm font-black text-white"
-    >
-      Scorecards →
-    </Link>
-  </div>
+  <a
+    href="/full-scorecard"
+    className="flex h-10 items-center justify-center rounded-xl bg-white text-center text-[10px] font-black text-green-950 shadow-sm ring-1 ring-slate-200"
+  >
+    📊 Full Card
+  </a>
 </section>
       </div>
-    </PageContainer>
+
+      {/* ======================================================
+          STICKY SAVE BAR
+          sits above Swift Tees bottom navigation
+      ====================================================== */}
+
+      <div className="fixed inset-x-0 bottom-[72px] z-40 px-2.5 md:static md:mt-4 md:px-0">
+        <div className="mx-auto max-w-6xl rounded-[1.2rem] border border-white/70 bg-white/95 p-2 shadow-[0_-6px_24px_rgba(15,23,42,0.13)] backdrop-blur-xl md:shadow-sm">
+          <button
+            onClick={
+              saveHole
+            }
+            disabled={
+              isSaving
+            }
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 text-[15px] font-black text-white shadow-sm transition active:scale-[0.99] disabled:opacity-60"
+          >
+            {isSaving ? (
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+
+                Saving...
+              </>
+            ) : (
+              <>
+                <span>
+                  ✓
+                </span>
+
+                <span>
+                  Save Hole{" "}
+                  {hole}
+                  {isScramble
+                    ? " Scores"
+                    : " Scorecards"}
+                </span>
+
+                {hole < 18 && (
+                  <span className="text-green-200">
+                    →
+                  </span>
+                )}
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+/* ============================================================
+   SCORE CONTROL
+============================================================ */
+
+function ScoreControl({
+  value,
+  onMinus,
+  onPlus,
+  onChange,
+}: {
+  value:
+    | number
+    | string;
+  onMinus: () => void;
+  onPlus: () => void;
+  onChange: (
+    value: string
+  ) => void;
+}) {
+  return (
+    <div className="flex shrink-0 items-center gap-1">
+      <button
+        type="button"
+        onClick={
+          onMinus
+        }
+        className="flex h-9 w-9 items-center justify-center rounded-[11px] bg-slate-100 text-xl font-black text-green-950 ring-1 ring-slate-200 transition active:scale-90 active:bg-slate-200"
+        aria-label="Decrease score"
+      >
+        −
+      </button>
+
+      <input
+        type="number"
+        inputMode="numeric"
+        min="0"
+        value={value}
+        onChange={(
+          event
+        ) =>
+          onChange(
+            event.target
+              .value
+          )
+        }
+        className="h-10 w-12 rounded-[11px] border border-slate-300 bg-white px-1 text-center text-[22px] font-black leading-none text-green-950 outline-none transition focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100"
+        placeholder="-"
+        aria-label="Gross score"
+      />
+
+      <button
+        type="button"
+        onClick={
+          onPlus
+        }
+        className="flex h-9 w-9 items-center justify-center rounded-[11px] bg-slate-100 text-xl font-black text-green-950 ring-1 ring-slate-200 transition active:scale-90 active:bg-emerald-100"
+        aria-label="Increase score"
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+/* ============================================================
+   HOLE STAT
+============================================================ */
+
+function HoleStatRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number;
+}) {
+  return (
+    <div className="flex h-[21px] items-center justify-between border-b border-slate-200/80 last:border-b-0">
+      <p className="text-[7px] font-black uppercase tracking-[0.12em] text-emerald-700">
+        {label}
+      </p>
+
+      <p className="text-[14px] font-black leading-none text-green-950">
+        {value}
+      </p>
+    </div>
   );
 }
