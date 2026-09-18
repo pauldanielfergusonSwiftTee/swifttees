@@ -707,33 +707,6 @@ ${moment.icon} ${moment.text}
 
 
 
-function formatLeaderboardCopy(
-  leaderboard: LeaderboardRow[],
-  teamStandings: TeamStanding[]
-) {
-  const playerLines = leaderboard
-    .map(
-      (player) =>
-        `${player.pos}. ${player.name} — ${player.points} pts (${progressText(
-          player.through
-        )})`
-    )
-    .join("\n");
-
-  const teamLines = teamStandings
-    .map((team) => `${team.icon} ${team.team} — ${team.points} pts`)
-    .join("\n");
-
-  return `🏆 Swift Tees Leaderboard
-
-${playerLines}
-
-🥊 Team Race
-${teamLines}
-
-#SwiftTees`;
-}
-
 function formatCommentaryArchive(
   moments: LiveMomentRow[],
   tournamentName: string
@@ -1625,14 +1598,14 @@ useEffect(() => {
   return (
     <PageContainer className="!bg-[#f5f4ee] text-slate-900">
       <div className="mx-auto max-w-3xl">
-        <header className="px-2 pb-5 pt-1 text-center">
-          <div className="mb-4 flex items-center justify-center gap-3">
-            <Image src="/swiftteeslogo.png" alt="" width={48} height={36} className="h-10 w-auto" />
-            <span className="text-sm font-black uppercase tracking-[0.25em] text-green-950">Swift Tees</span>
+        <header className="px-2 pb-2 text-center">
+          <div className="mb-1 flex items-center justify-center gap-1.5">
+            <Image src="/swiftteeslogo.png" alt="" width={32} height={24} className="h-6 w-auto" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-green-950">Swift Tees</span>
           </div>
-          <h1 className="text-3xl font-black tracking-tight text-[#103e30] sm:text-4xl">{tournament?.name ?? "Live Leaderboard"}</h1>
+          <h1 className="text-[22px] font-black leading-tight tracking-tight text-[#103e30] sm:text-3xl">{tournament?.name ?? "Live Leaderboard"}</h1>
           {currentRound && (
-  <p className="mt-2 text-sm text-slate-600">
+  <p className="mt-1 text-xs text-slate-600">
     {currentRound.date && formatLiveRoundDate(currentRound.date)}
     {currentRound.date && currentRound.format && " · "}
     {currentRound.format === "scramblePairs" ||
@@ -1643,7 +1616,7 @@ useEffect(() => {
         : ""}
   </p>
 )}
-          <p className="mt-3 inline-flex items-center gap-2 text-[11px] font-semibold text-green-800">
+          <p className="mt-1 inline-flex items-center gap-1.5 text-[10px] font-semibold text-green-800">
             <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-green-600" />
             {loading ? "Loading tournament…" : "Live leaderboard"}
             {lastUpdatedAt && <span className="font-normal text-slate-500"> · Updated {lastUpdatedAt}</span>}
@@ -1651,77 +1624,135 @@ useEffect(() => {
         </header>
 
         {teamStandings.length > 0 && (
-          <section aria-label="Team standings" className="mb-4 overflow-hidden rounded-2xl border border-green-950/10 bg-white shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
-              <div>
-                <h2 className="text-sm font-bold text-green-950">Team Leaderboard</h2>
-                <p className="mt-0.5 text-[11px] text-slate-500">Team totals with each player&apos;s points</p>
-              </div>
-              <span className="text-[11px] font-semibold text-slate-500">Points</span>
+          <section
+            aria-label="Team standings"
+            className="mb-3 rounded-2xl border border-green-950/10 bg-white px-2.5 pb-2.5 pt-2.5 shadow-sm"
+          >
+            <div className="mb-2 text-center">
+              <h2 className="text-sm font-black text-green-950">
+                Team Leaderboard
+              </h2>
             </div>
 
-            {teamStandings.map((team, index) => {
-              const teamPlayers = leaderboard
-                .filter((player) => (player.team || "No Team") === team.team)
-                .sort((a, b) => b.points - a.points || a.name.localeCompare(b.name));
+            <div
+              className={`grid items-end gap-2 ${
+                teamStandings.length === 2
+                  ? "grid-cols-2"
+                  : "grid-cols-3"
+              }`}
+            >
+              {teamStandings.map((team, index) => {
+                const teamPlayers = leaderboard
+                  .filter(
+                    (player) =>
+                      (player.team || "No Team") === team.team
+                  )
+                  .sort(
+                    (a, b) =>
+                      b.points - a.points ||
+                      a.name.localeCompare(b.name)
+                  );
 
-              return (
-                <div key={team.team} className={`border-b border-slate-100 px-4 py-4 last:border-0 ${index === 0 ? "bg-[#eaf8e9]" : ""}`}>
-                  <div className="flex items-center gap-3">
-                    <span aria-hidden="true" className="text-xl">{team.icon}</span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span aria-hidden="true" className={`h-2.5 w-2.5 shrink-0 rounded-full ${teamDot(team.team)}`} />
-                        <p className="truncate font-black text-green-950">{team.team}</p>
+                return (
+                  <div
+                    key={team.team}
+                    className={`relative overflow-hidden rounded-xl border px-2 pb-2 pt-2 text-center shadow-sm ${
+                      index === 0
+                        ? "border-emerald-300 bg-gradient-to-b from-[#eaf8e9] to-white"
+                        : "border-slate-200 bg-gradient-to-b from-slate-50 to-white"
+                    }`}
+                  >
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span
+                        aria-hidden="true"
+                        className={`h-2.5 w-2.5 shrink-0 rounded-full ${teamDot(team.team)}`}
+                      />
+                      <p className="truncate text-[12px] font-black text-green-950">
+                        {team.team}
+                      </p>
+                    </div>
+
+                    <p className="mt-0.5 text-[23px] font-black leading-none tabular-nums text-green-900">
+                      {team.points}
+                    </p>
+                    <p className="mt-0.5 text-[9px] font-semibold text-slate-500">
+                      {progressText(team.through)}
+                    </p>
+
+                    {teamPlayers.length > 0 && (
+                      <div className="mt-1.5 space-y-0.5 border-t border-green-950/10 pt-1.5">
+                        {teamPlayers.map((player) => (
+                          <div
+                            key={player.id}
+                            className="flex min-w-0 items-center justify-between gap-1 text-[9px]"
+                          >
+                            <span className="truncate font-semibold text-slate-600">
+                              {player.name}
+                            </span>
+                            <span className="shrink-0 font-black tabular-nums text-green-800">
+                              {player.points}
+                            </span>
+                          </div>
+                        ))}
                       </div>
-                      <p className="mt-0.5 text-xs text-slate-500">{progressText(team.through)}</p>
-                    </div>
-                    <span className="text-2xl font-black tabular-nums text-green-900">{team.points}</span>
+                    )}
                   </div>
-                  {teamPlayers.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-1.5 pl-8">
-                      {teamPlayers.map((player) => (
-                        <span key={player.id} className="rounded-full border border-green-950/10 bg-white/80 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
-                          <span className="text-green-950">{player.name}</span>{" "}
-                          <span className="font-black tabular-nums text-green-800">{player.points}</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </section>
         )}
 
-        <section aria-label="Individual standings" className="mb-4 overflow-hidden rounded-2xl border border-green-950/10 bg-white shadow-sm">
-          <div className="flex items-center justify-between px-4 py-3">
+        <section aria-label="Individual standings" className="mb-3 overflow-hidden rounded-2xl border border-green-950/10 bg-white shadow-sm">
+          <div className="px-4 py-2.5">
             <h2 className="text-sm font-bold text-green-950">Individual Leaderboard</h2>
-            <button type="button" onClick={() => copyText(formatLeaderboardCopy(leaderboard, teamStandings), "leaderboard")} className="rounded-full border border-green-800/20 px-3 py-1.5 text-xs font-bold text-green-800 hover:bg-green-50">
-              {copiedKey === "leaderboard" ? "Copied" : "Copy"}
-            </button>
           </div>
           <table className="w-full table-fixed text-left text-sm">
             <thead className="border-y border-slate-100 text-[11px] text-slate-500">
               <tr>
-                <th scope="col" className="w-11 py-3 text-center">#</th>
-                <th scope="col" className="py-3">Player</th>
-                <th scope="col" className="w-11 py-3 text-center">Thru</th>
-                <th scope="col" className="w-11 py-3 text-center">Move</th>
-                <th scope="col" className="w-[62px] py-3 pr-4 text-right">Points</th>
+                <th scope="col" className="w-10 py-2 text-center">#</th>
+                <th scope="col" className="py-2">Player</th>
+                <th scope="col" className="w-[62px] py-2 pr-4 text-right">Points</th>
               </tr>
             </thead>
             <tbody>
               {leaderboard.map((player) => (
                 <tr key={player.id} className={`border-b border-slate-100 last:border-0 ${player.pos === 1 ? "bg-[#eaf8e9]" : "hover:bg-[#f7faf6]"}`}>
-                  <td className="py-3 text-center"><span className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${player.pos === 1 ? "bg-amber-400 text-green-950 shadow-sm" : player.pos === 2 ? "bg-slate-300 text-slate-800 shadow-sm" : player.pos === 3 ? "bg-[#bc723c] text-white shadow-sm" : "text-slate-500"}`}>{player.pos}</span></td>
-                  <th scope="row" className="py-3 pr-1 font-semibold text-green-950">
+                  <td className="py-2 text-center text-sm font-black tabular-nums text-slate-500">{player.pos}</td>
+                  <th scope="row" className="py-2 pr-1 font-semibold text-green-950">
                     <div className="flex items-center gap-1.5"><span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${teamDot(player.team)}`} /><span className="break-words">{player.name}</span></div>
-                    {(player.bonusIcons.length > 0 || player.liveIcon) && <span className="mt-1 block text-xs" title="Bonus awards and live moment">{player.bonusIcons.join("")} {player.liveIcon}</span>}
+                    <div className="flex min-h-[14px] items-center gap-1.5 pl-3.5 text-[10px] font-medium text-slate-400">
+                      <span>{progressText(player.through)}</span>
+                      {player.bonusIcons.length > 0 && (
+                        <span className="text-xs" title="Achievement awards">
+                          {player.bonusIcons.join("")}
+                        </span>
+                      )}
+                    </div>
                   </th>
-                  <td className="py-3 text-center text-xs tabular-nums text-slate-500" title={progressText(player.through)}>{player.through >= 18 ? "F" : player.through}</td>
-                  <td className="py-3 text-center"><span title={player.movement.text} aria-label={player.movement.text} className={`text-xs font-semibold ${movementStyle(player.movement.icon)}`}>{player.movement.icon}</span></td>
-                  <td className="py-3 pr-4 text-right"><span className="text-lg font-black tabular-nums text-green-900">{player.points}</span></td>
+                  <td className="py-2 pr-4 text-right">
+                    <div className="flex items-center justify-end gap-1.5">
+                      {player.liveIcon && (
+                        <span
+                          className="text-xs"
+                          title="Current form"
+                          aria-label="Current form"
+                        >
+                          {player.liveIcon}
+                        </span>
+                      )}
+                      <span
+                        title={player.movement.text}
+                        aria-label={player.movement.text}
+                        className={`text-xs font-black ${movementStyle(player.movement.icon)}`}
+                      >
+                        {player.movement.icon}
+                      </span>
+                      <span className="text-lg font-black tabular-nums text-green-900">
+                        {player.points}
+                      </span>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -1730,16 +1761,15 @@ useEffect(() => {
         </section>
 
            {moments.length > 0 && (
-        <section className="mt-2.5 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <h2 className="text-lg font-black text-green-950">
-                🎙️ Live Commentary
+        <section className="mt-2 flex h-[340px] flex-col rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+          <div className="mb-2 flex shrink-0 items-center justify-between gap-2 px-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="rounded bg-red-600 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-white">
+                Live
+              </span>
+              <h2 className="text-sm font-black text-green-950">
+                Commentary
               </h2>
-
-              <p className="mt-0.5 text-xs text-slate-500">
-                The tournament story as it happens
-              </p>
             </div>
 
             <button
@@ -1753,7 +1783,7 @@ useEffect(() => {
                   "commentary-archive"
                 )
               }
-              className="shrink-0 rounded-full bg-green-950 px-3 py-1.5 text-[10px] font-black text-white"
+              className="shrink-0 rounded-full bg-green-950 px-2.5 py-1 text-[9px] font-black text-white"
             >
               {copiedKey === "commentary-archive"
                 ? "Copied"
@@ -1761,7 +1791,7 @@ useEffect(() => {
             </button>
           </div>
 
-          <div className="space-y-2">
+          <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain pr-1">
             {moments.map((moment, index) => {
               const momentKey =
                 moment.moment_key ??
@@ -1770,41 +1800,49 @@ useEffect(() => {
               return (
                 <div
                   key={momentKey}
-                  className="rounded-2xl bg-slate-50 px-3 py-3"
+                  className={`rounded-xl border-l-4 px-2.5 py-2 ${
+                    moment.rarity === "major"
+                      ? "border-red-500 bg-red-50/50"
+                      : moment.rarity === "rare"
+                        ? "border-amber-400 bg-amber-50/50"
+                        : "border-emerald-500 bg-slate-50"
+                  }`}
                 >
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-base">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className="text-sm">
                           {moment.icon || "⛳"}
                         </span>
 
-                        <p className="text-xs font-black uppercase tracking-wide text-green-950">
+                        <p className="text-[10px] font-black uppercase tracking-wide text-green-950">
                           {moment.title}
                         </p>
 
                         {moment.round_number && (
-                          <span className="text-[10px] font-bold text-slate-400">
+                          <span className="text-[9px] font-bold text-slate-400">
                             R{moment.round_number}
+                          </span>
+                        )}
+
+                        {moment.created_at && (
+                          <span className="text-[9px] font-semibold text-slate-400">
+                            {new Date(moment.created_at).toLocaleDateString(
+                              "en-GB",
+                              { day: "numeric", month: "short" }
+                            )}
+                            {" · "}
+                            {new Date(moment.created_at).toLocaleTimeString(
+                              "en-GB",
+                              { hour: "2-digit", minute: "2-digit" }
+                            )}
                           </span>
                         )}
                       </div>
 
-                      <p className="mt-1.5 text-sm font-semibold leading-snug text-slate-700">
+                      <p className="mt-1 text-xs font-semibold leading-snug text-slate-700">
                         {moment.text}
                       </p>
-
-                      {moment.created_at && (
-                        <p className="mt-1.5 text-[10px] font-semibold text-slate-400">
-                          {new Date(moment.created_at).toLocaleTimeString(
-                            "en-GB",
-                            {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }
-                          )}
-                        </p>
-                      )}
                     </div>
 
                     <button
@@ -1812,7 +1850,7 @@ useEffect(() => {
                       onClick={() =>
                         copyMoment(moment, index)
                       }
-                      className="shrink-0 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-black text-green-950"
+                      className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[9px] font-black text-green-950"
                     >
                       {copiedKey === `moment-${index}`
                         ? "Copied"
