@@ -10,6 +10,7 @@ import {
 
 import BottomNav from "@/components/BottomNav";
 import TopNav from "@/components/TopNav";
+import SafeAreaContent from "@/components/SafeAreaContent";
 
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import NativePushRegister from "@/components/NativePushRegister";
@@ -57,13 +58,9 @@ export default function RootLayout({
 
         <TopNav />
 
-        <div
-          style={{
-            paddingTop: "env(safe-area-inset-top)",
-          }}
-        >
+        <SafeAreaContent>
           {children}
-        </div>
+        </SafeAreaContent>
 
         <BottomNav />
       </body>
