@@ -38,7 +38,7 @@ export default function BottomNav() {
     <nav
       className="fixed left-3 right-3 z-50"
       style={{
-        bottom: "calc(0.5rem + env(safe-area-inset-bottom))",
+        bottom: "calc(1rem + env(safe-area-inset-bottom))",
       }}
     >
       <div className="mx-auto grid max-w-xl grid-cols-5 gap-1 rounded-[26px] border border-slate-200 bg-white/95 p-2 shadow-lg backdrop-blur">
