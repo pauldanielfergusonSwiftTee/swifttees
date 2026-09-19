@@ -2100,7 +2100,12 @@ export default function LiveScoringPage() {
           sits above Swift Tees bottom navigation
       ====================================================== */}
 
-      <div className="fixed inset-x-0 bottom-[72px] z-40 px-2.5 md:static md:mt-4 md:px-0">
+      <div
+  className="fixed inset-x-0 z-40 px-2.5 md:static md:mt-4 md:px-0"
+  style={{
+    bottom: "calc(6.5rem + env(safe-area-inset-bottom))",
+  }}
+>
         <div className="mx-auto max-w-6xl rounded-[1.2rem] border border-white/70 bg-white/95 p-2 shadow-[0_-6px_24px_rgba(15,23,42,0.13)] backdrop-blur-xl md:shadow-sm">
           <button
             onClick={
