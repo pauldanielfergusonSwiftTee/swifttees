@@ -36,8 +36,7 @@ const EXACT_PAGE_LABELS: Record<string, string> = {
 
   "/events/carden-park-2026/live-leaderboard": "Leaderboard",
   "/events/carden-park-2026/live-leaderboard/live-scoring": "Scorecard",
-  "/events/carden-park-2026/live-leaderboard/setup":
-    "Tournament Setup",
+  "/events/carden-park-2026/live-leaderboard/setup": "Tournament Setup",
 
   "/live-centre": "Leaderboard",
   "/live-scoring-v2": "Scorecard",
@@ -122,10 +121,7 @@ function formatSegment(segment: string) {
     .join(" ");
 }
 
-function getPageLabel(
-  segment: string,
-  href: string
-) {
+function getPageLabel(segment: string, href: string) {
   return (
     EXACT_PAGE_LABELS[href] ??
     PAGE_LABELS[segment] ??
@@ -221,7 +217,12 @@ export default function AppPageHeader() {
   );
 
   return (
-    <header className="sticky top-0 z-[80] border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-md [@media(min-width:1200px)]:hidden">
+    <header
+      className="sticky top-0 z-[80] border-b border-slate-200 bg-white/95 shadow-sm backdrop-blur-md [@media(min-width:1200px)]:hidden"
+      style={{
+        paddingTop: "env(safe-area-inset-top)",
+      }}
+    >
       <div className="mx-auto flex min-h-12 max-w-6xl items-center gap-3 px-4 py-2">
         <Link
           href={backRoute.href}
