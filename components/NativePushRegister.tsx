@@ -16,29 +16,71 @@ export default function NativePushRegister() {
           "Native app detected - setting up push notifications"
         );
 
-        let permission = await PushNotifications.checkPermissions();
+        let permission =
+          await PushNotifications.checkPermissions();
 
         if (permission.receive === "prompt") {
-          permission = await PushNotifications.requestPermissions();
+          permission =
+            await PushNotifications.requestPermissions();
         }
 
         if (permission.receive !== "granted") {
-          console.log("Push notification permission not granted");
+          console.log(
+            "Push notification permission not granted"
+          );
           return;
         }
 
         await PushNotifications.addListener(
           "registration",
-          (token) => {
+          async (token) => {
             console.log("APNs registration successful");
-            console.log("APNs token:", token.value);
+
+            try {
+              const response = await fetch(
+                "/api/push/native-subscribe",
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({
+                    deviceToken: token.value,
+                    platform: "ios",
+                  }),
+                }
+              );
+
+              if (!response.ok) {
+                const error = await response.text();
+
+                console.error(
+                  "Could not save native push subscription:",
+                  error
+                );
+
+                return;
+              }
+
+              console.log(
+                "Native push subscription saved"
+              );
+            } catch (error) {
+              console.error(
+                "Native push subscription request failed:",
+                error
+              );
+            }
           }
         );
 
         await PushNotifications.addListener(
           "registrationError",
           (error) => {
-            console.error("APNs registration error:", error);
+            console.error(
+              "APNs registration error:",
+              error
+            );
           }
         );
 
@@ -64,7 +106,10 @@ export default function NativePushRegister() {
 
         await PushNotifications.register();
       } catch (error) {
-        console.error("Native push setup failed:", error);
+        console.error(
+          "Native push setup failed:",
+          error
+        );
       }
     };
 
