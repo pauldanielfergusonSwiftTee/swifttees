@@ -29,10 +29,18 @@ export async function POST(request: NextRequest) {
     String(formData.get("redirect") ?? "")
   );
 
-  const correctPassword =
-    process.env.ADMIN_PASSWORD ?? "swifttees";
+  const correctPassword = process.env.ADMIN_PASSWORD;
 
-  if (password !== correctPassword) {
+if (!correctPassword) {
+  const loginUrl = new URL("/admin-login", request.url);
+
+  loginUrl.searchParams.set("error", "config");
+  loginUrl.searchParams.set("redirect", redirect);
+
+  return NextResponse.redirect(loginUrl, 303);
+}
+
+if (password !== correctPassword) {
     const loginUrl = new URL("/admin-login", request.url);
 
     loginUrl.searchParams.set("error", "incorrect");
