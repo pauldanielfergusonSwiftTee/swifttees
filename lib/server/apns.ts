@@ -68,7 +68,8 @@ function createProviderToken() {
   );
 }
 
-export async function sendApnsNotification(
+async function sendToApnsHost(
+  host: string,
   input: SendApnsInput
 ): Promise<ApnsResult> {
   const {
@@ -76,18 +77,6 @@ export async function sendApnsNotification(
   } = getApnsConfig();
 
   const providerToken = createProviderToken();
-
-  /*
-   * IMPORTANT:
-   *
-   * Our current iPhone build is installed directly from Xcode,
-   * so its device token belongs to Apple's SANDBOX environment.
-   *
-   * When we later test TestFlight/App Store builds we'll switch
-   * this to the production APNs host.
-   */
-  const host =
-    "https://api.sandbox.push.apple.com";
 
   const client = http2.connect(host);
 
@@ -185,4 +174,34 @@ export async function sendApnsNotification(
 
     request.end(JSON.stringify(payload));
   });
+}
+
+export async function sendApnsNotification(
+  input: SendApnsInput
+): Promise<ApnsResult> {
+  /*
+   * TestFlight/App Store builds use production APNs.
+   * Xcode development builds use sandbox APNs.
+   *
+   * Try production first. If Apple tells us the token does not
+   * belong to that environment, retry against sandbox.
+   */
+
+  const productionResult =
+    await sendToApnsHost(
+      "https://api.push.apple.com",
+      input
+    );
+
+  if (
+    productionResult.success ||
+    productionResult.reason !== "BadDeviceToken"
+  ) {
+    return productionResult;
+  }
+
+  return sendToApnsHost(
+    "https://api.sandbox.push.apple.com",
+    input
+  );
 }
