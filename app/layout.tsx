@@ -10,7 +10,7 @@ import {
 
 import BottomNav from "@/components/BottomNav";
 import TopNav from "@/components/TopNav";
-import AppPageHeader from "@/components/AppPageHeader";
+
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import NativePushRegister from "@/components/NativePushRegister";
 
@@ -54,7 +54,7 @@ export default function RootLayout({
 
         <TopNav />
 
-        <AppPageHeader />
+
 
         {children}
 
