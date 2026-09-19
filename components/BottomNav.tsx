@@ -36,12 +36,12 @@ export default function BottomNav() {
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 px-2 pt-2 backdrop-blur"
+      className="fixed left-3 right-3 z-50"
       style={{
-        paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))",
+        bottom: "calc(0.5rem + env(safe-area-inset-bottom))",
       }}
     >
-      <div className="mx-auto grid max-w-xl grid-cols-5 gap-1">
+      <div className="mx-auto grid max-w-xl grid-cols-5 gap-1 rounded-[26px] border border-slate-200 bg-white/95 p-2 shadow-lg backdrop-blur">
         {navItems.map((item) => {
           const isScorecard = pathname.includes("/live-scoring");
 
@@ -57,15 +57,15 @@ export default function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center rounded-2xl px-2 py-1.5 text-xs font-semibold transition-all duration-200 ${
+              className={`flex min-w-0 flex-col items-center justify-center rounded-[18px] px-1 py-1.5 text-xs font-semibold transition-all duration-200 ${
                 isActive
                   ? "bg-green-700 text-white shadow-md"
                   : "text-slate-500 hover:bg-green-50 hover:text-green-700"
               }`}
             >
-              <span className="text-lg">{item.icon}</span>
+              <span className="text-lg leading-none">{item.icon}</span>
 
-              <span className="mt-1 text-center text-[11px] font-medium leading-tight">
+              <span className="mt-1 w-full truncate text-center text-[10px] font-medium leading-tight sm:text-[11px]">
                 {item.label}
               </span>
             </Link>
