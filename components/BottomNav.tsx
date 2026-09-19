@@ -35,7 +35,12 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 px-2 py-2 backdrop-blur">
+    <nav
+      className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-200 bg-white/95 px-2 pt-2 backdrop-blur"
+      style={{
+        paddingBottom: "calc(0.5rem + env(safe-area-inset-bottom))",
+      }}
+    >
       <div className="mx-auto grid max-w-xl grid-cols-5 gap-1">
         {navItems.map((item) => {
           const isScorecard = pathname.includes("/live-scoring");
