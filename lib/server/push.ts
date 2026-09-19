@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
+import { sendApnsNotification } from "@/lib/server/apns";
 
 export type PushCategory = "live" | "results" | "admin";
 
@@ -16,6 +17,11 @@ type PushSubscriptionRow = {
   endpoint: string;
   p256dh: string;
   auth: string;
+  enabled?: boolean | null;
+};
+
+type NativePushSubscriptionRow = {
+  device_token: string;
   enabled?: boolean | null;
 };
 
@@ -69,8 +75,7 @@ function shouldReceive(
   // Manual admin messages are intentionally global.
   if (category === "admin") return true;
 
-  // Without an event context we preserve the old behaviour instead of
-  // unexpectedly suppressing a notification.
+  // Without an event context, preserve the old behaviour.
   if (!input.eventSlug) return true;
 
   const preference = preferenceMap.get(subscription.endpoint);
@@ -102,17 +107,34 @@ export async function sendPushToAll(input: SendPushInput) {
 
   const supabase = getAdminSupabase();
 
-  const { data: subscriptionData, error: subscriptionsError } =
-    await supabase
+  const [
+    { data: subscriptionData, error: subscriptionsError },
+    { data: nativeSubscriptionData, error: nativeSubscriptionsError },
+  ] = await Promise.all([
+    supabase
       .from("push_subscriptions")
       .select("endpoint,p256dh,auth,enabled")
-      .eq("enabled", true);
+      .eq("enabled", true),
+
+    supabase
+      .from("native_push_subscriptions")
+      .select("device_token,enabled")
+      .eq("enabled", true),
+  ]);
 
   if (subscriptionsError) {
     throw subscriptionsError;
   }
 
-  const subscriptions = (subscriptionData ?? []) as PushSubscriptionRow[];
+  if (nativeSubscriptionsError) {
+    throw nativeSubscriptionsError;
+  }
+
+  const subscriptions =
+    (subscriptionData ?? []) as PushSubscriptionRow[];
+
+  const nativeSubscriptions =
+    (nativeSubscriptionData ?? []) as NativePushSubscriptionRow[];
 
   const preferenceMap = new Map<string, PreferenceRow>();
 
@@ -135,7 +157,10 @@ export async function sendPushToAll(input: SendPushInput) {
 
     if (preferenceError) {
       // Preference failure should not silently send unwanted alerts.
-      console.error("Could not load push preferences:", preferenceError);
+      console.error(
+        "Could not load push preferences:",
+        preferenceError
+      );
       throw preferenceError;
     }
 
@@ -144,20 +169,22 @@ export async function sendPushToAll(input: SendPushInput) {
     }
   }
 
+  const url = input.url ?? "/live-centre";
+
   const payload = JSON.stringify({
     title: input.title,
     body: input.message,
-    url: input.url ?? "/live-centre",
+    url,
   });
 
-  let sent = 0;
-  let failed = 0;
-  let skipped = 0;
+  let webSent = 0;
+  let webFailed = 0;
+  let webSkipped = 0;
 
   await Promise.all(
     subscriptions.map(async (subscription) => {
       if (!shouldReceive(subscription, preferenceMap, input)) {
-        skipped += 1;
+        webSkipped += 1;
         return;
       }
 
@@ -173,12 +200,11 @@ export async function sendPushToAll(input: SendPushInput) {
           payload
         );
 
-        sent += 1;
+        webSent += 1;
       } catch (error: any) {
-        failed += 1;
+        webFailed += 1;
 
-        const statusCode =
-          Number(error?.statusCode ?? error?.statusCode) || 0;
+        const statusCode = Number(error?.statusCode ?? 0) || 0;
 
         if (statusCode === 404 || statusCode === 410) {
           const { error: disableError } = await supabase
@@ -193,16 +219,81 @@ export async function sendPushToAll(input: SendPushInput) {
             );
           }
         } else {
-          console.error("Push send failed:", error);
+          console.error("Web push send failed:", error);
         }
       }
     })
   );
 
+  let nativeSent = 0;
+  let nativeFailed = 0;
+
+  await Promise.all(
+    nativeSubscriptions.map(async (subscription) => {
+      try {
+        const result = await sendApnsNotification({
+          deviceToken: subscription.device_token,
+          title: input.title,
+          message: input.message,
+          url,
+        });
+
+        if (result.success) {
+          nativeSent += 1;
+          return;
+        }
+
+        nativeFailed += 1;
+
+        console.error(
+          "Native APNs send failed:",
+          result.status,
+          result.reason
+        );
+
+        if (
+          result.status === 410 ||
+          result.reason === "Unregistered"
+        ) {
+          const { error: disableError } = await supabase
+            .from("native_push_subscriptions")
+            .update({
+              enabled: false,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("device_token", subscription.device_token);
+
+          if (disableError) {
+            console.error(
+              "Could not disable expired native push subscription:",
+              disableError
+            );
+          }
+        }
+      } catch (error) {
+        nativeFailed += 1;
+        console.error("Native push send failed:", error);
+      }
+    })
+  );
+
   return {
-    sent,
-    failed,
-    skipped,
-    total: subscriptions.length,
+    sent: webSent + nativeSent,
+    failed: webFailed + nativeFailed,
+    skipped: webSkipped,
+    total: subscriptions.length + nativeSubscriptions.length,
+
+    web: {
+      sent: webSent,
+      failed: webFailed,
+      skipped: webSkipped,
+      total: subscriptions.length,
+    },
+
+    native: {
+      sent: nativeSent,
+      failed: nativeFailed,
+      total: nativeSubscriptions.length,
+    },
   };
 }
