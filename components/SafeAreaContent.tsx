@@ -11,14 +11,19 @@ export default function SafeAreaContent({
 
   const isHomePage = pathname === "/";
 
+  if (isHomePage) {
+    return <>{children}</>;
+  }
+
   return (
-    <div
-      style={{
-        paddingTop: isHomePage
-          ? "0"
-          : "env(safe-area-inset-top)",
-      }}
-    >
+    <div className="bg-[#052e16]">
+      <div
+        aria-hidden="true"
+        style={{
+          height: "env(safe-area-inset-top)",
+        }}
+      />
+
       {children}
     </div>
   );
