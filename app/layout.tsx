@@ -10,7 +10,8 @@ import {
 
 import BottomNav from "@/components/BottomNav";
 import TopNav from "@/components/TopNav";
-import AppPageHeader from "@/components/AppPageHeader";
+import SafeAreaContent from "@/components/SafeAreaContent";
+
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import NativePushRegister from "@/components/NativePushRegister";
 
@@ -36,6 +37,9 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#052e16",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -54,9 +58,9 @@ export default function RootLayout({
 
         <TopNav />
 
-        <AppPageHeader />
-
-        {children}
+        <SafeAreaContent>
+          {children}
+        </SafeAreaContent>
 
         <BottomNav />
       </body>
