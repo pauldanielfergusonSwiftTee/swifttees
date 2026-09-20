@@ -1,8 +1,23 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { sendPushToAll } from "@/lib/server/push";
 
 export async function POST(request: Request) {
   try {
+    const cookieStore = await cookies();
+    const accessCookie = cookieStore.get("swifttees_access");
+
+    if (accessCookie?.value !== "allowed") {
+      return NextResponse.json(
+        {
+          error: "Unauthorized",
+        },
+        {
+          status: 401,
+        }
+      );
+    }
+
     const { title, message } = await request.json();
 
     if (!title || !message) {
@@ -22,6 +37,7 @@ export async function POST(request: Request) {
 
       // All Swift Tees notifications open Live Centre.
       url: "/live-centre",
+      category: "admin",
     });
 
     return NextResponse.json({
