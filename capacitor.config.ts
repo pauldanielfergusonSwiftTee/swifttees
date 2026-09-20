@@ -13,6 +13,12 @@ const config: CapacitorConfig = {
       '*.swifttees.co.uk',
     ],
   },
+
+  plugins: {
+    PushNotifications: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
+  },
 };
 
 export default config;

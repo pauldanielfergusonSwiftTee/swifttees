@@ -101,6 +101,24 @@ export default function NativePushRegister() {
               "Push notification opened:",
               action
             );
+
+            const url = action.notification.data?.url;
+
+if (
+  typeof url === "string" &&
+  url.startsWith("/")
+) {
+  const targetUrl = `https://swifttees.co.uk${url}`;
+
+  console.log(
+    "Opening push notification URL:",
+    targetUrl
+  );
+
+  setTimeout(() => {
+    window.location.replace(targetUrl);
+  }, 750);
+}
           }
         );
 
