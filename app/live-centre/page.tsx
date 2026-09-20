@@ -77,6 +77,8 @@ type LeaderboardRow = {
   through: number;
   movement: Movement;
   bonusIcons: string[];
+  scoreIcons: string[];
+  totalShots: number;
   liveIcon: string;
 };
 
@@ -1306,6 +1308,59 @@ const scramblePairStandings =
         0
       );
 
+      const stablefordShots = playerScores.reduce(
+        (total: number, score: any) =>
+          total + Number(score.gross_score ?? 0),
+        0
+      );
+
+      const stablefordScoreIcons = playerScores
+        .map((score: any) => {
+          const round = tournamentSetup.rounds?.find(
+            (round: any) =>
+              getRoundNumber(round) === Number(score.round_number)
+          );
+
+          return getScoreIconFromGross(
+            Number(score.gross_score ?? 0),
+            getHolePar(round, Number(score.hole_number))
+          );
+        })
+        .filter(Boolean);
+
+      const playerScrambleScores = scrambleScores.filter(
+        (scrambleScore: any) => {
+          const pairInfo = getPairInfoForScrambleScore(
+            scrambleScore,
+            tournamentSetup,
+            players
+          );
+
+          return pairInfo.playerIds.includes(Number(player.id));
+        }
+      );
+
+      const scrambleShots = playerScrambleScores.reduce(
+        (total: number, score: any) =>
+          total + Number(score.gross_score ?? 0),
+        0
+      );
+
+      const scrambleScoreIcons = playerScrambleScores
+        .map((score: any) => {
+          const pairInfo = getPairInfoForScrambleScore(
+            score,
+            tournamentSetup,
+            players
+          );
+
+          return getScoreIconFromGross(
+            Number(score.gross_score ?? 0),
+            getHolePar(pairInfo.round, Number(score.hole_number))
+          );
+        })
+        .filter(Boolean);
+
       const currentRoundPlayerScores = playerScores.filter(
         (score: any) =>
           Number(score.round_number) === Number(currentRoundInfo.roundNumber)
@@ -1341,6 +1396,8 @@ const scramblePairStandings =
           text: "No movement",
         },
         bonusIcons: bonusIconsByPlayerName[player.name] ?? [],
+        scoreIcons: [...stablefordScoreIcons, ...scrambleScoreIcons],
+        totalShots: stablefordShots + scrambleShots,
         liveIcon: "",
       };
     });
@@ -1721,26 +1778,28 @@ useEffect(() => {
                   <td className="py-2 text-center text-sm font-black tabular-nums text-slate-500">{player.pos}</td>
                   <th scope="row" className="py-2 pr-1 font-semibold text-green-950">
                     <div className="flex items-center gap-1.5"><span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${teamDot(player.team)}`} /><span className="break-words">{player.name}</span></div>
-                    <div className="flex min-h-[14px] items-center gap-1.5 pl-3.5 text-[10px] font-medium text-slate-400">
+                    <div className="flex min-h-[14px] flex-wrap items-center gap-1.5 pl-3.5 text-[10px] font-medium text-slate-400">
+                      {player.totalShots > 0 && (
+                        <span className="tabular-nums">{player.totalShots}</span>
+                      )}
+                      {player.totalShots > 0 && <span>·</span>}
                       <span>{progressText(player.through)}</span>
-                      {player.bonusIcons.length > 0 && (
-                        <span className="text-xs" title="Achievement awards">
-                          {player.bonusIcons.join("")}
+                      {((player.scoreIcons?.length ?? 0) > 0 ||
+                        (player.bonusIcons?.length ?? 0) > 0) && (
+                        <span
+                          className="text-xs tracking-[1px]"
+                          title="Achievements"
+                        >
+                          {[
+                            ...(player.scoreIcons ?? []),
+                            ...(player.bonusIcons ?? []),
+                          ].join("")}
                         </span>
                       )}
                     </div>
                   </th>
                   <td className="py-2 pr-4 text-right">
                     <div className="flex items-center justify-end gap-1.5">
-                      {player.liveIcon && (
-                        <span
-                          className="text-xs"
-                          title="Current form"
-                          aria-label="Current form"
-                        >
-                          {player.liveIcon}
-                        </span>
-                      )}
                       <span
                         title={player.movement.text}
                         aria-label={player.movement.text}
@@ -1760,7 +1819,28 @@ useEffect(() => {
           {leaderboard.length === 0 && <p className="px-5 py-8 text-center text-sm text-slate-500">{loading ? "Loading standings…" : "Standings will appear when tournament scores are available."}</p>}
         </section>
 
-           {moments.length > 0 && (
+<section className="mt-2.5 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+  <div className="flex items-center justify-between gap-3">
+    <div className="min-w-0">
+      <h2 className="text-lg font-black text-green-950">
+        📝 Live Scoring
+      </h2>
+
+      <p className="mt-0.5 text-xs text-slate-500">
+        Enter your group&apos;s scores
+      </p>
+    </div>
+
+    <Link
+      href="/live-scoring-v2"
+      className="shrink-0 rounded-xl bg-green-700 px-4 py-2.5 text-sm font-black text-white"
+    >
+      Scorecards →
+    </Link>
+  </div>
+</section>
+
+{moments.length > 0 && (
         <section className="mt-2 flex h-[340px] flex-col rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
           <div className="mb-2 flex shrink-0 items-center justify-between gap-2 px-1">
             <div className="flex min-w-0 items-center gap-2">
@@ -1866,26 +1946,6 @@ useEffect(() => {
         </section>
       )}
 
-<section className="mt-2.5 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
-  <div className="flex items-center justify-between gap-3">
-    <div className="min-w-0">
-      <h2 className="text-lg font-black text-green-950">
-        📝 Live Scoring
-      </h2>
-
-      <p className="mt-0.5 text-xs text-slate-500">
-        Enter your group&apos;s scores
-      </p>
-    </div>
-
-    <Link
-      href="/live-scoring-v2"
-      className="shrink-0 rounded-xl bg-green-700 px-4 py-2.5 text-sm font-black text-white"
-    >
-      Scorecards →
-    </Link>
-  </div>
-</section>
       </div>
     </PageContainer>
   );
