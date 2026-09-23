@@ -16,6 +16,9 @@ export type CommentaryLeaderboardContext = {
   isJointLeader?: boolean;
   holesCompleted?: number;
   totalHoles?: number;
+  leaderGapBefore?: number;
+  leaderGapAfter?: number;
+  topThreeSpread?: number;
 };
 
 type HoleDefinition = {
@@ -23,6 +26,9 @@ type HoleDefinition = {
   number?: number | string;
   hole_number?: number | string;
   par?: number | string;
+  yards?: number | string;
+  strokeIndex?: number | string;
+  stroke_index?: number | string;
 };
 
 type RoundDefinition = {
@@ -60,6 +66,8 @@ export type ScrambleEventInput = {
   team?: string;
   holesCompleted?: number;
   totalHoles?: number;
+  yards?: number;
+  strokeIndex?: number;
 };
 
 function toFiniteNumber(
@@ -122,6 +130,24 @@ function getHolePar(
   return par && par > 0
     ? par
     : undefined;
+}
+
+function getHoleCourseContext(
+  currentRound: RoundDefinition | null | undefined,
+  holeNumber: number
+) {
+  const hole = getRoundHoles(currentRound).find(
+    (candidate) => getHoleNumber(candidate) === holeNumber
+  );
+  const yards = toOptionalFiniteNumber(hole?.yards);
+  const strokeIndex = toOptionalFiniteNumber(hole?.strokeIndex ?? hole?.stroke_index);
+  const holeDifficulty: CommentaryEvent["holeDifficulty"] =
+    strokeIndex !== undefined && strokeIndex <= 3
+      ? "hard"
+      : strokeIndex !== undefined && strokeIndex >= 16
+        ? "opportunity"
+        : "neutral";
+  return { yards, strokeIndex, holeDifficulty };
 }
 
 function getTotalHoles(
@@ -260,6 +286,9 @@ function buildLeaderboardFields(
   | "positionAfter"
   | "placesMoved"
   | "leaderGap"
+  | "leaderGapBefore"
+  | "leaderGapAfter"
+  | "topThreeSpread"
   | "isNewLeader"
   | "isJointLeader"
 > {
@@ -278,7 +307,7 @@ function buildLeaderboardFields(
   const placesMoved =
     positionBefore !== undefined &&
     positionAfter !== undefined
-      ? Math.max(positionBefore - positionAfter, 0)
+      ? positionBefore - positionAfter
       : undefined;
 
   return {
@@ -289,6 +318,9 @@ function buildLeaderboardFields(
       suppliedLeaderGap === undefined
         ? undefined
         : Math.max(suppliedLeaderGap, 0),
+    leaderGapBefore: toOptionalFiniteNumber(context?.leaderGapBefore),
+    leaderGapAfter: toOptionalFiniteNumber(context?.leaderGapAfter ?? context?.leaderGap),
+    topThreeSpread: toOptionalFiniteNumber(context?.topThreeSpread),
     isNewLeader:
       context?.isNewLeader ??
       (
@@ -363,6 +395,8 @@ if (
     context?.totalHoles
   );
 
+  const courseContext = getHoleCourseContext(currentRound, holeNumber);
+
   const holesCompleted = Math.min(
     Math.max(
       toFiniteNumber(
@@ -393,6 +427,7 @@ if (
     grossScore,
     par,
     stablefordPoints,
+    ...courseContext,
 
     tournamentStage: getTournamentStage(
       holeNumber,
@@ -500,6 +535,8 @@ export function buildScrambleEvent(
 
     playerId: undefined,
     playerName: pairNames,
+    pairPlayerIds: playerIds.map(Number).filter((id) => Number.isFinite(id)),
+    pairPlayerNames: pairNames.split(/\s+(?:&|and)\s+/i).map((name) => name.trim()).filter(Boolean),
     team:
       normaliseText(scrambleInfo.team) ||
       undefined,
@@ -509,6 +546,14 @@ export function buildScrambleEvent(
 
     grossScore,
     par,
+    yards: toOptionalFiniteNumber(scrambleInfo.yards),
+    strokeIndex: toOptionalFiniteNumber(scrambleInfo.strokeIndex),
+    holeDifficulty:
+      scrambleInfo.strokeIndex !== undefined && scrambleInfo.strokeIndex <= 3
+        ? "hard"
+        : scrambleInfo.strokeIndex !== undefined && scrambleInfo.strokeIndex >= 16
+          ? "opportunity"
+          : "neutral",
     stablefordPoints: toFiniteNumber(
       scrambleInfo.points,
       0

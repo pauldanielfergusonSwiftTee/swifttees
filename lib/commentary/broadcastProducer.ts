@@ -116,7 +116,7 @@ function applyAlias(
   leaderboard: BroadcastLeaderboardRow[],
   seed: string
 ) {
-  if (hashString(`${seed}-alias`) % 100 >= 32) return text;
+  if (hashString(`${seed}-alias`) % 100 >= 12) return text;
 
   const name = moment.player_name;
   const alias = buildAlias(moment, leaderboard, seed);
@@ -174,7 +174,7 @@ function buildCallbackLine(
   recentMoments: BroadcastMomentLike[],
   seed: string
 ) {
-  if (hashString(`${seed}-callback`) % 100 >= 38) return null;
+  if (hashString(`${seed}-callback`) % 100 >= 22) return null;
 
   const previous = recentMoments.find((candidate) => sameSubject(moment, candidate));
   if (!previous) return null;
@@ -224,26 +224,15 @@ function buildCallbackLine(
   return null;
 }
 
-function applyBroadcastStyle(text: string, moment: BroadcastMomentLike, seed: string) {
-  const style = hashString(`${seed}-style`) % 4;
-
-  if (style === 1 && isPositiveMoment(moment)) {
-    return `${normaliseSentence(text)} Clinical golf.`;
-  }
-
-  if (style === 2 && moment.rarity !== "common") {
-    return `${normaliseSentence(text)} A significant moment in this round.`;
-  }
-
-  if (style === 3 && isNegativeMoment(moment)) {
-    return `${normaliseSentence(text)} The course has bitten back.`;
-  }
-
+function applyBroadcastStyle(text: string, _moment: BroadcastMomentLike, _seed: string) {
+  // The factual engine decides significance. The producer only cleans the prose;
+  // it no longer appends generic lines such as "Clinical golf" or
+  // "A significant moment" which can make routine updates sound manufactured.
   return normaliseSentence(text);
 }
 
 function buildSignature(moment: BroadcastMomentLike, seed: string) {
-  if (hashString(`${seed}-signature`) % 100 >= 16) return null;
+  if (hashString(`${seed}-signature`) % 100 >= 8) return null;
 
   const positive = [
     "The chasing pack will have noticed that.",
@@ -265,7 +254,7 @@ function buildSignature(moment: BroadcastMomentLike, seed: string) {
 }
 
 function buildSocietyHumour(moment: BroadcastMomentLike, seed: string) {
-  if (hashString(`${seed}-humour`) % 100 >= 6) return null;
+  if (hashString(`${seed}-humour`) % 100 >= 4) return null;
 
   return pick(
     [
@@ -299,7 +288,7 @@ export function enhanceBroadcastMoment<T extends BroadcastMomentLike>(
 
   // Keep the producer disciplined: never bolt more than two extra thoughts
   // onto one update, and common moments receive at most one.
-  const maximumAdditions = moment.rarity === "common" ? 1 : 2;
+  const maximumAdditions = 1;
   const selectedAdditions = additions.slice(0, maximumAdditions);
 
   return {

@@ -1367,6 +1367,8 @@ function buildScrambleMoment(
     );
 
 
+  const holeDetails = getHoleDetails(tournament, roundNumber, holeNumber);
+
   const event =
     buildScrambleEvent({
       playerIds:
@@ -1380,6 +1382,8 @@ function buildScrambleMoment(
 
       grossScore,
       par,
+      yards: holeDetails?.yards,
+      strokeIndex: holeDetails?.strokeIndex,
 
       points:
         Number(score.points ?? 0),
@@ -2191,6 +2195,169 @@ function buildTeamLeadPush(
   return null;
 }
 
+
+function buildTeamRacePush(
+  teamsBefore: TeamStanding[],
+  teamsAfter: TeamStanding[],
+  holeNumber: number,
+  totalHoles: number
+): PushMessage | null {
+  const beforeLeader = teamsBefore[0];
+  const afterLeader = teamsAfter[0];
+  const afterSecond = teamsAfter[1];
+  if (!afterLeader || !afterSecond) return null;
+
+  const holesRemaining = Math.max(0, totalHoles - holeNumber);
+  const late = holesRemaining <= 6;
+  const gapAfter = Math.max(0, afterLeader.points - afterSecond.points);
+
+  if (gapAfter === 0) {
+    const beforeGap = beforeLeader && teamsBefore[1]
+      ? Math.max(0, beforeLeader.points - teamsBefore[1].points)
+      : null;
+    if (beforeGap !== 0) {
+      return {
+        priority: late ? 98 : 90,
+        fact: `Nothing between them now — ${afterLeader.team} and ${afterSecond.team} are level after ${holeNumber}.`,
+        subjectKey: `team-race-tied-${holeNumber}`,
+      };
+    }
+  }
+
+  if (beforeLeader && beforeLeader.team !== afterLeader.team) {
+    return {
+      priority: late ? 105 : 96,
+      fact: `${afterLeader.team} hit the front after ${holeNumber}, moving ahead of ${beforeLeader.team}.`,
+      subjectKey: `team-race-lead-change-${afterLeader.team}`,
+    };
+  }
+
+  if (beforeLeader?.team === afterLeader.team && teamsBefore[1]) {
+    const gapBefore = Math.max(0, beforeLeader.points - teamsBefore[1].points);
+    if (gapAfter < gapBefore && gapAfter <= 3) {
+      return {
+        priority: late ? 92 : 82,
+        fact: `${afterSecond.team} are coming. ${afterLeader.team}'s lead is cut from ${gapBefore} to ${gapAfter} ${gapAfter === 1 ? "pt" : "pts"}.`,
+        subjectKey: `team-race-gap-cut-${afterSecond.team}`,
+      };
+    }
+    if (gapAfter > gapBefore && gapAfter - gapBefore >= 2) {
+      return {
+        priority: late ? 84 : 72,
+        fact: `${afterLeader.team} stretch the lead from ${gapBefore} to ${gapAfter} ${gapAfter === 1 ? "pt" : "pts"}.`,
+        subjectKey: `team-race-gap-extended-${afterLeader.team}`,
+      };
+    }
+  }
+
+  if (late && gapAfter <= 2) {
+    return {
+      priority: 80,
+      fact: `${afterLeader.team} lead ${afterSecond.team} by just ${gapAfter} ${gapAfter === 1 ? "pt" : "pts"} with ${holesRemaining} ${holesRemaining === 1 ? "hole" : "holes"} to play.`,
+      subjectKey: `team-race-tight-${holeNumber}`,
+    };
+  }
+
+  return null;
+}
+
+function buildLeaderboardTightnessPush(
+  leaderboardBefore: LeaderboardRow[],
+  leaderboardAfter: LeaderboardRow[],
+  holeNumber: number,
+  totalHoles: number
+): PushMessage | null {
+  if (leaderboardAfter.length < 2) return null;
+  const topAfter = leaderboardAfter.slice(0, Math.min(3, leaderboardAfter.length));
+  const topBefore = leaderboardBefore.slice(0, Math.min(3, leaderboardBefore.length));
+  const spreadAfter = Math.max(...topAfter.map((row) => row.points)) - Math.min(...topAfter.map((row) => row.points));
+  const spreadBefore = topBefore.length > 1
+    ? Math.max(...topBefore.map((row) => row.points)) - Math.min(...topBefore.map((row) => row.points))
+    : 999;
+  const holesRemaining = Math.max(0, totalHoles - holeNumber);
+
+  if (spreadAfter <= 1 && (spreadBefore > 1 || holesRemaining <= 4)) {
+    const names = topAfter.map((row) => row.name).join(", ");
+    return {
+      priority: holesRemaining <= 4 ? 92 : 82,
+      fact: `This has tightened right up — ${names} are separated by a single point after ${holeNumber}.`,
+      subjectKey: `leaderboard-tight-${holeNumber}`,
+    };
+  }
+
+  return null;
+}
+
+function getRecentStablefordPoints(
+  scores: ScoreRow[],
+  playerId: number,
+  roundNumber: number,
+  throughHole: number,
+  count: number
+) {
+  return scores
+    .filter((row) =>
+      Number(row.player_id) === playerId &&
+      Number(row.round_number) === roundNumber &&
+      Number(row.hole_number) <= throughHole
+    )
+    .sort((a, b) => Number(b.hole_number) - Number(a.hole_number))
+    .slice(0, count)
+    .reduce((total, row) => total + Number(row.points ?? 0), 0);
+}
+
+function buildStablefordFormPush(
+  row: ScoreRow,
+  tournament: TournamentSetup,
+  stablefordScoresAfter: ScoreRow[]
+): PushMessage | null {
+  if (!row.player_id) return null;
+  const playerId = Number(row.player_id);
+  const player = tournament.players?.find((candidate) => Number(candidate.id) === playerId);
+  if (!player) return null;
+
+  const roundNumber = Number(row.round_number);
+  const holeNumber = Number(row.hole_number);
+  const points = Number(row.points ?? 0);
+  const last3 = getRecentStablefordPoints(stablefordScoresAfter, playerId, roundNumber, holeNumber, 3);
+  const last4 = getRecentStablefordPoints(stablefordScoresAfter, playerId, roundNumber, holeNumber, 4);
+  const previous = stablefordScoresAfter.find((score) =>
+    Number(score.player_id) === playerId &&
+    Number(score.round_number) === roundNumber &&
+    Number(score.hole_number) === holeNumber - 1
+  );
+
+  if (last3 >= 9) {
+    return {
+      priority: last3 >= 10 ? 92 : 86,
+      fact: `${player.name} is flying — ${last3} points from the last three holes.`,
+      subjectKey: `form-hot-${playerId}-${holeNumber}`,
+    };
+  }
+  if (last4 >= 11) {
+    return {
+      priority: 80,
+      fact: `${player.name} is on a serious run — ${last4} points from the last four holes.`,
+      subjectKey: `form-run-${playerId}-${holeNumber}`,
+    };
+  }
+  if (points >= 4) {
+    return {
+      priority: 84,
+      fact: `BIG ONE from ${player.name} — ${points} points on the ${ordinal(holeNumber)}.`,
+      subjectKey: `stableford-big-score-${playerId}-${holeNumber}`,
+    };
+  }
+  if (Number(previous?.points ?? -1) === 0 && points >= 3) {
+    return {
+      priority: 74,
+      fact: `${player.name} responds after a pointless ${ordinal(holeNumber - 1)} with ${points} points on ${holeNumber}.`,
+      subjectKey: `stableford-bounce-back-${playerId}-${holeNumber}`,
+    };
+  }
+  return null;
+}
+
 function buildLeaderboardSummaryFact(
   teamEvent: boolean,
   leaderboardAfter: LeaderboardRow[],
@@ -2338,6 +2505,15 @@ function buildPushSummary({
       }
     }
 
+    if (row.player_id) {
+      const formCandidate = buildStablefordFormPush(
+        row,
+        tournament,
+        stablefordScoresAfter
+      );
+      if (formCandidate) candidates.push(formCandidate);
+    }
+
     const candidate = row.player_id
       ? buildPlayerPush(
           row,
@@ -2369,6 +2545,17 @@ function buildPushSummary({
   if (teamLead) {
     candidates.push(teamLead);
   }
+
+  const totalHoles = getRoundTotalHoles(tournament, Number(rows[0]?.round_number ?? 0));
+  const teamRace = teamEvent
+    ? buildTeamRacePush(teamsBefore, teamsAfter, holeNumber, totalHoles)
+    : null;
+  if (teamRace) candidates.push(teamRace);
+
+  const tightness = !teamEvent
+    ? buildLeaderboardTightnessPush(leaderboardBefore, leaderboardAfter, holeNumber, totalHoles)
+    : null;
+  if (tightness) candidates.push(tightness);
 
   candidates.sort(
     (a, b) =>
@@ -2427,17 +2614,17 @@ function buildPushSummary({
   );
 
   if (!second) {
-    return capPushText(base);
+    return { message: capPushText(base), priority: primary.priority };
   }
 
   const combined =
     `${base} ${second.fact}`;
 
   if (combined.length <= 120) {
-    return capPushText(combined);
+    return { message: capPushText(combined), priority: primary.priority };
   }
 
-  return capPushText(base);
+  return { message: capPushText(base), priority: primary.priority };
 }
 
 
@@ -2449,17 +2636,18 @@ function buildGroupPushSummary({
   rows: ScoreRow[];
   tournament: TournamentSetup;
   holeNumber: number;
-}) {
-  const facts: string[] = [];
+}): { message: string; priority: number } | null {
+  const candidates: PushMessage[] = [];
+  const roundNumber = Number(rows[0]?.round_number ?? 0);
+  const totalHoles = getRoundTotalHoles(tournament, roundNumber);
+  const holesRemaining = Math.max(0, totalHoles - holeNumber);
+  const hole = getHoleDetails(tournament, roundNumber, holeNumber);
 
   for (const row of rows) {
     const gross = Number(row.gross_score ?? 0);
     if (!gross) continue;
 
-    const round = getRound(tournament, Number(row.round_number));
-    const par = getHolePar(round, holeNumber);
     const achievement = scoreAchievement(row, tournament);
-
     let subject = "";
     let singular = true;
 
@@ -2473,29 +2661,46 @@ function buildGroupPushSummary({
       subject = pairInfo.pairNames;
       singular = pairInfo.playerIds.length === 1;
     }
-
     if (!subject) continue;
 
-    let result = "";
-    if (achievement === "eagle") {
-      result = singular ? "eagles" : "eagle";
-    } else if (achievement === "birdie") {
-      result = singular ? "birdies" : "birdie";
-    } else if (par && gross === par) {
-      result = singular ? "makes par" : "make par";
-    } else if (par && gross === par + 1) {
-      result = singular ? "makes bogey" : "make bogey";
-    } else if (par && gross === par + 2) {
-      result = singular ? "makes double bogey" : "make double bogey";
-    } else {
-      result = singular ? `scores ${gross}` : `score ${gross}`;
+    const points = Number(row.points ?? 0);
+    if (row.player_id && points >= 4) {
+      candidates.push({
+        priority: 86,
+        fact: `BIG ONE from ${subject} — ${points} points on ${holeNumber}.`,
+        subjectKey: `group-big-score-${row.player_id}`,
+      });
+      continue;
     }
 
-    facts.push(`${subject} ${result}.`);
+    if (achievement === "eagle") {
+      candidates.push({
+        priority: 100,
+        fact: `${subject} ${singular ? "eagles" : "eagle"} the ${ordinal(holeNumber)}.`,
+        subjectKey: `group-eagle-${subject}`,
+      });
+      continue;
+    }
+
+    // A scramble birdie is worth interrupting the lock screen for when the
+    // hole is especially difficult or the round has reached the closing stretch.
+    if (achievement === "birdie" && (!row.player_id) && (hole?.strokeIndex === 1 || holesRemaining <= 4)) {
+      const difficulty = hole?.strokeIndex === 1 ? " on Worsley's toughest hole" : "";
+      candidates.push({
+        priority: holesRemaining <= 2 ? 88 : 78,
+        fact: `${subject} ${singular ? "birdies" : "birdie"} ${holeNumber}${difficulty}.`,
+        subjectKey: `group-birdie-${subject}`,
+      });
+    }
   }
 
-  if (!facts.length) return null;
-  return capPushText(facts.join(" "));
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => b.priority - a.priority);
+  const primary = candidates[0];
+  return {
+    message: capPushText(addTournamentPhaseContext(primary.fact, tournament, roundNumber, holeNumber)),
+    priority: primary.priority,
+  };
 }
 
 function getRoundTotalGroups(
@@ -3714,14 +3919,14 @@ export async function POST(
             holeNumber,
           });
 
-        if (groupMessage) {
+        if (groupMessage && groupMessage.priority >= 75) {
           const pushedBefore = pushed;
 
           await publishPush({
             checkpointKey: `group-${groupNumber}`,
             archiveKey: `group-${groupNumber}`,
             title: `Hole ${holeNumber} · Group ${groupNumber}`,
-            message: groupMessage,
+            message: groupMessage.message,
           });
 
           if (pushed > pushedBefore) {
@@ -3839,23 +4044,55 @@ export async function POST(
           });
 
         if (finalSummary) {
-          if (groupPushPublishedThisRequest) {
-            await new Promise((resolve) => setTimeout(resolve, 1200));
+          const totalHoles = getRoundTotalHoles(tournament, roundNumber);
+          const holesRemaining = Math.max(0, totalHoles - holeNumber);
+          const editorialThreshold = holesRemaining <= 6 ? 70 : 78;
+          const scheduledRaceCheck = [6, 9, 12, 15].includes(holeNumber);
+          const isRoundComplete = holeNumber >= totalHoles;
+          const shouldPublish =
+            isRoundComplete ||
+            scheduledRaceCheck ||
+            finalSummary.priority >= editorialThreshold;
+
+          if (shouldPublish) {
+            if (groupPushPublishedThisRequest) {
+              await new Promise((resolve) => setTimeout(resolve, 1200));
+            }
+
+            let title = `Hole ${holeNumber} Complete`;
+            let finalMessage = capPushText(`Hole ${holeNumber} complete. ${finalSummary.message}`);
+
+            // A winner is only announced once every configured group has a
+            // complete authoritative row on the final hole.
+            if (isRoundComplete) {
+              title = "Final Result";
+
+              if (teamEvent && teamsAtHoleEnd.length > 0) {
+                const leader = teamsAtHoleEnd[0];
+                const tied = teamsAtHoleEnd.filter((team) => team.points === leader.points);
+                finalMessage = capPushText(
+                  tied.length > 1
+                    ? `FINAL RESULT — ${tied.map((team) => team.team).join(" and ")} finish tied on ${leader.points} pts.`
+                    : `FINAL RESULT — ${leader.team} win the team round on ${leader.points} pts.`
+                );
+              } else if (leaderboardAtHoleEnd.length > 0) {
+                const leader = leaderboardAtHoleEnd[0];
+                const tied = leaderboardAtHoleEnd.filter((player) => player.points === leader.points);
+                finalMessage = capPushText(
+                  tied.length > 1
+                    ? `FINAL RESULT — ${tied.map((player) => player.name).join(" and ")} finish tied on ${leader.points} pts.`
+                    : `FINAL RESULT — ${leader.name} wins on ${leader.points} pts.`
+                );
+              }
+            }
+
+            await publishPush({
+              checkpointKey: "complete",
+              archiveKey: "complete",
+              title,
+              message: finalMessage,
+            });
           }
-
-          const finalMessage =
-            capPushText(
-              `Hole ${holeNumber} complete. ${finalSummary}`
-            );
-
-          await publishPush({
-            checkpointKey: "complete",
-            archiveKey: "complete",
-            title:
-              `Hole ${holeNumber} Complete`,
-            message:
-              finalMessage,
-          });
         }
       }
     }

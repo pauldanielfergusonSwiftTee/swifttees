@@ -4,6 +4,18 @@ export type CommentaryTier =
   | "major"
   | "rare";
 
+export type CommentaryImportance = "low" | "medium" | "high" | "major";
+
+export type CommentaryCategory =
+  | "score"
+  | "leaderboard"
+  | "team_race"
+  | "pair_race"
+  | "form"
+  | "course"
+  | "history"
+  | "result";
+
 export type TournamentStage =
   | "opening"
   | "early"
@@ -36,11 +48,32 @@ export interface CommentaryEvent {
   stablefordPoints?: number;
   tournamentStage: TournamentStage;
 
+  // Course / pair context. These are factual inputs only; renderers must not infer them.
+  yards?: number;
+  strokeIndex?: number;
+  holeDifficulty?: "hard" | "neutral" | "opportunity";
+  pairPlayerIds?: number[];
+  pairPlayerNames?: string[];
+
+  // Editorial metadata. Scoring remains the source of truth.
+  importance?: CommentaryImportance;
+  category?: CommentaryCategory;
+  shouldPush?: boolean;
+
+  // Recent Stableford form, when calculated from authoritative score rows.
+  recentPoints3?: number;
+  recentPoints4?: number;
+  consecutiveThreePlus?: number;
+  previousHolePoints?: number;
+
   // Individual leaderboard context
   positionBefore?: number;
   positionAfter?: number;
   placesMoved?: number;
   leaderGap?: number;
+  leaderGapBefore?: number;
+  leaderGapAfter?: number;
+  topThreeSpread?: number;
   isNewLeader?: boolean;
   isJointLeader?: boolean;
   holesCompleted?: number;
