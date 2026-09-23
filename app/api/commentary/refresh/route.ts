@@ -4234,10 +4234,17 @@ export async function POST(
           const editorialThreshold = holesRemaining <= 2 ? 60 : holesRemaining <= 6 ? 68 : 78;
           const scheduledRaceCheck = [6, 9, 12, 15].includes(holeNumber);
           const isRoundComplete = holeNumber >= totalHoles;
+          /*
+           * Final result notifications are owned by /api/results/check.
+           * Suppress the commentary route on the completed final hole so
+           * users receive one definitive individual result, or two results
+           * for team tournaments (team + individual), rather than duplicate
+           * final-result pushes from two different endpoints.
+           */
           const shouldPublish =
-            isRoundComplete ||
-            scheduledRaceCheck ||
-            finalSummary.priority >= editorialThreshold;
+            !isRoundComplete &&
+            (scheduledRaceCheck ||
+              finalSummary.priority >= editorialThreshold);
 
           if (shouldPublish) {
             if (groupPushPublishedThisRequest) {
@@ -4247,69 +4254,7 @@ export async function POST(
             let title = `Hole ${holeNumber} Complete`;
             let finalMessage = capPushText(`Hole ${holeNumber} complete. ${finalSummary.message}`);
 
-            // A winner is only announced once every configured group has a
-            // complete authoritative row on the final hole.
-            if (isRoundComplete) {
-              title = "Final Result";
-
-              if (teamEvent && teamsAtHoleEnd.length > 0) {
-                const leader = teamsAtHoleEnd[0];
-                const tied = teamsAtHoleEnd.filter((team) => team.points === leader.points);
-
-                if (tied.length > 1) {
-                  finalMessage = capPushText(
-                    `FINAL RESULT — ${tied.map((team) => team.team).join(" and ")} finish tied on ${leader.points} pts. Nothing separates them after 18 holes.`
-                  );
-                } else {
-                  const winningPlayers = getTournamentPlayers(tournament)
-                    .filter((player) => getPlayerTeam(tournament, player) === leader.team)
-                    .map((player) => player.name)
-                    .filter(Boolean);
-
-                  const runnerUp = teamsAtHoleEnd[1];
-                  const margin = runnerUp
-                    ? Math.max(0, leader.points - runnerUp.points)
-                    : 0;
-                  const marginText = runnerUp
-                    ? margin === 1
-                      ? " by a single point"
-                      : ` by ${margin} points`
-                    : "";
-                  const playerText = winningPlayers.length > 0
-                    ? ` Congratulations to ${winningPlayers.join(", ")} —`
-                    : "";
-
-                  title = `🏆 ${leader.team} — Team Winners`;
-                  finalMessage = capPushText(
-                    `${playerText} ${leader.team} take the team competition on ${leader.points} pts${marginText}.`.trim()
-                  );
-                }
-              } else if (leaderboardAtHoleEnd.length > 0) {
-                const leader = leaderboardAtHoleEnd[0];
-                const tied = leaderboardAtHoleEnd.filter((player) => player.points === leader.points);
-
-                if (tied.length > 1) {
-                  finalMessage = capPushText(
-                    `FINAL RESULT — ${tied.map((player) => player.name).join(" and ")} finish tied on ${leader.points} pts. No winner is declared without a configured tie-break.`
-                  );
-                } else {
-                  const runnerUp = leaderboardAtHoleEnd[1];
-                  const margin = runnerUp
-                    ? Math.max(0, leader.points - runnerUp.points)
-                    : 0;
-                  const marginText = runnerUp
-                    ? margin === 1
-                      ? " by a single point"
-                      : ` by ${margin} points`
-                    : "";
-
-                  title = `🏆 ${leader.name} — Stableford Champion`;
-                  finalMessage = capPushText(
-                    `Congratulations ${leader.name} — ${leader.points} pts takes the individual title${marginText}.`
-                  );
-                }
-              }
-            }
+            // Definitive result pushes are sent by /api/results/check only.
 
             await publishPush({
               checkpointKey: "complete",

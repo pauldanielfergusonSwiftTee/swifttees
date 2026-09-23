@@ -1361,35 +1361,6 @@ export async function POST(
     const moments:
       ResultMoment[] = [];
 
-    /*
-     * Create a result for every
-     * completed round.
-     *
-     * Existing result keys will simply
-     * hit the duplicate constraint.
-     */
-    for (
-      const round of
-        completedRounds
-    ) {
-      const moment =
-        isScrambleRound(round)
-          ? buildScrambleRoundResult(
-              round,
-              tournament,
-              scrambleScores
-            )
-          : buildStablefordRoundResult(
-              round,
-              tournament,
-              stablefordScores
-            );
-
-      if (moment) {
-        moments.push(moment);
-      }
-    }
-
     const tournamentComplete =
       tournament.rounds.length >
         0 &&
@@ -1397,10 +1368,40 @@ export async function POST(
         tournament.rounds.length;
 
     /*
-     * Only declare the overall champions
-     * when EVERY tournament round is complete.
+     * RESULT NOTIFICATION POLICY
+     *
+     * Do not send separate per-round result pushes. The live commentary
+     * route already covers the drama during the round; this endpoint owns
+     * the definitive tournament result notifications once EVERY round is
+     * complete.
+     *
+     * Individual-only tournament: 1 push (individual overall result).
+     * Team tournament:            2 pushes (team result + individual result).
+     *
+     * Both builders are tie-aware and use the Swift Tees overall totals,
+     * including configured bonus points.
      */
     if (tournamentComplete) {
+      const teamMode =
+        tournament.team_mode ===
+          "teams" ||
+        tournament.teamMode ===
+          "teams";
+
+      if (teamMode) {
+        const teamResult =
+          buildTeamResult(
+            tournament,
+            stablefordScores,
+            scrambleScores,
+            bonusWinners
+          );
+
+        if (teamResult) {
+          moments.push(teamResult);
+        }
+      }
+
       const overallResult =
         buildOverallResult(
           tournament,
@@ -1410,23 +1411,7 @@ export async function POST(
         );
 
       if (overallResult) {
-        moments.push(
-          overallResult
-        );
-      }
-
-      const teamResult =
-        buildTeamResult(
-          tournament,
-          stablefordScores,
-          scrambleScores,
-          bonusWinners
-        );
-
-      if (teamResult) {
-        moments.push(
-          teamResult
-        );
+        moments.push(overallResult);
       }
     }
 
