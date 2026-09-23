@@ -1945,7 +1945,8 @@ function buildStablefordHistoryPush(
   stablefordScoresBefore: ScoreRow[],
   stablefordScoresAfter: ScoreRow[],
   playerHistory: Record<string, PlayerHistory>,
-  stablefordHistory: StablefordHistory
+  stablefordHistory: StablefordHistory,
+  bonusWinners: BonusWinnerRow[] = []
 ): PushMessage | null {
   if (!row.player_id || !stablefordHistory.loaded) return null;
 
@@ -1960,12 +1961,23 @@ function buildStablefordHistoryPush(
   const totalHoles = getRoundTotalHoles(tournament, roundNumber);
   const holesRemaining = Math.max(0, totalHoles - holeNumber);
 
-  const beforePoints = getStablefordRoundPoints(
-    stablefordScoresBefore, playerId, roundNumber
-  );
-  const roundPoints = getStablefordRoundPoints(
-    stablefordScoresAfter, playerId, roundNumber
-  );
+  const roundBonusPoints = bonusWinners
+    .filter(
+      (bonus) =>
+        Number(bonus.round_number) === roundNumber &&
+        normaliseText(bonus.winner_player_name) === player.name
+    )
+    .reduce((total, bonus) => total + Number(bonus.points ?? 0), 0);
+
+  // Swift Tees event Stableford totals include Longest Drive / Nearest Pin
+  // bonus points. Use that same total for records and personal bests so
+  // history commentary matches the visible event leaderboard.
+  const beforePoints =
+    getStablefordRoundPoints(stablefordScoresBefore, playerId, roundNumber) +
+    roundBonusPoints;
+  const roundPoints =
+    getStablefordRoundPoints(stablefordScoresAfter, playerId, roundNumber) +
+    roundBonusPoints;
 
   const allTimeRecord = stablefordHistory.allTimeRecord ?? 0;
   const personalBest = playerHistory[player.name]?.bestStableford ?? 0;
@@ -1978,7 +1990,7 @@ function buildStablefordHistoryPush(
     roundPoints > allTimeRecord
   ) {
     return {
-      priority: 115,
+      priority: 76,
       fact: `${player.name} reaches ${roundPoints} pts — a new Swift Tees Stableford record.`,
       subjectKey: `stableford-record-${playerId}-${roundPoints}`,
     };
@@ -1990,7 +2002,7 @@ function buildStablefordHistoryPush(
     roundPoints === allTimeRecord
   ) {
     return {
-      priority: 110,
+      priority: 74,
       fact: `${player.name} reaches ${roundPoints} pts — matching the Swift Tees Stableford record.`,
       subjectKey: `stableford-record-match-${playerId}-${roundPoints}`,
     };
@@ -2003,7 +2015,7 @@ function buildStablefordHistoryPush(
     roundPoints === allTimeRecord - 1
   ) {
     return {
-      priority: 96,
+      priority: 62,
       fact: `${player.name} reaches ${roundPoints} pts — one short of the Swift Tees record.`,
       subjectKey: `stableford-record-chase-${playerId}-${roundPoints}`,
     };
@@ -2016,7 +2028,7 @@ function buildStablefordHistoryPush(
     roundPoints > personalBest
   ) {
     return {
-      priority: 82,
+      priority: 68,
       fact: `${player.name} finishes on ${roundPoints} pts — a new personal Swift Tees best.`,
       subjectKey: `stableford-personal-best-${playerId}-${roundPoints}`,
     };
@@ -2320,6 +2332,75 @@ function buildLeaderboardTightnessPush(
   return null;
 }
 
+function buildIndividualRaceHypePush(
+  leaderboardBefore: LeaderboardRow[],
+  leaderboardAfter: LeaderboardRow[],
+  holeNumber: number,
+  totalHoles: number
+): PushMessage | null {
+  if (leaderboardAfter.length < 2) return null;
+
+  const holesRemaining = Math.max(0, totalHoles - holeNumber);
+  const top = leaderboardAfter.slice(0, Math.min(3, leaderboardAfter.length));
+  const leader = top[0];
+  const second = top[1];
+  const tiedAtTop = leaderboardAfter.filter((row) => row.points === leader.points);
+  const spread = Math.max(...top.map((row) => row.points)) - Math.min(...top.map((row) => row.points));
+  const milestone = [6, 9, 12, 15].includes(holeNumber);
+  const closing = holesRemaining <= 4;
+
+  // Closing holes should feel like a live sporting contest. These messages
+  // describe only the authoritative leaderboard state; they do not assume
+  // groups played or synced in a particular chronological order.
+  if (holesRemaining === 1 && tiedAtTop.length > 1) {
+    const names = tiedAtTop.slice(0, 3).map((row) => row.name).join(" and ");
+    return {
+      priority: 112,
+      fact: `Nothing between ${names} — level on ${leader.points} pts with one hole remaining. It all comes down to 18.`,
+      subjectKey: `race-hype-final-hole-tie-${leader.points}`,
+    };
+  }
+
+  if (holesRemaining === 1 && second) {
+    const gap = leader.points - second.points;
+    if (gap <= 2) {
+      return {
+        priority: 108,
+        fact: `${leader.name} takes a ${gap}-point lead over ${second.name} to the final hole. This is going to the wire.`,
+        subjectKey: `race-hype-final-hole-${leader.id}-${second.id}-${gap}`,
+      };
+    }
+  }
+
+  if (closing && tiedAtTop.length > 1) {
+    const names = tiedAtTop.slice(0, 3).map((row) => row.name).join(" and ");
+    return {
+      priority: 101,
+      fact: `${names} are level at the top on ${leader.points} pts with ${holesRemaining} ${holesRemaining === 1 ? "hole" : "holes"} remaining.`,
+      subjectKey: `race-hype-closing-tie-${holeNumber}-${leader.points}`,
+    };
+  }
+
+  if ((closing || milestone) && spread <= 3) {
+    if (top.length >= 3) {
+      return {
+        priority: closing ? 94 : 80,
+        fact: `This is wide open — just ${spread} ${spread === 1 ? "point" : "points"} cover ${top.map((row) => row.name).join(", ")} after ${holeNumber}.`,
+        subjectKey: `race-hype-top-three-${holeNumber}-${spread}`,
+      };
+    }
+
+    const gap = leader.points - second.points;
+    return {
+      priority: closing ? 92 : 79,
+      fact: `${leader.name} leads ${second.name} by just ${gap} ${gap === 1 ? "point" : "points"} after ${holeNumber}. Plenty still in this.`,
+      subjectKey: `race-hype-top-two-${holeNumber}-${gap}`,
+    };
+  }
+
+  return null;
+}
+
 function getRecentStablefordPoints(
   scores: ScoreRow[],
   playerId: number,
@@ -2508,6 +2589,7 @@ function buildPushSummary({
   stablefordScoresBefore,
   stablefordScoresAfter,
   stablefordHistory,
+  bonusWinners = [],
   includeScoreForm = true,
 }: {
   rows: ScoreRow[];
@@ -2524,6 +2606,7 @@ function buildPushSummary({
   stablefordScoresBefore: ScoreRow[];
   stablefordScoresAfter: ScoreRow[];
   stablefordHistory: StablefordHistory;
+  bonusWinners?: BonusWinnerRow[];
   includeScoreForm?: boolean;
 }) {
   const candidates: PushMessage[] = [];
@@ -2540,7 +2623,8 @@ function buildPushSummary({
           stablefordScoresBefore,
           stablefordScoresAfter,
           playerHistory,
-          stablefordHistory
+          stablefordHistory,
+          bonusWinners
         );
 
       if (historyCandidate) {
@@ -2597,6 +2681,11 @@ function buildPushSummary({
     ? buildLeaderboardTightnessPush(leaderboardBefore, leaderboardAfter, holeNumber, totalHoles)
     : null;
   if (tightness) candidates.push(tightness);
+
+  const raceHype = !teamEvent
+    ? buildIndividualRaceHypePush(leaderboardBefore, leaderboardAfter, holeNumber, totalHoles)
+    : null;
+  if (raceHype) candidates.push(raceHype);
 
   // Flag society competitions before players reach the tee. This is factual
   // tournament setup data, so it is safe even when groups sync out of order.
@@ -4135,13 +4224,14 @@ export async function POST(
             stablefordScoresAfter:
               currentStablefordScores,
             stablefordHistory,
+            bonusWinners: currentBonusWinners,
             includeScoreForm: !(groupPushPublishedThisRequest || priorGroupPushForHole),
           });
 
         if (finalSummary) {
           const totalHoles = getRoundTotalHoles(tournament, roundNumber);
           const holesRemaining = Math.max(0, totalHoles - holeNumber);
-          const editorialThreshold = holesRemaining <= 6 ? 70 : 78;
+          const editorialThreshold = holesRemaining <= 2 ? 60 : holesRemaining <= 6 ? 68 : 78;
           const scheduledRaceCheck = [6, 9, 12, 15].includes(holeNumber);
           const isRoundComplete = holeNumber >= totalHoles;
           const shouldPublish =
@@ -4165,19 +4255,59 @@ export async function POST(
               if (teamEvent && teamsAtHoleEnd.length > 0) {
                 const leader = teamsAtHoleEnd[0];
                 const tied = teamsAtHoleEnd.filter((team) => team.points === leader.points);
-                finalMessage = capPushText(
-                  tied.length > 1
-                    ? `FINAL RESULT — ${tied.map((team) => team.team).join(" and ")} finish tied on ${leader.points} pts.`
-                    : `FINAL RESULT — ${leader.team} win the team round on ${leader.points} pts.`
-                );
+
+                if (tied.length > 1) {
+                  finalMessage = capPushText(
+                    `FINAL RESULT — ${tied.map((team) => team.team).join(" and ")} finish tied on ${leader.points} pts. Nothing separates them after 18 holes.`
+                  );
+                } else {
+                  const winningPlayers = getTournamentPlayers(tournament)
+                    .filter((player) => getPlayerTeam(tournament, player) === leader.team)
+                    .map((player) => player.name)
+                    .filter(Boolean);
+
+                  const runnerUp = teamsAtHoleEnd[1];
+                  const margin = runnerUp
+                    ? Math.max(0, leader.points - runnerUp.points)
+                    : 0;
+                  const marginText = runnerUp
+                    ? margin === 1
+                      ? " by a single point"
+                      : ` by ${margin} points`
+                    : "";
+                  const playerText = winningPlayers.length > 0
+                    ? ` Congratulations to ${winningPlayers.join(", ")} —`
+                    : "";
+
+                  title = `🏆 ${leader.team} — Team Winners`;
+                  finalMessage = capPushText(
+                    `${playerText} ${leader.team} take the team competition on ${leader.points} pts${marginText}.`.trim()
+                  );
+                }
               } else if (leaderboardAtHoleEnd.length > 0) {
                 const leader = leaderboardAtHoleEnd[0];
                 const tied = leaderboardAtHoleEnd.filter((player) => player.points === leader.points);
-                finalMessage = capPushText(
-                  tied.length > 1
-                    ? `FINAL RESULT — ${tied.map((player) => player.name).join(" and ")} finish tied on ${leader.points} pts.`
-                    : `FINAL RESULT — ${leader.name} wins on ${leader.points} pts.`
-                );
+
+                if (tied.length > 1) {
+                  finalMessage = capPushText(
+                    `FINAL RESULT — ${tied.map((player) => player.name).join(" and ")} finish tied on ${leader.points} pts. No winner is declared without a configured tie-break.`
+                  );
+                } else {
+                  const runnerUp = leaderboardAtHoleEnd[1];
+                  const margin = runnerUp
+                    ? Math.max(0, leader.points - runnerUp.points)
+                    : 0;
+                  const marginText = runnerUp
+                    ? margin === 1
+                      ? " by a single point"
+                      : ` by ${margin} points`
+                    : "";
+
+                  title = `🏆 ${leader.name} — Stableford Champion`;
+                  finalMessage = capPushText(
+                    `Congratulations ${leader.name} — ${leader.points} pts takes the individual title${marginText}.`
+                  );
+                }
               }
             }
 
