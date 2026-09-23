@@ -46,6 +46,16 @@ type ScoreRow = {
 };
 
 
+type BonusWinnerRow = {
+  event_slug?: string;
+  round_number?: number | string;
+  hole?: number | string;
+  bonus_type?: string | null;
+  winner_player_name?: string | null;
+  points?: number | string | null;
+};
+
+
 type TournamentPlayer = {
   id: number | string;
   name: string;
@@ -613,7 +623,8 @@ function buildLeaderboard(
   stablefordScores: ScoreRow[],
   scrambleScores: ScoreRow[],
   tournament: TournamentSetup,
-  roundNumber: number
+  roundNumber: number,
+  bonusWinners: BonusWinnerRow[] = []
 ): LeaderboardRow[] {
   const players =
     getTournamentPlayers(tournament);
@@ -626,6 +637,22 @@ function buildLeaderboard(
 
   const scrambleThroughByPlayerId:
     Record<number, number> = {};
+
+  /*
+   * Keep commentary standings aligned with the visible Live Centre
+   * leaderboard. Bonus winners (Longest Drive / Nearest Pin) are part
+   * of the authoritative individual total shown to players.
+   */
+  const bonusPointsByPlayerName: Record<string, number> = {};
+
+  bonusWinners.forEach((bonus) => {
+    const playerName = normaliseText(bonus.winner_player_name);
+    if (!playerName) return;
+
+    bonusPointsByPlayerName[playerName] =
+      (bonusPointsByPlayerName[playerName] ?? 0) +
+      Number(bonus.points ?? 0);
+  });
 
 
   scrambleScores.forEach(
@@ -748,6 +775,9 @@ function buildLeaderboard(
           playerId
         ] ?? 0;
 
+      const bonusPoints =
+        bonusPointsByPlayerName[player.name] ?? 0;
+
       return {
         id: playerId,
         name: player.name,
@@ -759,11 +789,13 @@ function buildLeaderboard(
 
         points:
           stablefordPoints +
-          scramblePoints,
+          scramblePoints +
+          bonusPoints,
 
         teamPoints:
           stablefordPoints +
-          teamScramblePoints,
+          teamScramblePoints +
+          bonusPoints,
 
         through:
           Math.max(
@@ -3187,6 +3219,7 @@ export async function POST(
     const [
       scoresResult,
       scrambleResult,
+      bonusWinnersResult,
       momentsResult,
       historyAchievementsResult,
       historicalStablefordResult,
@@ -3207,6 +3240,14 @@ export async function POST(
             "scramble_scores"
           )
           .select("*")
+          .eq(
+            "event_slug",
+            eventSlug
+          ),
+
+        supabase
+          .from("bonus_winners")
+          .select("event_slug,round_number,hole,bonus_type,winner_player_name,points")
           .eq(
             "event_slug",
             eventSlug
@@ -3261,6 +3302,15 @@ export async function POST(
     ) {
       throw scrambleResult.error;
     }
+
+    if (
+      bonusWinnersResult.error
+    ) {
+      throw bonusWinnersResult.error;
+    }
+
+    const currentBonusWinners =
+      (bonusWinnersResult.data ?? []) as BonusWinnerRow[];
 
 
     const playerHistory: Record<string, PlayerHistory> = {};
@@ -3432,7 +3482,8 @@ export async function POST(
         stablefordBefore,
         scrambleBefore,
         tournament,
-        roundNumber
+        roundNumber,
+        currentBonusWinners
       );
 
 
@@ -3441,7 +3492,8 @@ export async function POST(
         currentStablefordScores,
         currentScrambleScores,
         tournament,
-        roundNumber
+        roundNumber,
+        currentBonusWinners
       );
 
 
@@ -4000,7 +4052,8 @@ export async function POST(
             stablefordAtHoleStart,
             scrambleAtHoleStart,
             tournament,
-            roundNumber
+            roundNumber,
+            currentBonusWinners
           );
 
         const leaderboardAtHoleEnd =
