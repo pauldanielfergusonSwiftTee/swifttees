@@ -2625,13 +2625,13 @@ function buildPushSummary({
   let contextualFact = primary.fact;
   const currentHole = getHoleDetails(tournament, roundNumber, holeNumber);
 
-  // Course context is deliberately selective so lock-screen pushes stay useful.
-  // Bonus holes and SI 1 are notable enough to surface immediately.
-  if (currentHole?.isLongestDrive) {
-    contextualFact = `${contextualFact} Longest Drive hole.`;
-  } else if (currentHole?.isClosestToPin) {
-    contextualFact = `${contextualFact} Nearest Pin hole.`;
-  } else if (currentHole?.strokeIndex === 1 && currentHole.par) {
+  // Keep bonus-hole information to the advance warning only. When special
+  // holes are consecutive, appending the CURRENT hole competition here can
+  // produce confusing messages such as "Coming up on 12: Nearest Pin ...
+  // Longest Drive hole." The previous-hole notification already announced
+  // the competition, so Hole Complete should concentrate on the golf story.
+  // SI 1 remains useful factual context for a significant score.
+  if (currentHole?.strokeIndex === 1 && currentHole.par) {
     contextualFact = `${contextualFact} Par ${currentHole.par}, SI 1.`;
   }
 
