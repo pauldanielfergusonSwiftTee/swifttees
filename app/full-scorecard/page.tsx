@@ -325,6 +325,27 @@ export default function LiveScorecardsPage() {
     return `${currentRound.id}-${groupId}-${holeNumber}-${id}`;
   }
 
+  const currentRoundBonuses = bonusWinners.filter(
+    (bonus: any) =>
+      Number(bonus.round_number) ===
+      Number(currentRound.roundNumber ?? currentRound.id)
+  );
+
+  function getPlayerBonusPoints(playerName: string) {
+    const normalisedName = String(playerName ?? "").trim().toLowerCase();
+
+    return currentRoundBonuses
+      .filter(
+        (bonus: any) =>
+          String(bonus.winner_player_name ?? "").trim().toLowerCase() ===
+          normalisedName
+      )
+      .reduce(
+        (total: number, bonus: any) => total + Number(bonus.points ?? 0),
+        0
+      );
+  }
+
   const scorecardRows = (() => {
     const holes = currentRound.holes ?? [];
 
@@ -371,6 +392,11 @@ export default function LiveScorecardsPage() {
               0
             ),
             pointsTotal: holeScores.reduce(
+              (total: number, item: any) => total + (item.points || 0),
+              0
+            ),
+            bonusTotal: 0,
+            totalPoints: holeScores.reduce(
               (total: number, item: any) => total + (item.points || 0),
               0
             ),
@@ -424,6 +450,14 @@ export default function LiveScorecardsPage() {
             };
           });
 
+          const pointsTotal = holeScores.reduce(
+            (total: number, item: any) => total + (item.points || 0),
+            0
+          );
+
+          const bonusTotal = getPlayerBonusPoints(player.name);
+          const totalPoints = pointsTotal + bonusTotal;
+
           return {
             id: String(player.player_id ?? player.name),
             label: player.name,
@@ -435,18 +469,25 @@ export default function LiveScorecardsPage() {
               (total: number, item: any) => total + (item.gross || 0),
               0
             ),
-            pointsTotal: holeScores.reduce(
-              (total: number, item: any) => total + (item.points || 0),
-              0
-            ),
+            pointsTotal,
+            bonusTotal,
+            totalPoints,
           };
         })
     );
   })();
 
   const rankedRows = [...scorecardRows].sort((a, b) => {
-    if (b.pointsTotal !== a.pointsTotal) {
-      return b.pointsTotal - a.pointsTotal;
+    const aRankingPoints = isScramble
+      ? Number(a.pointsTotal ?? 0)
+      : Number(a.totalPoints ?? a.pointsTotal ?? 0);
+
+    const bRankingPoints = isScramble
+      ? Number(b.pointsTotal ?? 0)
+      : Number(b.totalPoints ?? b.pointsTotal ?? 0);
+
+    if (bRankingPoints !== aRankingPoints) {
+      return bRankingPoints - aRankingPoints;
     }
 
     if (b.completed !== a.completed) {
@@ -474,12 +515,6 @@ export default function LiveScorecardsPage() {
     );
 
   const totalPar = frontNinePar + backNinePar;
-
-  const currentRoundBonuses = bonusWinners.filter(
-    (bonus: any) =>
-      Number(bonus.round_number) ===
-      Number(currentRound.roundNumber ?? currentRound.id)
-  );
 
   return (
     <main className="min-h-screen bg-slate-100 p-3 pb-32 text-slate-900 md:p-8 md:pb-16">
@@ -674,11 +709,33 @@ export default function LiveScorecardsPage() {
                   </p>
                 </div>
 
-                <div className="w-[58px] shrink-0 bg-slate-900 px-1 py-2 text-center">
-                  <p className="text-[10px] font-black text-white">
-                    PTS
-                  </p>
-                </div>
+                {isScramble ? (
+                  <div className="w-[58px] shrink-0 bg-slate-900 px-1 py-2 text-center">
+                    <p className="text-[10px] font-black text-white">
+                      PTS
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="w-[58px] shrink-0 border-r border-slate-300 bg-slate-200 px-1 py-2 text-center">
+                      <p className="text-[10px] font-black text-slate-900">
+                        STB
+                      </p>
+                    </div>
+
+                    <div className="w-[62px] shrink-0 border-r border-amber-300 bg-amber-50 px-1 py-2 text-center">
+                      <p className="text-[10px] font-black text-amber-900">
+                        BONUS
+                      </p>
+                    </div>
+
+                    <div className="w-[64px] shrink-0 bg-slate-900 px-1 py-2 text-center">
+                      <p className="text-[10px] font-black text-white">
+                        TOTAL
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
 
               {rankedRows.map((row: any, index: number) => {
@@ -698,7 +755,23 @@ export default function LiveScorecardsPage() {
                     0
                   );
 
-                const position = row.completed > 0 ? index + 1 : "–";
+                const rankingPoints = isScramble
+                  ? Number(row.pointsTotal ?? 0)
+                  : Number(row.totalPoints ?? row.pointsTotal ?? 0);
+
+                const position =
+                  row.completed > 0
+                    ? 1 +
+                      rankedRows.filter((other: any) => {
+                        if (other.completed <= 0) return false;
+
+                        const otherPoints = isScramble
+                          ? Number(other.pointsTotal ?? 0)
+                          : Number(other.totalPoints ?? other.pointsTotal ?? 0);
+
+                        return otherPoints > rankingPoints;
+                      }).length
+                    : "–";
 
                 return (
                   <div
@@ -727,7 +800,9 @@ export default function LiveScorecardsPage() {
 
                         <div className="mt-1 flex items-center gap-1">
                           <span className="rounded-md border border-slate-200 bg-slate-50 px-1 py-0.5 text-[8px] font-black text-slate-700">
-                            {row.pointsTotal} pts
+                            {isScramble
+                              ? row.pointsTotal
+                              : row.totalPoints ?? row.pointsTotal} pts
                           </span>
 
                           <span className="truncate text-[8px] font-black text-slate-500">
@@ -772,9 +847,25 @@ export default function LiveScorecardsPage() {
                       {row.grossTotal || "–"}
                     </div>
 
-                    <div className="flex w-[58px] shrink-0 items-center justify-center bg-slate-900 px-1 py-2 text-lg font-black text-white">
-                      {row.pointsTotal}
-                    </div>
+                    {isScramble ? (
+                      <div className="flex w-[58px] shrink-0 items-center justify-center bg-slate-900 px-1 py-2 text-lg font-black text-white">
+                        {row.pointsTotal}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex w-[58px] shrink-0 items-center justify-center border-r border-slate-200 bg-slate-50 px-1 py-2 text-base font-black text-slate-900">
+                          {row.pointsTotal}
+                        </div>
+
+                        <div className="flex w-[62px] shrink-0 items-center justify-center border-r border-amber-200 bg-amber-50 px-1 py-2 text-base font-black text-amber-900">
+                          {row.bonusTotal > 0 ? `+${row.bonusTotal}` : "–"}
+                        </div>
+
+                        <div className="flex w-[64px] shrink-0 items-center justify-center bg-slate-900 px-1 py-2 text-lg font-black text-white">
+                          {row.totalPoints}
+                        </div>
+                      </>
+                    )}
                   </div>
                 );
               })}
@@ -784,7 +875,7 @@ export default function LiveScorecardsPage() {
           <div className="border-t border-slate-200 bg-slate-50 px-3 py-2">
             <p className="text-center text-[10px] font-bold text-slate-500">
               Swipe left for every hole. Player or pair name and running
-              points remain fixed.
+              total remain fixed. STB is golf Stableford; TOTAL includes bonus points.
             </p>
           </div>
         </section>
@@ -805,9 +896,15 @@ export default function LiveScorecardsPage() {
                     Hole {bonus.hole} • {bonus.bonus_type}
                   </p>
 
-                  <p className="mt-0.5 text-sm font-black text-slate-950">
-                    {bonus.winner_player_name}
-                  </p>
+                  <div className="mt-0.5 flex items-center justify-between gap-3">
+                    <p className="text-sm font-black text-slate-950">
+                      {bonus.winner_player_name}
+                    </p>
+
+                    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-900">
+                      +{Number(bonus.points ?? 0)} pts
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
