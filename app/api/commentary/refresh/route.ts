@@ -2330,21 +2330,29 @@ function buildStablefordFormPush(
   if (last3 >= 9) {
     return {
       priority: last3 >= 10 ? 92 : 86,
-      fact: `${player.name} is flying — ${last3} points from the last three holes.`,
+      fact: holeNumber % 2 === 0
+        ? `${player.name} has taken ${last3} points from the last three holes — a proper charge.`
+        : `${last3} points in three holes for ${player.name}. The run is building.`,
       subjectKey: `form-hot-${playerId}-${holeNumber}`,
     };
   }
   if (last4 >= 11) {
     return {
       priority: 80,
-      fact: `${player.name} is on a serious run — ${last4} points from the last four holes.`,
+      fact: holeNumber % 2 === 0
+        ? `${player.name} keeps stacking them up — ${last4} points from four holes.`
+        : `${last4} from the last four for ${player.name}. That's some stretch of scoring.`,
       subjectKey: `form-run-${playerId}-${holeNumber}`,
     };
   }
   if (points >= 4) {
     return {
       priority: 84,
-      fact: `BIG ONE from ${player.name} — ${points} points on the ${ordinal(holeNumber)}.`,
+      fact: holeNumber % 3 === 0
+        ? `${points} points for ${player.name} on ${holeNumber} — that will move the needle.`
+        : holeNumber % 3 === 1
+          ? `${player.name} cashes in on ${holeNumber} with ${points} points.`
+          : `${player.name} lands a ${points}-pointer on the ${ordinal(holeNumber)}.`,
       subjectKey: `stableford-big-score-${playerId}-${holeNumber}`,
     };
   }
@@ -2468,6 +2476,7 @@ function buildPushSummary({
   stablefordScoresBefore,
   stablefordScoresAfter,
   stablefordHistory,
+  includeScoreForm = true,
 }: {
   rows: ScoreRow[];
   tournament: TournamentSetup;
@@ -2483,11 +2492,15 @@ function buildPushSummary({
   stablefordScoresBefore: ScoreRow[];
   stablefordScoresAfter: ScoreRow[];
   stablefordHistory: StablefordHistory;
+  includeScoreForm?: boolean;
 }) {
   const candidates: PushMessage[] = [];
 
   for (const row of rows) {
-    if (row.player_id) {
+    // Score/form/history facts are useful for an immediate group alert, but
+    // once that alert has already gone out the Hole Complete message must
+    // add a NEW story rather than repeating the same player's score.
+    if (row.player_id && includeScoreForm) {
       const historyCandidate =
         buildStablefordHistoryPush(
           row,
@@ -2499,13 +2512,9 @@ function buildPushSummary({
         );
 
       if (historyCandidate) {
-        candidates.push(
-          historyCandidate
-        );
+        candidates.push(historyCandidate);
       }
-    }
 
-    if (row.player_id) {
       const formCandidate = buildStablefordFormPush(
         row,
         tournament,
@@ -2556,6 +2565,26 @@ function buildPushSummary({
     ? buildLeaderboardTightnessPush(leaderboardBefore, leaderboardAfter, holeNumber, totalHoles)
     : null;
   if (tightness) candidates.push(tightness);
+
+  // Flag society competitions before players reach the tee. This is factual
+  // tournament setup data, so it is safe even when groups sync out of order.
+  const nextHole = getHoleDetails(
+    tournament,
+    Number(rows[0]?.round_number ?? 0),
+    holeNumber + 1
+  );
+  if (nextHole?.isLongestDrive || nextHole?.isClosestToPin) {
+    const competition = nextHole.isLongestDrive ? "Longest Drive" : "Nearest Pin";
+    const details = [
+      nextHole.par ? `par ${nextHole.par}` : "",
+      nextHole.yards ? `${nextHole.yards} yds` : "",
+    ].filter(Boolean).join(" · ");
+    candidates.push({
+      priority: 79,
+      fact: `Coming up on ${holeNumber + 1}: ${competition}${details ? ` — ${details}` : ""}.`,
+      subjectKey: `upcoming-bonus-${holeNumber + 1}-${competition}`,
+    });
+  }
 
   candidates.sort(
     (a, b) =>
@@ -2667,7 +2696,11 @@ function buildGroupPushSummary({
     if (row.player_id && points >= 4) {
       candidates.push({
         priority: 86,
-        fact: `BIG ONE from ${subject} — ${points} points on ${holeNumber}.`,
+        fact: holeNumber % 3 === 0
+          ? `${points} points for ${subject} on ${holeNumber} — a big swing.`
+          : holeNumber % 3 === 1
+            ? `${subject} cashes in on ${holeNumber} with ${points} points.`
+            : `${subject} lands a ${points}-pointer on the ${ordinal(holeNumber)}.`,
         subjectKey: `group-big-score-${row.player_id}`,
       });
       continue;
@@ -4017,6 +4050,14 @@ export async function POST(
           ),
         ];
 
+        const priorGroupPushForHole =
+          (momentsResult.data ?? []).some((moment: any) =>
+            moment.moment_type === "push_notification" &&
+            Number(moment.round_number) === roundNumber &&
+            Number(moment.hole_number) === holeNumber &&
+            normaliseText(moment.title).includes(`Hole ${holeNumber} · Group`)
+          );
+
         const finalSummary =
           buildPushSummary({
             rows: wholeHoleRows,
@@ -4041,6 +4082,7 @@ export async function POST(
             stablefordScoresAfter:
               currentStablefordScores,
             stablefordHistory,
+            includeScoreForm: !(groupPushPublishedThisRequest || priorGroupPushForHole),
           });
 
         if (finalSummary) {
