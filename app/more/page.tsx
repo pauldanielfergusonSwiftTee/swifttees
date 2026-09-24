@@ -38,7 +38,7 @@ const moreLinks = [
   {
     title: "Admin",
     description: "Tournament setup and admin tools.",
-    href: "/admin",
+    href: "/admin-login",
     icon: "⚙️",
   },
 ];
