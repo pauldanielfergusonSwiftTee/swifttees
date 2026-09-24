@@ -91,12 +91,19 @@ export default function Home() {
             <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
               <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-green-300">
                 <span className="h-2 w-2 rounded-full bg-green-400" aria-hidden="true" />
-                {hasStarted ? "The weekend is here" : "Until the first tee"}
+                {hasStarted ? "Tournament now live" : "Until the first tee"}
               </h2>
               <p className="text-xs text-white/70">Sunday · 13:00 UK time</p>
             </div>
             {hasStarted ? (
-              <p className="py-3 text-3xl font-black tracking-tight sm:text-5xl">Time to enjoy the weekend.</p>
+              <div className="py-3">
+                <p className="text-3xl font-black tracking-tight text-green-300 sm:text-5xl">
+                  🟢 TOURNAMENT NOW LIVE
+                </p>
+                <p className="mt-2 text-sm font-semibold text-white/75 sm:text-base">
+                  Follow the action on Swift Tees
+                </p>
+              </div>
             ) : (
               <div role="timer" aria-label="Time until the first tee" className="grid grid-cols-4 divide-x divide-white/20">
                 <CountdownNumber value={countdown?.days} label="Days" />
