@@ -209,9 +209,17 @@ export default function LiveScorecardsPage() {
 
         if (!player) return;
 
+        const grossScore = Number(row.gross_score);
+
         loadedScores[
           `${round.id}-${group.id}-${row.hole_number}-${player.name}`
-        ] = Number(row.gross_score);
+        ] = grossScore;
+
+        // Canonical Stableford lookup for the full scorecard.
+        // player_id is stable even if groups/order change.
+        loadedScores[
+          `${round.id}-player-${row.player_id}-${row.hole_number}`
+        ] = grossScore;
       });
 
       savedScrambleScores.forEach((row: any) => {
@@ -425,24 +433,14 @@ export default function LiveScorecardsPage() {
           const holeScores = holes.map((holeItem: any) => {
             const holeNumber = Number(holeItem.hole);
 
-            // A player can appear in more than one configured group. Scores are
-            // stored against the group they were actually entered in, so find
-            // that player's saved score across every group for this round
-            // instead of assuming the first group containing their name.
-            const gross =
-              currentRound.groups
-                .map((scoreGroup: any) =>
-                  Number(
-                    scores[
-                      scoreKeyFor(
-                        scoreGroup.id,
-                        player.name,
-                        holeNumber
-                      )
-                    ] ?? 0
-                  )
-                )
-                .find((savedGross: number) => savedGross > 0) ?? 0;
+            // Use player_id as the canonical Stableford key. This avoids
+            // mismatches when a player appears in a different configured group.
+            const playerId = player.player_id ?? player.id;
+            const gross = Number(
+              scores[
+                `${currentRound.id}-player-${playerId}-${holeNumber}`
+              ] ?? 0
+            );
 
             const points = gross
               ? calculateStablefordPoints(
