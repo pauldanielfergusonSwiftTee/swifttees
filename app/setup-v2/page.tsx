@@ -811,17 +811,39 @@ async function handleResetTournament(tournament: any) {
   }
 }
 
-  async function handleDeleteTournament(slug: string) {
-    const confirmed = window.confirm(
-      "Delete this tournament? This cannot be undone."
+ async function handleDeleteTournament(slug: string) {
+  const confirmed = window.confirm(
+    "Delete this tournament? This cannot be undone.\n\nThis will also permanently delete its scores, commentary and notification history."
+  );
+
+  if (!confirmed) return;
+
+  try {
+    // Clear everything tied to this event slug first, including
+    // live_moments notification checkpoints, so reusing the same
+    // slug later starts as a genuinely fresh tournament.
+    await resetEventScores(slug);
+
+    // Then remove the tournament setup itself.
+    await deleteTournamentV2(slug);
+
+    localStorage.removeItem(`swift-tees-reset-${slug}`);
+
+    setSaveMessage(
+      "🗑 Tournament and its scores, commentary and notification history deleted."
     );
 
-    if (!confirmed) return;
-
-    await deleteTournamentV2(slug);
-    setSaveMessage("🗑 Tournament deleted.");
     await loadSavedTournaments();
+  } catch (error: any) {
+    console.error("Could not delete tournament:", error);
+
+    setSaveMessage(
+      `❌ Could not delete tournament. ${
+        error?.message ?? "Please try again."
+      }`
+    );
   }
+}
 
   return (
   <main className="min-h-screen bg-slate-100 text-slate-900 p-4 pb-24">
