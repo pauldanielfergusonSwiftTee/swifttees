@@ -209,17 +209,9 @@ export default function LiveScorecardsPage() {
 
         if (!player) return;
 
-        const grossScore = Number(row.gross_score);
-
         loadedScores[
           `${round.id}-${group.id}-${row.hole_number}-${player.name}`
-        ] = grossScore;
-
-        // Canonical Stableford lookup for the full scorecard.
-        // player_id is stable even if groups/order change.
-        loadedScores[
-          `${round.id}-player-${row.player_id}-${row.hole_number}`
-        ] = grossScore;
+        ] = Number(row.gross_score);
       });
 
       savedScrambleScores.forEach((row: any) => {
@@ -431,16 +423,14 @@ export default function LiveScorecardsPage() {
           );
 
           const holeScores = holes.map((holeItem: any) => {
-            const holeNumber = Number(holeItem.hole);
-
-            // Use player_id as the canonical Stableford key. This avoids
-            // mismatches when a player appears in a different configured group.
-            const playerId = player.player_id ?? player.id;
-            const gross = Number(
+            const gross =
               scores[
-                `${currentRound.id}-player-${playerId}-${holeNumber}`
-              ] ?? 0
-            );
+                scoreKeyFor(
+                  group.id,
+                  player.name,
+                  Number(holeItem.hole)
+                )
+              ] ?? 0;
 
             const points = gross
               ? calculateStablefordPoints(
@@ -662,6 +652,8 @@ export default function LiveScorecardsPage() {
                       Number(holeItem.hole)
                   );
 
+                  const holeNumber = Number(holeItem.hole);
+
                   return (
                     <div key={holeItem.hole} className="contents">
                       <div className="w-[48px] shrink-0 border-r border-slate-300 bg-slate-100 px-0.5 py-1.5 text-center">
@@ -689,7 +681,7 @@ export default function LiveScorecardsPage() {
                         </p>
                       </div>
 
-                      {Number(holeItem.hole) === 9 && (
+                      {holeNumber === 9 && (
                         <div className="w-[52px] shrink-0 border-r border-slate-300 bg-slate-200 px-1 py-2 text-center">
                           <p className="text-[10px] font-black text-slate-900">
                             OUT
@@ -721,7 +713,7 @@ export default function LiveScorecardsPage() {
                 </div>
 
                 {isScramble ? (
-                  <div className="sticky right-0 z-50 w-[58px] shrink-0 border-l border-slate-700 bg-slate-900 px-1 py-2 text-center shadow-[-6px_0_10px_rgba(15,23,42,0.18)]">
+                  <div className="sticky right-0 z-40 w-[58px] shrink-0 border-l border-slate-700 bg-slate-900 px-1 py-2 text-center shadow-[-4px_0_8px_rgba(15,23,42,0.14)]">
                     <p className="text-[10px] font-black text-white">
                       PTS
                     </p>
@@ -740,7 +732,7 @@ export default function LiveScorecardsPage() {
                       </p>
                     </div>
 
-                    <div className="sticky right-0 z-50 w-[64px] shrink-0 border-l border-slate-700 bg-slate-900 px-1 py-2 text-center shadow-[-6px_0_10px_rgba(15,23,42,0.18)]">
+                    <div className="sticky right-0 z-40 w-[64px] shrink-0 border-l border-slate-700 bg-slate-900 px-1 py-2 text-center shadow-[-4px_0_8px_rgba(15,23,42,0.14)]">
                       <p className="text-[10px] font-black text-white">
                         TOTAL
                       </p>
@@ -862,7 +854,7 @@ export default function LiveScorecardsPage() {
                     </div>
 
                     {isScramble ? (
-                      <div className="sticky right-0 z-30 flex w-[58px] shrink-0 items-center justify-center border-l border-slate-700 bg-slate-900 px-1 py-2 text-lg font-black text-white shadow-[-6px_0_10px_rgba(15,23,42,0.18)]">
+                      <div className="sticky right-0 z-30 flex w-[58px] shrink-0 items-center justify-center border-l border-slate-700 bg-slate-900 px-1 py-2 text-lg font-black text-white shadow-[-4px_0_8px_rgba(15,23,42,0.14)]">
                         {row.pointsTotal}
                       </div>
                     ) : (
@@ -875,7 +867,7 @@ export default function LiveScorecardsPage() {
                           {row.bonusTotal > 0 ? `+${row.bonusTotal}` : "–"}
                         </div>
 
-                        <div className="sticky right-0 z-30 flex w-[64px] shrink-0 items-center justify-center border-l border-slate-700 bg-slate-900 px-1 py-2 text-lg font-black text-white shadow-[-6px_0_10px_rgba(15,23,42,0.18)]">
+                        <div className="sticky right-0 z-30 flex w-[64px] shrink-0 items-center justify-center border-l border-slate-700 bg-slate-900 px-1 py-2 text-lg font-black text-white shadow-[-4px_0_8px_rgba(15,23,42,0.14)]">
                           {row.totalPoints}
                         </div>
                       </>
@@ -888,7 +880,8 @@ export default function LiveScorecardsPage() {
 
           <div className="border-t border-slate-200 bg-slate-50 px-3 py-2">
             <p className="text-center text-[10px] font-bold text-slate-500">
-              Swipe across the holes. Player or pair stays fixed on the left and TOTAL stays fixed on the right. STB is golf Stableford; TOTAL includes bonus points.
+              Swipe across the holes. Player or pair stays fixed on the left and
+              TOTAL stays fixed on the right. STB is golf Stableford; TOTAL includes bonus points.
             </p>
           </div>
         </section>
