@@ -4286,6 +4286,20 @@ let pushed = 0;
       }
     }
 
+console.log("🔔 PUSH DEBUG", {
+  eventSlug,
+  roundNumber,
+  holeNumber,
+  livePushesEnabled,
+  changedRows: changedRows.length,
+  generatedMoments: enhancedMoments.length,
+  createdMoments,
+  duplicates,
+  pushed,
+});
+
+
+
     return NextResponse.json({
       success: true,
 
