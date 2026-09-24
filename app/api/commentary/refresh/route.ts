@@ -3893,18 +3893,37 @@ export async function POST(
 
 
     /*
-     * Notification-only mode.
-     *
-     * We still use the existing scoring/context builders above to create
-     * a good factual push summary, but we no longer save commentary
-     * moments for a Live Centre feed.
-     *
-     * Durable duplicate protection is still handled below by the
-     * push_checkpoint rows.
-     */
-    const createdMoments = 0;
-    const duplicates = 0;
-    let pushed = 0;
+ * Save generated commentary to live_moments.
+ *
+ * These rows build the tournament commentary history for Live Centre
+ * and the post-event write-up.
+ *
+ * Push notifications remain separate below. Saving a commentary
+ * moment does NOT automatically send a push.
+ *
+ * saveMoment() uses the existing unique (event_slug, moment_key)
+ * protection, so re-saving the same score cannot create duplicate
+ * commentary.
+ */
+let createdMoments = 0;
+let duplicates = 0;
+
+for (const moment of enhancedMoments) {
+  const result = await saveMoment(
+    supabase,
+    moment
+  );
+
+  if (result.created) {
+    createdMoments += 1;
+  }
+
+  if (result.duplicate) {
+    duplicates += 1;
+  }
+}
+
+let pushed = 0;
 
     /*
      * Admin emergency switch.
