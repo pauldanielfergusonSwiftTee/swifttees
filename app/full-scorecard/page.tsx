@@ -423,14 +423,26 @@ export default function LiveScorecardsPage() {
           );
 
           const holeScores = holes.map((holeItem: any) => {
+            const holeNumber = Number(holeItem.hole);
+
+            // A player can appear in more than one configured group. Scores are
+            // stored against the group they were actually entered in, so find
+            // that player's saved score across every group for this round
+            // instead of assuming the first group containing their name.
             const gross =
-              scores[
-                scoreKeyFor(
-                  group.id,
-                  player.name,
-                  Number(holeItem.hole)
+              currentRound.groups
+                .map((scoreGroup: any) =>
+                  Number(
+                    scores[
+                      scoreKeyFor(
+                        scoreGroup.id,
+                        player.name,
+                        holeNumber
+                      )
+                    ] ?? 0
+                  )
                 )
-              ] ?? 0;
+                .find((savedGross: number) => savedGross > 0) ?? 0;
 
             const points = gross
               ? calculateStablefordPoints(
@@ -653,45 +665,46 @@ export default function LiveScorecardsPage() {
                   );
 
                   return (
-                    <div
-                      key={holeItem.hole}
-                      className="w-[48px] shrink-0 border-r border-slate-300 bg-slate-100 px-0.5 py-1.5 text-center"
-                    >
-                      <div className="flex items-center justify-center gap-0.5">
-                        <span className="text-xs font-black text-slate-900">
-                          {holeItem.hole}
-                        </span>
-
-                        {hasBonus && (
-                          <span
-                            className="text-[8px] text-slate-500"
-                            title="Bonus hole"
-                          >
-                            ★
+                    <div key={holeItem.hole} className="contents">
+                      <div className="w-[48px] shrink-0 border-r border-slate-300 bg-slate-100 px-0.5 py-1.5 text-center">
+                        <div className="flex items-center justify-center gap-0.5">
+                          <span className="text-xs font-black text-slate-900">
+                            {holeItem.hole}
                           </span>
-                        )}
+
+                          {hasBonus && (
+                            <span
+                              className="text-[8px] text-slate-500"
+                              title="Bonus hole"
+                            >
+                              ★
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="text-[8px] font-bold text-slate-500">
+                          P{holeItem.par}
+                        </p>
+
+                        <p className="text-[7px] font-bold text-slate-400">
+                          SI{holeItem.strokeIndex}
+                        </p>
                       </div>
 
-                      <p className="text-[8px] font-bold text-slate-500">
-                        P{holeItem.par}
-                      </p>
+                      {Number(holeItem.hole) === 9 && (
+                        <div className="w-[52px] shrink-0 border-r border-slate-300 bg-slate-200 px-1 py-2 text-center">
+                          <p className="text-[10px] font-black text-slate-900">
+                            OUT
+                          </p>
 
-                      <p className="text-[7px] font-bold text-slate-400">
-                        SI{holeItem.strokeIndex}
-                      </p>
+                          <p className="text-[8px] font-bold text-slate-500">
+                            {frontNinePar}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
-
-                <div className="w-[52px] shrink-0 border-r border-slate-300 bg-slate-200 px-1 py-2 text-center">
-                  <p className="text-[10px] font-black text-slate-900">
-                    OUT
-                  </p>
-
-                  <p className="text-[8px] font-bold text-slate-500">
-                    {frontNinePar}
-                  </p>
-                </div>
 
                 <div className="w-[52px] shrink-0 border-r border-slate-300 bg-slate-200 px-1 py-2 text-center">
                   <p className="text-[10px] font-black text-slate-900">
@@ -821,23 +834,26 @@ export default function LiveScorecardsPage() {
                       );
 
                       return (
-                        <div
-                          key={item.hole}
-                          className={`flex w-[48px] shrink-0 items-center justify-center border-r border-slate-200 px-0.5 py-1.5 ${
-                            hasBonus ? "bg-slate-50" : "bg-white"
-                          }`}
-                        >
-                          <GolfScoreMarker
-                            gross={item.gross}
-                            par={item.par}
-                          />
+                        <div key={item.hole} className="contents">
+                          <div
+                            className={`flex w-[48px] shrink-0 items-center justify-center border-r border-slate-200 px-0.5 py-1.5 ${
+                              hasBonus ? "bg-slate-50" : "bg-white"
+                            }`}
+                          >
+                            <GolfScoreMarker
+                              gross={item.gross}
+                              par={item.par}
+                            />
+                          </div>
+
+                          {item.hole === 9 && (
+                            <div className="flex w-[52px] shrink-0 items-center justify-center border-r border-slate-200 bg-slate-50 px-1 py-2 text-sm font-black text-slate-900">
+                              {frontGross || "–"}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
-
-                    <div className="flex w-[52px] shrink-0 items-center justify-center border-r border-slate-200 bg-slate-50 px-1 py-2 text-sm font-black text-slate-900">
-                      {frontGross || "–"}
-                    </div>
 
                     <div className="flex w-[52px] shrink-0 items-center justify-center border-r border-slate-200 bg-slate-50 px-1 py-2 text-sm font-black text-slate-900">
                       {backGross || "–"}
@@ -874,8 +890,7 @@ export default function LiveScorecardsPage() {
 
           <div className="border-t border-slate-200 bg-slate-50 px-3 py-2">
             <p className="text-center text-[10px] font-bold text-slate-500">
-              Swipe left for every hole. Player or pair name and running
-              total remain fixed. STB is golf Stableford; TOTAL includes bonus points.
+              Swipe across the holes. Player or pair stays fixed on the left and TOTAL stays fixed on the right. STB is golf Stableford; TOTAL includes bonus points.
             </p>
           </div>
         </section>
