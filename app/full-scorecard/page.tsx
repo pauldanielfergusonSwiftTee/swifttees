@@ -482,11 +482,40 @@ export default function LiveScorecardsPage() {
   );
 
   function getPlayerBonusPoints(playerName: string) {
-    if (isScramble) return 0;
     const name = String(playerName ?? "").trim().toLowerCase();
+
     return currentRoundBonuses
-      .filter((bonus: any) => String(bonus.winner_player_name ?? "").trim().toLowerCase() === name)
-      .reduce((total: number, bonus: any) => total + Number(bonus.points ?? 0), 0);
+      .filter(
+        (bonus: any) =>
+          String(bonus.winner_player_name ?? "").trim().toLowerCase() === name
+      )
+      .reduce(
+        (total: number, bonus: any) => total + Number(bonus.points ?? 0),
+        0
+      );
+  }
+
+  function getPairBonusDetails(row: any) {
+    if (!isScramble) return [];
+
+    const group = currentRound.groups.find((groupItem: any) =>
+      (groupItem.pairs ?? []).some(
+        (pair: any) => `${groupItem.id}-${pair.id}` === row.id
+      )
+    );
+
+    const pair = group?.pairs?.find(
+      (pairItem: any) => `${group.id}-${pairItem.id}` === row.id
+    );
+
+    if (!pair) return [];
+
+    return [pair.player1, pair.player2]
+      .map((playerName: string) => ({
+        playerName,
+        bonusPoints: getPlayerBonusPoints(playerName),
+      }))
+      .filter((item: any) => item.bonusPoints > 0);
   }
 
   return (
@@ -685,23 +714,25 @@ export default function LiveScorecardsPage() {
                   </p>
                 </div>
 
-                {isScramble ? (
-                  <div className="w-[58px] shrink-0 bg-slate-900 px-1 py-2 text-center">
-                    <p className="text-[10px] font-black text-white">PTS</p>
+                <div className="w-[72px] shrink-0 border-r border-slate-300 bg-slate-200 px-1 py-2 text-center">
+                  <p className="text-[9px] font-black text-slate-900">
+                    STABLEFORD
+                  </p>
+                </div>
+
+                {!isScramble && (
+                  <div className="w-[58px] shrink-0 border-r border-slate-300 bg-amber-50 px-1 py-2 text-center">
+                    <p className="text-[10px] font-black text-amber-900">
+                      BONUS
+                    </p>
                   </div>
-                ) : (
-                  <>
-                    <div className="w-[72px] shrink-0 border-r border-slate-300 bg-slate-200 px-1 py-2 text-center">
-                      <p className="text-[9px] font-black text-slate-900">STABLEFORD</p>
-                    </div>
-                    <div className="w-[58px] shrink-0 border-r border-slate-300 bg-amber-50 px-1 py-2 text-center">
-                      <p className="text-[10px] font-black text-amber-900">BONUS</p>
-                    </div>
-                    <div className="w-[58px] shrink-0 bg-slate-900 px-1 py-2 text-center">
-                      <p className="text-[10px] font-black text-white">TOTAL</p>
-                    </div>
-                  </>
                 )}
+
+                <div className="w-[58px] shrink-0 bg-slate-900 px-1 py-2 text-center">
+                  <p className="text-[10px] font-black text-white">
+                    TOTAL
+                  </p>
+                </div>
               </div>
 
               {rankedRows.map((row: any, index: number) => {
@@ -722,8 +753,11 @@ export default function LiveScorecardsPage() {
                   );
 
                 const position = row.completed > 0 ? index + 1 : "–";
-                const bonusPoints = getPlayerBonusPoints(row.label);
+                const bonusPoints = isScramble
+                  ? 0
+                  : getPlayerBonusPoints(row.label);
                 const totalPoints = row.pointsTotal + bonusPoints;
+                const pairBonusDetails = getPairBonusDetails(row);
 
                 return (
                   <div
@@ -752,7 +786,7 @@ export default function LiveScorecardsPage() {
 
                         <div className="mt-1 flex items-center gap-1">
                           <span className="rounded-md border border-slate-200 bg-slate-50 px-1 py-0.5 text-[8px] font-black text-slate-700">
-                            {totalPoints} pts
+                            {isScramble ? row.pointsTotal : totalPoints} pts
                           </span>
 
                           <span className="truncate text-[8px] font-black text-slate-500">
@@ -761,6 +795,19 @@ export default function LiveScorecardsPage() {
                               : `Thru ${row.completed}`}
                           </span>
                         </div>
+
+                        {isScramble && pairBonusDetails.length > 0 && (
+                          <div className="mt-1 space-y-0.5">
+                            {pairBonusDetails.map((item: any) => (
+                              <p
+                                key={item.playerName}
+                                className="truncate text-[8px] font-black text-amber-700"
+                              >
+                                {item.playerName} +{item.bonusPoints} bonus
+                              </p>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -800,23 +847,19 @@ export default function LiveScorecardsPage() {
                       {row.grossTotal || "–"}
                     </div>
 
-                    {isScramble ? (
-                      <div className="flex w-[58px] shrink-0 items-center justify-center bg-slate-900 px-1 py-2 text-lg font-black text-white">
-                        {row.pointsTotal}
+                    <div className="flex w-[72px] shrink-0 items-center justify-center border-r border-slate-200 bg-white px-1 py-2 text-base font-black text-slate-900">
+                      {row.pointsTotal}
+                    </div>
+
+                    {!isScramble && (
+                      <div className="flex w-[58px] shrink-0 items-center justify-center border-r border-slate-200 bg-amber-50 px-1 py-2 text-base font-black text-amber-900">
+                        {bonusPoints}
                       </div>
-                    ) : (
-                      <>
-                        <div className="flex w-[72px] shrink-0 items-center justify-center border-r border-slate-200 bg-white px-1 py-2 text-base font-black text-slate-900">
-                          {row.pointsTotal}
-                        </div>
-                        <div className="flex w-[58px] shrink-0 items-center justify-center border-r border-slate-200 bg-amber-50 px-1 py-2 text-base font-black text-amber-900">
-                          {bonusPoints}
-                        </div>
-                        <div className="flex w-[58px] shrink-0 items-center justify-center bg-slate-900 px-1 py-2 text-lg font-black text-white">
-                          {totalPoints}
-                        </div>
-                      </>
                     )}
+
+                    <div className="flex w-[58px] shrink-0 items-center justify-center bg-slate-900 px-1 py-2 text-lg font-black text-white">
+                      {isScramble ? row.pointsTotal : totalPoints}
+                    </div>
                   </div>
                 );
               })}
@@ -825,8 +868,9 @@ export default function LiveScorecardsPage() {
 
           <div className="border-t border-slate-200 bg-slate-50 px-3 py-2">
             <p className="text-center text-[10px] font-bold text-slate-500">
-              Swipe left for every hole. Player or pair name and running
-              points remain fixed. Stableford + Bonus = Total.
+              Swipe left for every hole. Stableford rounds show individual
+              Stableford + Bonus = Total. Scramble bonus points stay with the
+              individual winner; the pair score remains the pair Stableford score.
             </p>
           </div>
         </section>
