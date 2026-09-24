@@ -1537,10 +1537,12 @@ const generatedMoments = hasScoringActivity
     ].filter(Boolean) as LiveMomentRow[])
   : [];
 
-// Notification-only mode:
- // Live Centre no longer saves generated commentary moments.
- // Push notifications are created server-side when scores are saved.
-
+/*
+ * Commentary is generated and saved server-side when scores are saved.
+ * Live Centre only reads the saved commentary for the active tournament.
+ *
+ * Internal push bookkeeping rows must never appear in the commentary feed.
+ */
 if (!hasScoringActivity && typeof window !== "undefined") {
   localStorage.removeItem(getPositionStorageKey(eventSlug));
 }
@@ -1554,7 +1556,8 @@ const isScrambleRound =
 const visibleMoments = hasScoringActivity
   ? (refreshedMoments ?? []).filter(
       (moment: LiveMomentRow) =>
-        moment.moment_type === "push_notification"
+        moment.moment_type !== "push_checkpoint" &&
+        moment.moment_type !== "push_notification"
     )
   : [];
 
