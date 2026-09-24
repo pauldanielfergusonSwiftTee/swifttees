@@ -710,7 +710,7 @@ export default function LiveScorecardsPage() {
                 </div>
 
                 {isScramble ? (
-                  <div className="w-[58px] shrink-0 bg-slate-900 px-1 py-2 text-center">
+                  <div className="sticky right-0 z-50 w-[58px] shrink-0 border-l border-slate-700 bg-slate-900 px-1 py-2 text-center shadow-[-6px_0_10px_rgba(15,23,42,0.18)]">
                     <p className="text-[10px] font-black text-white">
                       PTS
                     </p>
@@ -729,7 +729,7 @@ export default function LiveScorecardsPage() {
                       </p>
                     </div>
 
-                    <div className="w-[64px] shrink-0 bg-slate-900 px-1 py-2 text-center">
+                    <div className="sticky right-0 z-50 w-[64px] shrink-0 border-l border-slate-700 bg-slate-900 px-1 py-2 text-center shadow-[-6px_0_10px_rgba(15,23,42,0.18)]">
                       <p className="text-[10px] font-black text-white">
                         TOTAL
                       </p>
@@ -848,7 +848,7 @@ export default function LiveScorecardsPage() {
                     </div>
 
                     {isScramble ? (
-                      <div className="flex w-[58px] shrink-0 items-center justify-center bg-slate-900 px-1 py-2 text-lg font-black text-white">
+                      <div className="sticky right-0 z-30 flex w-[58px] shrink-0 items-center justify-center border-l border-slate-700 bg-slate-900 px-1 py-2 text-lg font-black text-white shadow-[-6px_0_10px_rgba(15,23,42,0.18)]">
                         {row.pointsTotal}
                       </div>
                     ) : (
@@ -861,7 +861,7 @@ export default function LiveScorecardsPage() {
                           {row.bonusTotal > 0 ? `+${row.bonusTotal}` : "–"}
                         </div>
 
-                        <div className="flex w-[64px] shrink-0 items-center justify-center bg-slate-900 px-1 py-2 text-lg font-black text-white">
+                        <div className="sticky right-0 z-30 flex w-[64px] shrink-0 items-center justify-center border-l border-slate-700 bg-slate-900 px-1 py-2 text-lg font-black text-white shadow-[-6px_0_10px_rgba(15,23,42,0.18)]">
                           {row.totalPoints}
                         </div>
                       </>
