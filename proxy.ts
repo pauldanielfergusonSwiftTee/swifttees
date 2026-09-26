@@ -22,9 +22,7 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/live-centre/:path*",
     "/live-scoring-v2/:path*",
-    "/setup-v2/:path*",
     "/admin/:path*",
   ],
 };

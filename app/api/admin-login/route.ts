@@ -3,22 +3,22 @@ import { NextRequest, NextResponse } from "next/server";
 const COOKIE_NAME = "swifttees_access";
 const COOKIE_VALUE = "allowed";
 
-const PROTECTED_PATHS = [
-  "/live-centre",
+const ALLOWED_REDIRECT_PATHS = [
+  "/admin",
   "/live-scoring-v2",
   "/setup-v2",
 ];
 
 function getSafeRedirect(value: string) {
-  const isProtected = PROTECTED_PATHS.some(
+  const isAllowed = ALLOWED_REDIRECT_PATHS.some(
     (path) => value === path || value.startsWith(`${path}/`)
   );
 
   return value.startsWith("/") &&
     !value.startsWith("//") &&
-    isProtected
+    isAllowed
     ? value
-    : "/live-centre";
+    : "/admin";
 }
 
 export async function POST(request: NextRequest) {
@@ -31,16 +31,16 @@ export async function POST(request: NextRequest) {
 
   const correctPassword = process.env.ADMIN_PASSWORD;
 
-if (!correctPassword) {
-  const loginUrl = new URL("/admin-login", request.url);
+  if (!correctPassword) {
+    const loginUrl = new URL("/admin-login", request.url);
 
-  loginUrl.searchParams.set("error", "config");
-  loginUrl.searchParams.set("redirect", redirect);
+    loginUrl.searchParams.set("error", "config");
+    loginUrl.searchParams.set("redirect", redirect);
 
-  return NextResponse.redirect(loginUrl, 303);
-}
+    return NextResponse.redirect(loginUrl, 303);
+  }
 
-if (password !== correctPassword) {
+  if (password !== correctPassword) {
     const loginUrl = new URL("/admin-login", request.url);
 
     loginUrl.searchParams.set("error", "incorrect");

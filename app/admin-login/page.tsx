@@ -43,10 +43,10 @@ export default async function AdminLoginPage({
             Tournament Access
           </h1>
 
-          <p className="mt-3 text-sm font-medium leading-6 text-green-100">
-            Live scoring, leaderboards and tournament setup are currently
-            restricted while they are being prepared.
-          </p>
+         <p className="mt-3 text-sm font-medium leading-6 text-green-100">
+  Enter the Swift Tees password to access scoring and tournament
+  administration.
+</p>
         </div>
 
         <div className="p-6">
@@ -93,7 +93,7 @@ export default async function AdminLoginPage({
               type="submit"
               className="w-full rounded-2xl bg-green-900 px-5 py-3.5 text-base font-black text-white shadow-sm transition hover:bg-green-800 active:scale-[0.98]"
             >
-              Unlock Tournament Area
+              Continue
             </button>
           </form>
 
