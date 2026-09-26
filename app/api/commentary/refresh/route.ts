@@ -1765,7 +1765,21 @@ function buildScrambleMoment(
 }
 
 
+type LivePushLevel = "key" | "live" | "full";
 
+function getLivePushThreshold(level: unknown) {
+  switch (normaliseText(level).toLowerCase()) {
+    case "key":
+      return 80;
+
+    case "full":
+      return 40;
+
+    case "live":
+    default:
+      return 65;
+  }
+}
 
 type PushMessage = {
   priority: number;
@@ -3945,7 +3959,7 @@ let pushed = 0;
     } =
       await supabase
         .from("tournaments_v2")
-        .select("live_pushes_enabled")
+     .select("live_pushes_enabled, live_push_level")
         .eq("slug", eventSlug)
         .maybeSingle();
 
@@ -3959,7 +3973,14 @@ let pushed = 0;
     const livePushesEnabled =
       !livePushControlError &&
       livePushControl?.live_pushes_enabled !== false;
+const livePushLevel: LivePushLevel =
+  livePushControl?.live_push_level === "key" ||
+  livePushControl?.live_push_level === "full"
+    ? livePushControl.live_push_level
+    : "live";
 
+const livePushThreshold =
+  getLivePushThreshold(livePushLevel);
 
     /*
      * Notification rhythm — one published update per scoring group,
@@ -4112,7 +4133,10 @@ let pushed = 0;
             holeNumber,
           });
 
-        if (groupMessage && groupMessage.priority >= 75) {
+        if (
+  groupMessage &&
+  groupMessage.priority >= livePushThreshold
+) {
           const pushedBefore = pushed;
 
           await publishPush({
@@ -4250,7 +4274,15 @@ let pushed = 0;
         if (finalSummary) {
           const totalHoles = getRoundTotalHoles(tournament, roundNumber);
           const holesRemaining = Math.max(0, totalHoles - holeNumber);
-          const editorialThreshold = holesRemaining <= 2 ? 60 : holesRemaining <= 6 ? 68 : 78;
+          const stageThreshold =
+  holesRemaining <= 2
+    ? 60
+    : holesRemaining <= 6
+      ? 68
+      : 78;
+
+const editorialThreshold =
+  Math.min(livePushThreshold, stageThreshold);
           const scheduledRaceCheck = [6, 9, 12, 15].includes(holeNumber);
           const isRoundComplete = holeNumber >= totalHoles;
           /*
