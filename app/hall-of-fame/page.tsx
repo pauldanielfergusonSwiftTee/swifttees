@@ -73,18 +73,18 @@ function canonicalPlayerName(name: string) {
     default: return trimmed;
   }
 }
-
 function normalisePlayers<T extends { player_name: string }>(rows: T[]): T[] {
   return rows.map((row) => ({ ...row, player_name: canonicalPlayerName(row.player_name) }));
 }
-
 function uniqueRows<T>(rows: T[], key: (row: T) => string): T[] {
   return Array.from(new Map(rows.map((row) => [key(row), row])).values());
 }
-
 function achievementEventLabel(row: AchievementRow) {
   if (row.detail) {
-    return `${row.event_name} — ${row.detail}`;
+    const detail = row.achievement_type === "team_win"
+      ? row.detail.replace(/\s*[·—–-]?\s*\d+(?:\.\d+)?\s*(?:points?|pts)\b/gi, "").trim()
+      : row.detail;
+    return detail ? `${row.event_name} — ${detail}` : row.event_name;
   }
   if (row.round_number) {
     return `${row.event_name} — Round ${row.round_number}`;
@@ -447,65 +447,23 @@ export default function HallOfFamePage() {
         />
         {/* TEAM WINS */}
         <div className="overflow-hidden rounded-[24px] bg-white shadow-sm ring-1 ring-black/[0.04]">
-          <div className="flex items-center justify-between px-5 py-4">
-            <h3 className="text-[15px] font-bold text-slate-500">
-              Team Wins
-            </h3>
-            <span className="rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-bold text-green-800">
-              🏆 Championship
-            </span>
+          <div className="flex items-center justify-between px-5 py-3">
+            <h3 className="text-[15px] font-bold text-slate-500">Team Wins</h3>
+            <span className="text-xs font-semibold text-slate-400">Wins</span>
           </div>
           {teamWins.length > 0 ? (
-            <div className="grid grid-cols-2 border-t border-slate-100 md:grid-cols-4">
-              {teamWins.map((winner, index) => (
-                <div
-                  key={`${winner.player}-${index}`}
-                  className={`
-                    min-w-0 px-4 py-4
-                    ${
-                      index % 2 === 0
-                        ? "border-r border-slate-100"
-                        : ""
-                    }
-                    ${
-                      index < teamWins.length - 2
-                        ? "border-b border-slate-100 md:border-b-0"
-                        : ""
-                    }
-                    md:border-r
-                    md:border-slate-100
-                    md:last:border-r-0
-                  `}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[18px] font-black tracking-tight text-green-950">
-                        {winner.player}
-                      </p>
-                      <div className="mt-1.5 space-y-0.5">
-                        {winner.events.map(
-                          (event, eventIndex) => (
-                            <p
-                              key={`${event}-${eventIndex}`}
-                              className="text-[10px] font-semibold leading-4 text-slate-400"
-                            >
-                              {event}
-                            </p>
-                          )
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 items-baseline gap-1">
-                      <span className="text-[28px] font-black leading-none text-green-950">
-                        {winner.wins}
-                      </span>
-                      <span className="text-[9px] font-bold uppercase text-slate-400">
-                        {winner.wins === 1
-                          ? "win"
-                          : "wins"}
-                      </span>
-                    </div>
+            <div className="divide-y divide-slate-100 border-t border-slate-100">
+              {teamWins.map((winner) => (
+                <div key={winner.player} className="flex items-center justify-between gap-4 px-5 py-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-green-950">{winner.player}</p>
+                    <p className="mt-0.5 text-xs leading-5 text-slate-500">
+                      {winner.events.join(" • ")}
+                    </p>
                   </div>
+                  <span className="flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full bg-green-50 px-2 text-sm font-black text-green-950">
+                    {winner.wins}
+                  </span>
                 </div>
               ))}
             </div>
@@ -679,18 +637,18 @@ function RecordsCentre({
   drives: AchievementSummary[];
 }) {
   const [activeTab, setActiveTab] =
-    useState<RecordsTab>("stableford");
+    useState<RecordsTab>("gross");
   const tabs: {
     id: RecordsTab;
     label: string;
   }[] = [
     {
-      id: "stableford",
-      label: "Stableford",
+      id: "gross",
+      label: "Lowest Gross",
     },
     {
-      id: "gross",
-      label: "Lowest",
+      id: "stableford",
+      label: "Stableford",
     },
     {
       id: "closest",
@@ -724,7 +682,7 @@ function RecordsCentre({
                 className={`
                   relative min-w-0 rounded-[11px]
                   px-0.5 py-2.5 text-center
-                  text-[12px] font-bold
+                  text-[10px] sm:text-[12px] font-bold
                   transition-all duration-200
                   ${
                     active
