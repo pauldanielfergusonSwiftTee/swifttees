@@ -5,14 +5,24 @@ import PageHeader from "@/components/PageHeader";
 
 const events = [
   {
+    title: "Worsley Park 2026",
+    date: "27–28 September 2026",
+    label: "Latest Weekend",
+    description:
+      "Blues take the team title, Paul wins overall, and another weekend of tough golf, great food and plenty of stories. Read the review and both scorecards.",
+    href: "/events/worsley-park-2026/weekend-review",
+    image: "/images/worsley-park/worsleymain.png",
+    featured: true,
+  },
+  {
     title: "Carden Park 2026",
     date: "July 2026",
-    label: "Latest Weekend",
+    label: "July 2026",
     description:
       "Two days at Carden Park, White Team champions, live scoring, full scorecards and the complete weekend review.",
     href: "/events/carden-park-2026/weekend-review",
     image: "/carden-park.jpg",
-    featured: true,
+    featured: false,
   },
   {
     title: "Mottram Hall 2026",
@@ -54,7 +64,7 @@ export default function EventsPage() {
       <PageHeader
         eyebrow="Swift Tees"
         title="Past Events"
-        subtitle="Past weekends, results, photos and all the photos."
+        subtitle="Past weekends, results, photos and the stories worth remembering."
       />
 
       <div className="grid gap-4 md:grid-cols-2">
@@ -64,26 +74,22 @@ export default function EventsPage() {
             href={event.href}
             className={`group relative overflow-hidden rounded-3xl shadow-sm transition active:scale-[0.99] ${
               event.featured
-                ? "min-h-[300px] md:col-span-2 md:min-h-[380px]"
-                : "min-h-[230px]"
+                ? "min-h-[340px] md:col-span-2 md:min-h-[380px]"
+                : "min-h-[300px]"
             }`}
           >
-            {event.image ? (
-              <Image
-                src={event.image}
-                alt={`${event.title} ${event.date}`}
-                fill
-                priority={event.featured}
-                sizes={
-                  event.featured
-                    ? "(max-width: 768px) 100vw, 1024px"
-                    : "(max-width: 768px) 100vw, 512px"
-                }
-                className="object-cover transition duration-500 group-hover:scale-105"
-              />
-            ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-green-900 via-green-950 to-slate-950" />
-            )}
+            <Image
+              src={event.image}
+              alt={event.title}
+              fill
+              priority={event.featured}
+              sizes={
+                event.featured
+                  ? "(max-width: 768px) 100vw, 1024px"
+                  : "(max-width: 768px) 100vw, 512px"
+              }
+              className="object-cover transition duration-500 group-hover:scale-105"
+            />
 
             <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/10" />
 
@@ -98,7 +104,10 @@ export default function EventsPage() {
                 {event.label}
               </span>
 
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-lg font-black text-green-950 shadow-sm">
+              <span
+                aria-hidden="true"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-lg font-black text-green-950 shadow-sm"
+              >
                 →
               </span>
             </div>
@@ -129,7 +138,10 @@ export default function EventsPage() {
                   ? "View latest weekend"
                   : "View weekend"}
 
-                <span className="ml-2 transition group-hover:translate-x-1">
+                <span
+                  aria-hidden="true"
+                  className="ml-2 transition group-hover:translate-x-1"
+                >
                   →
                 </span>
               </div>

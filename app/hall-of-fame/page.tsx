@@ -1,13 +1,11 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import PageContainer from "@/components/PageContainer";
 import { supabase } from "@/lib/supabase";
-
+import { isWorsley2026, worsleyAchievements, worsleyAttendance, worsleyRoundRecords } from "@/lib/history/worsley-park-2026";
 /* ============================================================
    TYPES
 ============================================================ */
-
 type StablefordRound = {
   name: string;
   points: number;
@@ -15,12 +13,10 @@ type StablefordRound = {
   event: string;
   course: string;
 };
-
 type AttendanceGroup = {
   trips: number;
   players: string[];
 };
-
 type AchievementRow = {
   event_slug: string;
   event_name: string;
@@ -32,7 +28,6 @@ type AchievementRow = {
   course_name: string | null;
   detail: string | null;
 };
-
 type AttendanceRow = {
   event_slug: string;
   event_name: string;
@@ -40,12 +35,10 @@ type AttendanceRow = {
   player_id: number | null;
   player_name: string;
 };
-
 type BaselineRow = {
   player_name: string;
   legacy_trips: number;
 };
-
 type OverallResultRow = {
   event_name: string;
   event_date: string | null;
@@ -55,41 +48,54 @@ type OverallResultRow = {
   stableford_points: number;
   gross_score: number | null;
 };
-
 type AchievementSummary = {
   player: string;
   wins: number;
   events: string[];
 };
-
 type RecordsTab =
   | "stableford"
   | "gross"
   | "closest"
   | "drive";
-
 /* ============================================================
    HELPERS
 ============================================================ */
+// Confirmed aliases: use the same identity for all career history.
+function canonicalPlayerName(name: string) {
+  const trimmed = name.trim();
+  switch (trimmed.toLowerCase()) {
+    case "cal":
+    case "calp": return "Calp";
+    case "john":
+    case "big john":
+    case "john w": return "John W";
+    default: return trimmed;
+  }
+}
+
+function normalisePlayers<T extends { player_name: string }>(rows: T[]): T[] {
+  return rows.map((row) => ({ ...row, player_name: canonicalPlayerName(row.player_name) }));
+}
+
+function uniqueRows<T>(rows: T[], key: (row: T) => string): T[] {
+  return Array.from(new Map(rows.map((row) => [key(row), row])).values());
+}
 
 function achievementEventLabel(row: AchievementRow) {
   if (row.detail) {
     return `${row.event_name} — ${row.detail}`;
   }
-
   if (row.round_number) {
     return `${row.event_name} — Round ${row.round_number}`;
   }
-
   return row.event_name;
 }
-
 function summariseAchievements(
   rows: AchievementRow[],
   achievementType: string
 ): AchievementSummary[] {
   const grouped = new Map<string, AchievementSummary>();
-
   rows
     .filter((row) => row.achievement_type === achievementType)
     .forEach((row) => {
@@ -98,33 +104,26 @@ function summariseAchievements(
         wins: 0,
         events: [],
       };
-
       current.wins += 1;
       current.events.push(achievementEventLabel(row));
-
       grouped.set(row.player_name, current);
     });
-
   return Array.from(grouped.values()).sort(
     (a, b) =>
       b.wins - a.wins ||
       a.player.localeCompare(b.player)
   );
 }
-
 function tiedPosition(
   rows: AchievementSummary[],
   index: number
 ) {
   const wins = rows[index].wins;
-
   const firstIndex = rows.findIndex(
     (row) => row.wins === wins
   );
-
   return firstIndex + 1;
 }
-
 function isTied(
   rows: AchievementSummary[],
   index: number
@@ -135,42 +134,32 @@ function isTied(
       row.wins === rows[index].wins
   );
 }
-
 /* ============================================================
    PAGE
 ============================================================ */
-
 export default function HallOfFamePage() {
   const [achievements, setAchievements] = useState<
     AchievementRow[]
   >([]);
-
   const [attendance, setAttendance] = useState<
     AttendanceRow[]
   >([]);
-
   const [baselines, setBaselines] = useState<
     BaselineRow[]
   >([]);
-
   const [overallResults, setOverallResults] = useState<
     OverallResultRow[]
   >([]);
-
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-
   /* ============================================================
      LOAD DATA
   ============================================================ */
-
   useEffect(() => {
     let cancelled = false;
-
     async function loadHallOfFame() {
       setLoading(true);
       setLoadError("");
-
       const [
         achievementsResult,
         attendanceResult,
@@ -182,98 +171,79 @@ export default function HallOfFamePage() {
           .select(
             "event_slug,event_name,event_date,player_id,player_name,achievement_type,round_number,course_name,detail"
           ),
-
         supabase
           .from("event_attendance")
           .select(
             "event_slug,event_name,event_date,player_id,player_name"
           ),
-
         supabase
           .from("player_history_baseline")
           .select("player_name,legacy_trips"),
-
         supabase
           .from("overall_results")
           .select(
             "event_name,event_date,round_number,course_name,player_name,stableford_points,gross_score"
           ),
       ]);
-
       if (cancelled) return;
-
       const error =
         achievementsResult.error ||
         attendanceResult.error ||
         baselinesResult.error ||
         overallResultsResult.error;
-
       if (error) {
         console.error("Hall of Fame load failed:", error);
         setLoadError(error.message);
         setLoading(false);
         return;
       }
-
       setAchievements(
-        (achievementsResult.data ?? []) as AchievementRow[]
+        uniqueRows(normalisePlayers([...((achievementsResult.data ?? []) as AchievementRow[]).filter((row) => !isWorsley2026(row)), ...worsleyAchievements]), (row) =>
+          JSON.stringify([row.event_slug, row.player_name, row.achievement_type, row.round_number, row.detail]))
       );
-
       setAttendance(
-        (attendanceResult.data ?? []) as AttendanceRow[]
+        uniqueRows(normalisePlayers([...((attendanceResult.data ?? []) as AttendanceRow[]).filter((row) => !isWorsley2026(row)), ...worsleyAttendance]), (row) =>
+          JSON.stringify([row.event_slug, row.player_name]))
       );
-
       setBaselines(
-        (baselinesResult.data ?? []) as BaselineRow[]
+        normalisePlayers((baselinesResult.data ?? []) as BaselineRow[])
       );
-
       setOverallResults(
-        (overallResultsResult.data ?? []) as OverallResultRow[]
+        uniqueRows(normalisePlayers([...((overallResultsResult.data ?? []) as OverallResultRow[]).filter((row) => !isWorsley2026(row)), ...worsleyRoundRecords]), (row) =>
+          JSON.stringify([row.event_name, row.event_date, row.round_number, row.course_name, row.player_name]))
       );
-
       setLoading(false);
     }
-
     void loadHallOfFame();
-
     return () => {
       cancelled = true;
     };
   }, []);
-
   /* ============================================================
      ATTENDANCE
   ============================================================ */
-
   const attendanceGroups =
     useMemo<AttendanceGroup[]>(() => {
       const totals = new Map<string, number>();
-
       baselines.forEach((row) => {
         totals.set(
           row.player_name,
-          Number(row.legacy_trips) || 0
+          (totals.get(row.player_name) ?? 0) + (Number(row.legacy_trips) || 0)
         );
       });
-
       attendance.forEach((row) => {
         totals.set(
           row.player_name,
           (totals.get(row.player_name) ?? 0) + 1
         );
       });
-
       const grouped = new Map<number, string[]>();
-
       totals.forEach((trips, player) => {
         if (trips <= 0) return;
-
         const players = grouped.get(trips) ?? [];
         players.push(player);
-
         grouped.set(trips, players);
       });
-
       return Array.from(grouped.entries())
         .map(([trips, players]) => ({
           trips,
@@ -283,11 +253,9 @@ export default function HallOfFamePage() {
         }))
         .sort((a, b) => b.trips - a.trips);
     }, [attendance, baselines]);
-
   /* ============================================================
      MAJOR HONOURS
   ============================================================ */
-
   const eventWins = useMemo(
     () =>
       summariseAchievements(
@@ -296,7 +264,6 @@ export default function HallOfFamePage() {
       ),
     [achievements]
   );
-
   const teamWins = useMemo(
     () =>
       summariseAchievements(
@@ -305,11 +272,9 @@ export default function HallOfFamePage() {
       ),
     [achievements]
   );
-
   /* ============================================================
      RECORDS
   ============================================================ */
-
   const closestToPinRecords = useMemo(
     () =>
       summariseAchievements(
@@ -318,7 +283,6 @@ export default function HallOfFamePage() {
       ),
     [achievements]
   );
-
   const longestDriveRecords = useMemo(
     () =>
       summariseAchievements(
@@ -327,11 +291,9 @@ export default function HallOfFamePage() {
       ),
     [achievements]
   );
-
   /* ============================================================
      STABLEFORD
   ============================================================ */
-
   const bestStableford =
     useMemo<StablefordRound[]>(
       () =>
@@ -360,7 +322,6 @@ export default function HallOfFamePage() {
           ),
       [overallResults]
     );
-
   const lowestGross =
     useMemo<StablefordRound[]>(
       () =>
@@ -380,38 +341,30 @@ export default function HallOfFamePage() {
           ),
       [bestStableford]
     );
-
   /* ============================================================
      PLAYER COUNT
   ============================================================ */
-
   const playerCount = useMemo(() => {
     const players = new Set<string>();
-
     baselines.forEach((row) => {
       if (Number(row.legacy_trips) > 0) {
         players.add(row.player_name);
       }
     });
-
     attendance.forEach((row) => {
       players.add(row.player_name);
     });
-
     return players.size;
   }, [attendance, baselines]);
-
   const maxTrips = Math.max(
     1,
     ...attendanceGroups.map(
       (group) => group.trips
     )
   );
-
   /* ============================================================
      LOADING
   ============================================================ */
-
   if (loading) {
     return (
       <PageContainer className="bg-[#f2f2f7] text-slate-900">
@@ -423,11 +376,9 @@ export default function HallOfFamePage() {
       </PageContainer>
     );
   }
-
   /* ============================================================
      ERROR
   ============================================================ */
-
   if (loadError) {
     return (
       <PageContainer className="bg-[#f2f2f7] text-slate-900">
@@ -435,7 +386,6 @@ export default function HallOfFamePage() {
           <p className="font-bold text-red-900">
             Hall of Fame data could not be loaded.
           </p>
-
           <p className="mt-2 text-sm text-red-700">
             {loadError}
           </p>
@@ -443,13 +393,11 @@ export default function HallOfFamePage() {
       </PageContainer>
     );
   }
-
   return (
     <PageContainer className="bg-[#f2f2f7] text-slate-900">
       {/* ======================================================
           COMPACT HERO
       ====================================================== */}
-
       <section className="relative min-h-[285px] overflow-hidden rounded-[28px] bg-[#06140f] text-white shadow-sm md:min-h-[350px]">
         <div
           className="absolute inset-0 bg-cover bg-center"
@@ -458,13 +406,9 @@ export default function HallOfFamePage() {
               "url('/carden-park.jpg')",
           }}
         />
-
         <div className="absolute inset-0 bg-black/20" />
-
         <div className="absolute inset-0 bg-gradient-to-r from-[#04110c] via-[#06140f]/85 to-transparent" />
-
         <div className="absolute inset-0 bg-gradient-to-t from-[#04110c]/80 via-transparent to-black/10" />
-
         <div className="relative z-10 flex min-h-[285px] flex-col p-5 md:min-h-[350px] md:p-8">
           <a
             href="/"
@@ -472,49 +416,45 @@ export default function HallOfFamePage() {
           >
             ‹ Home
           </a>
-
           <div className="mt-auto pb-2">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-lime-300">
               Swift Tees Record Book
             </p>
-
             <h1 className="mt-2 text-[48px] font-black leading-[0.88] tracking-[-0.055em] md:text-7xl">
               Hall of
               <span className="block text-lime-300">
                 Fame.
               </span>
             </h1>
-
             <p className="mt-3 max-w-sm text-[13px] font-medium leading-5 text-white/70">
               The records and winners of Swift Tees.
             </p>
           </div>
         </div>
       </section>
-
+      <section className="mt-6 rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-black/[0.04]">
+        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">Weekend archive</p>
+        <a href="/events/worsley-park-2026/weekend-review" className="mt-2 block text-xl font-black text-green-950 underline underline-offset-4">Worsley Park · 27–28 September 2026 →</a>
+        <p className="mt-2 text-sm text-slate-500">The write-up, both scorecards and final champions. Individual round records use Monday’s Stableford and gross scores, excluding bonuses.</p>
+      </section>
       {/* ======================================================
           MAJOR HONOURS
       ====================================================== */}
-
       <section className="mt-6">
         <IOSSectionHeading
           eyebrow="Major Honours"
           title="The winners"
         />
-
         {/* TEAM WINS */}
-
         <div className="overflow-hidden rounded-[24px] bg-white shadow-sm ring-1 ring-black/[0.04]">
           <div className="flex items-center justify-between px-5 py-4">
             <h3 className="text-[15px] font-bold text-slate-500">
               Team Wins
             </h3>
-
             <span className="rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-bold text-green-800">
               🏆 Championship
             </span>
           </div>
-
           {teamWins.length > 0 ? (
             <div className="grid grid-cols-2 border-t border-slate-100 md:grid-cols-4">
               {teamWins.map((winner, index) => (
@@ -542,7 +482,6 @@ export default function HallOfFamePage() {
                       <p className="text-[18px] font-black tracking-tight text-green-950">
                         {winner.player}
                       </p>
-
                       <div className="mt-1.5 space-y-0.5">
                         {winner.events.map(
                           (event, eventIndex) => (
@@ -556,12 +495,10 @@ export default function HallOfFamePage() {
                         )}
                       </div>
                     </div>
-
                     <div className="flex shrink-0 items-baseline gap-1">
                       <span className="text-[28px] font-black leading-none text-green-950">
                         {winner.wins}
                       </span>
-
                       <span className="text-[9px] font-bold uppercase text-slate-400">
                         {winner.wins === 1
                           ? "win"
@@ -576,20 +513,16 @@ export default function HallOfFamePage() {
             <EmptySmall text="No team wins recorded yet." />
           )}
         </div>
-
         {/* INDIVIDUAL WINS */}
-
         <div className="mt-3 overflow-hidden rounded-[24px] bg-white shadow-sm ring-1 ring-black/[0.04]">
           <div className="flex items-center justify-between px-5 py-4">
             <h3 className="text-[15px] font-bold text-slate-500">
               Individual Wins
             </h3>
-
             <span className="rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-bold text-green-800">
               🏆 Events
             </span>
           </div>
-
           {eventWins.length > 0 ? (
             <div className="divide-y divide-slate-100 border-t border-slate-100">
               {eventWins.map((winner, index) => (
@@ -613,7 +546,6 @@ export default function HallOfFamePage() {
                         ? "🏆"
                         : index + 1}
                     </div>
-
                     <div className="min-w-0">
                       <p
                         className={`font-black tracking-[-0.03em] text-green-950 ${
@@ -624,7 +556,6 @@ export default function HallOfFamePage() {
                       >
                         {winner.player}
                       </p>
-
                       <div className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5">
                         {winner.events.map(
                           (event, eventIndex) => (
@@ -643,7 +574,6 @@ export default function HallOfFamePage() {
                       </div>
                     </div>
                   </div>
-
                   <div className="shrink-0 text-right">
                     <span
                       className={`font-black leading-none text-green-950 ${
@@ -654,7 +584,6 @@ export default function HallOfFamePage() {
                     >
                       {winner.wins}
                     </span>
-
                     <span className="ml-1.5 text-[10px] font-bold uppercase text-slate-400">
                       {winner.wins === 1
                         ? "win"
@@ -669,17 +598,14 @@ export default function HallOfFamePage() {
           )}
         </div>
       </section>
-
       {/* ======================================================
           RECORDS CENTRE
       ====================================================== */}
-
       <section className="mt-7">
         <IOSSectionHeading
           eyebrow="Record Book"
           title="Records Centre"
         />
-
         <RecordsCentre
           stableford={bestStableford}
           gross={lowestGross}
@@ -687,34 +613,28 @@ export default function HallOfFamePage() {
           drives={longestDriveRecords}
         />
       </section>
-
       {/* ======================================================
           ATTENDANCE
       ====================================================== */}
-
       <section className="mt-7">
         <div className="mb-3 flex items-end justify-between gap-4 px-1">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">
               Roll Call
             </p>
-
             <h2 className="mt-0.5 text-[28px] font-black tracking-[-0.04em] text-green-950">
               Trips attended
             </h2>
           </div>
-
           <div className="shrink-0 rounded-[14px] bg-green-950 px-3 py-2 text-center text-white shadow-sm">
             <p className="text-[22px] font-black leading-none text-lime-300">
               {playerCount}
             </p>
-
             <p className="mt-1 text-[8px] font-bold uppercase tracking-[0.08em] text-white/60">
               Participants
             </p>
           </div>
         </div>
-
         <div className="space-y-2.5">
           {attendanceGroups.map((group) => (
             <AttendanceProgress
@@ -726,16 +646,13 @@ export default function HallOfFamePage() {
           ))}
         </div>
       </section>
-
       {/* ======================================================
           CLOSING
       ====================================================== */}
-
       <section className="relative mt-7 overflow-hidden rounded-[28px] bg-[#06140f] px-6 py-9 text-center text-white">
         <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-lime-300">
           Swift Tees
         </p>
-
         <p className="mt-2 text-3xl font-black tracking-[-0.04em]">
           Records are there
           <span className="block text-lime-300">
@@ -743,16 +660,13 @@ export default function HallOfFamePage() {
           </span>
         </p>
       </section>
-
       <div className="h-52 md:hidden" />
     </PageContainer>
   );
 }
-
 /* ============================================================
    RECORDS CENTRE
 ============================================================ */
-
 function RecordsCentre({
   stableford,
   gross,
@@ -766,7 +680,6 @@ function RecordsCentre({
 }) {
   const [activeTab, setActiveTab] =
     useState<RecordsTab>("stableford");
-
   const tabs: {
     id: RecordsTab;
     label: string;
@@ -788,11 +701,9 @@ function RecordsCentre({
       label: "Drives",
     },
   ];
-
   return (
     <div className="overflow-hidden rounded-[24px] bg-white shadow-sm ring-1 ring-black/[0.04]">
       {/* iOS SEGMENTED CONTROL */}
-
       <div className="p-3 pb-2">
         <div
           role="tablist"
@@ -801,7 +712,6 @@ function RecordsCentre({
           {tabs.map((tab) => {
             const active =
               activeTab === tab.id;
-
             return (
               <button
                 key={tab.id}
@@ -824,7 +734,6 @@ function RecordsCentre({
                 `}
               >
                 {tab.label}
-
                 {active && (
                   <span className="absolute bottom-[4px] left-1/2 h-[2px] w-4 -translate-x-1/2 rounded-full bg-green-800" />
                 )}
@@ -833,16 +742,13 @@ function RecordsCentre({
           })}
         </div>
       </div>
-
       {/* STABLEFORD */}
-
       {activeTab === "stableford" && (
         <div>
           <RecordContext
             title="Top 10 Stableford"
             description="Highest individual Stableford rounds."
           />
-
           {stableford[0] && (
             <RecordHero
               player={stableford[0].name}
@@ -851,23 +757,19 @@ function RecordsCentre({
               sub={`${stableford[0].grossScore ?? "—"} shots · ${stableford[0].event}`}
             />
           )}
-
           <RoundLeaderboard
             rows={stableford.slice(0, 10)}
             mode="stableford"
           />
         </div>
       )}
-
       {/* LOWEST GROSS */}
-
       {activeTab === "gross" && (
         <div>
           <RecordContext
             title="Lowest Gross"
-            description="Lowest 18-hole gross scores."
+            description="Lowest individual 18-hole gross scores. Worsley uses Monday only; scramble rounds are excluded."
           />
-
           {gross[0] && (
             <RecordHero
               player={gross[0].name}
@@ -878,23 +780,19 @@ function RecordsCentre({
               sub={`${gross[0].points} pts · ${gross[0].event}`}
             />
           )}
-
           <RoundLeaderboard
             rows={gross.slice(0, 10)}
             mode="gross"
           />
         </div>
       )}
-
       {/* CLOSEST PIN */}
-
       {activeTab === "closest" && (
         <div>
           <RecordContext
             title="Closest to the Pin"
             description="Players ranked by CTP wins."
           />
-
           <AchievementLeaderboard
             rows={closest.slice(0, 10)}
             singular="win"
@@ -902,16 +800,13 @@ function RecordsCentre({
           />
         </div>
       )}
-
       {/* LONGEST DRIVE */}
-
       {activeTab === "drive" && (
         <div>
           <RecordContext
             title="Longest Drive"
             description="Players ranked by Longest Drive wins."
           />
-
           <AchievementLeaderboard
             rows={drives.slice(0, 10)}
             singular="win"
@@ -922,11 +817,9 @@ function RecordsCentre({
     </div>
   );
 }
-
 /* ============================================================
    RECORD CONTEXT
 ============================================================ */
-
 function RecordContext({
   title,
   description,
@@ -939,18 +832,15 @@ function RecordContext({
       <h3 className="text-[22px] font-black tracking-[-0.035em] text-green-950">
         {title}
       </h3>
-
       <p className="mt-0.5 text-[12px] font-medium text-slate-500">
         {description}
       </p>
     </div>
   );
 }
-
 /* ============================================================
    RECORD HERO
 ============================================================ */
-
 function RecordHero({
   player,
   value,
@@ -969,21 +859,17 @@ function RecordHero({
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-lime-300">
             Record
           </p>
-
           <p className="mt-1 text-[28px] font-black leading-none tracking-[-0.035em]">
             {player}
           </p>
-
           <p className="mt-2 truncate text-[10px] font-medium text-white/50">
             {sub}
           </p>
         </div>
-
         <div className="shrink-0 text-right">
           <p className="text-[46px] font-black leading-none text-lime-300">
             {value}
           </p>
-
           <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.12em] text-white/50">
             {unit}
           </p>
@@ -992,11 +878,9 @@ function RecordHero({
     </div>
   );
 }
-
 /* ============================================================
    ROUND LEADERBOARD
 ============================================================ */
-
 function RoundLeaderboard({
   rows,
   mode,
@@ -1009,40 +893,31 @@ function RoundLeaderboard({
       <EmptySmall text="No rounds recorded yet." />
     );
   }
-
   return (
     <div className="border-t border-slate-100">
       {/* MOBILE COLUMN TITLES */}
-
       <div className="grid grid-cols-[34px_1fr_55px_50px] px-4 py-2 text-[9px] font-bold uppercase tracking-[0.08em] text-slate-400 md:hidden">
         <div>#</div>
         <div>Player</div>
-
         <div className="text-right">
           Score
         </div>
-
         <div className="text-right">
           Pts
         </div>
       </div>
-
       {/* DESKTOP TITLES */}
-
       <div className="hidden grid-cols-[50px_1fr_220px_90px_80px] px-5 py-2 text-[9px] font-bold uppercase tracking-[0.08em] text-slate-400 md:grid">
         <div>#</div>
         <div>Player</div>
         <div>Round</div>
-
         <div className="text-right">
           Score
         </div>
-
         <div className="text-right">
           Pts
         </div>
       </div>
-
       {rows.map((round, index) => (
         <div
           key={`${mode}-${round.name}-${round.event}-${round.course}-${index}`}
@@ -1053,20 +928,16 @@ function RoundLeaderboard({
           }`}
         >
           {/* MOBILE */}
-
           <div className="grid min-h-[62px] grid-cols-[34px_1fr_55px_50px] items-center gap-1 px-4 py-2.5 md:hidden">
             <Rank position={index + 1} />
-
             <div className="min-w-0">
               <p className="truncate text-[15px] font-bold text-green-950">
                 {round.name}
               </p>
-
               <p className="mt-0.5 truncate text-[9px] font-medium text-slate-400">
                 {round.event} · {round.course}
               </p>
             </div>
-
             <div
               className={`text-right font-black ${
                 mode === "gross"
@@ -1076,7 +947,6 @@ function RoundLeaderboard({
             >
               {round.grossScore ?? "—"}
             </div>
-
             <div
               className={`text-right font-black ${
                 mode === "stableford"
@@ -1087,26 +957,20 @@ function RoundLeaderboard({
               {round.points}
             </div>
           </div>
-
           {/* DESKTOP */}
-
           <div className="hidden min-h-[62px] grid-cols-[50px_1fr_220px_90px_80px] items-center gap-2 px-5 py-2.5 md:grid">
             <Rank position={index + 1} />
-
             <p className="text-[15px] font-bold text-green-950">
               {round.name}
             </p>
-
             <div>
               <p className="text-[11px] font-semibold text-slate-600">
                 {round.event}
               </p>
-
               <p className="text-[9px] text-slate-400">
                 {round.course}
               </p>
             </div>
-
             <div
               className={`text-right font-black ${
                 mode === "gross"
@@ -1116,7 +980,6 @@ function RoundLeaderboard({
             >
               {round.grossScore ?? "—"}
             </div>
-
             <div
               className={`text-right font-black ${
                 mode === "stableford"
@@ -1132,11 +995,9 @@ function RoundLeaderboard({
     </div>
   );
 }
-
 /* ============================================================
    ACHIEVEMENT LEADERBOARD
 ============================================================ */
-
 function AchievementLeaderboard({
   rows,
   singular,
@@ -1151,7 +1012,6 @@ function AchievementLeaderboard({
       <EmptySmall text="No records recorded yet." />
     );
   }
-
   return (
     <div className="border-t border-slate-100">
       {rows.map((row, index) => {
@@ -1159,9 +1019,7 @@ function AchievementLeaderboard({
           rows,
           index
         );
-
         const tied = isTied(rows, index);
-
         return (
           <div
             key={`${row.player}-${index}`}
@@ -1176,12 +1034,10 @@ function AchievementLeaderboard({
                 ? `T${position}`
                 : position}
             </div>
-
             <div className="min-w-0">
               <p className="text-[16px] font-black text-green-950">
                 {row.player}
               </p>
-
               <div className="mt-1 flex flex-wrap gap-x-1.5 gap-y-0.5">
                 {row.events.map(
                   (event, eventIndex) => (
@@ -1199,12 +1055,10 @@ function AchievementLeaderboard({
                 )}
               </div>
             </div>
-
             <div className="shrink-0 text-right">
               <span className="text-[28px] font-black leading-none text-green-950">
                 {row.wins}
               </span>
-
               <span className="ml-1 text-[9px] font-bold uppercase text-slate-400">
                 {row.wins === 1
                   ? singular
@@ -1217,11 +1071,9 @@ function AchievementLeaderboard({
     </div>
   );
 }
-
 /* ============================================================
    RANK
 ============================================================ */
-
 function Rank({
   position,
 }: {
@@ -1234,7 +1086,6 @@ function Rank({
       </span>
     );
   }
-
   if (position === 2) {
     return (
       <span className="text-[18px]">
@@ -1242,7 +1093,6 @@ function Rank({
       </span>
     );
   }
-
   if (position === 3) {
     return (
       <span className="text-[18px]">
@@ -1250,18 +1100,15 @@ function Rank({
       </span>
     );
   }
-
   return (
     <span className="text-[12px] font-bold text-slate-400">
       {position}
     </span>
   );
 }
-
 /* ============================================================
    IOS SECTION HEADING
 ============================================================ */
-
 function IOSSectionHeading({
   eyebrow,
   title,
@@ -1274,18 +1121,15 @@ function IOSSectionHeading({
       <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">
         {eyebrow}
       </p>
-
       <h2 className="mt-0.5 text-[28px] font-black tracking-[-0.04em] text-green-950">
         {title}
       </h2>
     </div>
   );
 }
-
 /* ============================================================
    ATTENDANCE
 ============================================================ */
-
 function AttendanceProgress({
   trips,
   players,
@@ -1297,7 +1141,6 @@ function AttendanceProgress({
 }) {
   const percentage =
     (trips / maxTrips) * 100;
-
   return (
     <div className="overflow-hidden rounded-[22px] bg-white shadow-sm ring-1 ring-black/[0.04]">
       <div className="flex items-start gap-3 p-4">
@@ -1305,14 +1148,12 @@ function AttendanceProgress({
           <span className="text-[28px] font-black leading-none text-green-950">
             {trips}
           </span>
-
           <span className="mt-1 text-[8px] font-bold uppercase tracking-[0.08em] text-slate-400">
             {trips === 1
               ? "trip"
               : "trips"}
           </span>
         </div>
-
         <div className="min-w-0 flex-1">
           <div className="flex max-w-full flex-wrap gap-1.5">
             {players.map((player) => (
@@ -1324,7 +1165,6 @@ function AttendanceProgress({
               </span>
             ))}
           </div>
-
           <div className="mt-3 h-[5px] overflow-hidden rounded-full bg-slate-100">
             <div
               className="h-full rounded-full bg-green-900 transition-all"
@@ -1338,11 +1178,9 @@ function AttendanceProgress({
     </div>
   );
 }
-
 /* ============================================================
    SMALL EMPTY STATE
 ============================================================ */
-
 function EmptySmall({
   text,
 }: {
