@@ -1,60 +1,9 @@
-"use client";
-
 import Image from "next/image";
-import { useEffect, useState } from "react";
-
 export default function Home() {
-  const [countdown, setCountdown] = useState<{ days: number; hours: number; minutes: number; seconds: number } | null>(null);
-  const [hasStarted, setHasStarted] = useState(false);
-
-  useEffect(() => {
-    // Worsley Park weekend starts Sunday 27 September 2026
-    const targetDate = new Date(
-      "2026-09-27T13:00:00+01:00"
-    ).getTime();
-
-    function updateCountdown() {
-      const now = new Date().getTime();
-      const difference = targetDate - now;
-
-      setHasStarted(difference <= 0);
-      if (difference <= 0) {
-        setCountdown({
-          days: 0,
-          hours: 0,
-          minutes: 0,
-          seconds: 0,
-        });
-        return;
-      }
-
-      setCountdown({
-        days: Math.floor(
-          difference / (1000 * 60 * 60 * 24)
-        ),
-        hours: Math.floor(
-          (difference / (1000 * 60 * 60)) % 24
-        ),
-        minutes: Math.floor(
-          (difference / (1000 * 60)) % 60
-        ),
-        seconds: Math.floor(
-          (difference / 1000) % 60
-        ),
-      });
-    }
-
-    updateCountdown();
-
-    const timer = setInterval(updateCountdown, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
 
   return (
     <main className="min-h-screen bg-[#f3f1eb] text-slate-900">
-
-      <section aria-labelledby="next-trip-title" className="relative isolate overflow-hidden bg-[#092e24] text-[#faf7ed]">
+      <section aria-labelledby="latest-weekend-title" className="relative isolate overflow-hidden bg-[#092e24] text-[#faf7ed]">
         <Image
           src="/images/worsley-park/worsleymain.png"
           alt="Worsley Park Marriott Hotel & Country Club"
@@ -65,104 +14,77 @@ export default function Home() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#052e16]/95 via-[#052e16]/45 to-black/10" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/35 via-transparent to-transparent" />
-
         <div className="relative mx-auto max-w-6xl px-5 pb-7 pt-6 sm:px-8 sm:pb-10">
           <div className="flex items-center justify-between gap-4">
             <Image src="/swiftteeslogo.png" alt="Swift Tees" width={100} height={50} priority className="h-auto w-24" />
             <span className="rounded-full border border-green-300/40 bg-green-800/85 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.16em] backdrop-blur-sm sm:text-xs">
-              Up Next...
+              Latest Weekend
             </span>
           </div>
-
           <div className="pb-7 pt-12 sm:pb-9 sm:pt-20 lg:pt-24">
             <p className="text-xs font-bold uppercase tracking-[0.25em] text-green-300">Manchester · 27–28 September 2026</p>
             <div className="mt-4 grid items-end gap-5 lg:grid-cols-[1.2fr_0.8fr] lg:gap-12">
-              <h1 id="next-trip-title" className="text-[clamp(3.5rem,9vw,7.5rem)] font-black leading-[0.92] tracking-[-0.06em]">
+              <h1 id="latest-weekend-title" className="text-[clamp(3.5rem,9vw,7.5rem)] font-black leading-[0.92] tracking-[-0.06em]">
                 Worsley <span className="block text-green-300">Park.</span>
               </h1>
               <div className="max-w-sm lg:pb-2">
-                <p className="text-xl font-semibold leading-snug sm:text-2xl">Two rounds. One Weekend.<br />Who will top the Leaderboard?</p>
-                <p className="mt-3 text-sm leading-6 text-white/70">The teams are drawn. The first tee is waiting.</p>
+                <p className="text-xl font-semibold leading-snug sm:text-2xl">Fast greens. Early nights.<br />Another weekend in the books.</p>
+                <p className="mt-3 text-sm leading-6 text-white/70">Blues take the team title. Paul wins overall. Relive the golf, the laughs and the weekend’s stories.</p>
               </div>
             </div>
           </div>
-
-          <div className="rounded-2xl border border-green-300/30 bg-green-950/70 px-3 py-6 shadow-lg sm:px-6 sm:py-8">
-            <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-green-300">
-                <span className="h-2 w-2 rounded-full bg-green-400" aria-hidden="true" />
-                {hasStarted ? "Tournament now live" : "Until the first tee"}
-              </h2>
-              <p className="text-xs text-white/70">Sunday · 13:00 UK time</p>
+          <div className="rounded-2xl border border-green-300/30 bg-green-950/75 px-5 py-6 shadow-lg backdrop-blur-sm sm:px-7 sm:py-8">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-green-300">Worsley Park · Final results</p>
+            <div className="mt-5 grid gap-6 sm:grid-cols-2">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-white/65">Team champions</p>
+                <p className="mt-2 text-3xl font-black text-green-300 sm:text-4xl">Blues · 211 points</p>
+                <p className="mt-2 text-sm font-semibold text-white/80">Carl · Paul · Stu</p>
+              </div>
+              <div className="border-t border-white/15 pt-5 sm:border-l sm:border-t-0 sm:pl-6 sm:pt-0">
+                <p className="text-xs font-bold uppercase tracking-wider text-white/65">Weekend champion</p>
+                <p className="mt-2 text-3xl font-black text-green-300 sm:text-4xl">Paul · 83 points</p>
+                <p className="mt-2 text-sm font-semibold text-white/80">Liam led Monday’s Stableford with 36 points.</p>
+              </div>
             </div>
-            {hasStarted ? (
-              <div className="py-3">
-                <p className="text-3xl font-black tracking-tight text-green-300 sm:text-5xl">
-                  🟢 TOURNAMENT NOW LIVE
-                </p>
-                <p className="mt-2 text-sm font-semibold text-white/75 sm:text-base">
-                  Follow the action on Swift Tees
-                </p>
-              </div>
-            ) : (
-              <div role="timer" aria-label="Time until the first tee" className="grid grid-cols-4 divide-x divide-white/20">
-                <CountdownNumber value={countdown?.days} label="Days" />
-                <CountdownNumber value={countdown?.hours} label="Hours" />
-                <CountdownNumber value={countdown?.minutes} label="Minutes" />
-                <CountdownNumber value={countdown?.seconds} label="Seconds" />
-              </div>
-            )}
           </div>
-
           <div className="flex flex-col gap-5 pt-6 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-white/75">36 holes <span className="mx-2 text-white/35">/</span> 3 teams <span className="mx-2 text-white/35">/</span> 1 weekend</p>
-            <a href="/events/worsley-park-september-2026" className="inline-flex items-center justify-between gap-10 rounded-xl bg-green-400 px-6 py-4 font-bold text-[#092e24] transition hover:bg-green-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
-              Weekend details <span aria-hidden="true">↗</span>
+            <p className="text-sm text-white/75">36 holes <span className="mx-2 text-white/35">/</span> 9 golfers <span className="mx-2 text-white/35">/</span> 3 teams <span className="mx-2 text-white/35">/</span> 1 weekend</p>
+            <a href="/events/worsley-park-2026/weekend-review" className="inline-flex items-center justify-between gap-10 rounded-xl bg-green-400 px-6 py-4 font-bold text-[#092e24] transition hover:bg-green-300 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+              Read the weekend review <span aria-hidden="true">↗</span>
             </a>
           </div>
         </div>
       </section>
-
       <div className="mx-auto max-w-6xl px-5 py-10 md:px-8 md:py-14">
         {/* ======================================================
             LAST TIME OUT - CARDEN PARK
         ====================================================== */}
-
         <section className="mb-10">
-
           <div className="mb-6">
-
             <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-700">
-              Last Time Out
+              Earlier This Summer
             </p>
-
             <h2 className="mt-2 text-3xl font-black tracking-tight md:text-4xl">
               Carden Park 2026
             </h2>
-
           </div>
-
           <div className="grid overflow-hidden rounded-[2rem] bg-[#07111f] text-white shadow-lg md:grid-cols-[1.1fr_.9fr]">
-
             <div className="p-7 md:p-10 lg:p-12">
-
               <p className="text-xs font-black uppercase tracking-[0.24em] text-lime-300">
                 Carden Park • 26–27 July 2026
               </p>
-
               <h2 className="mt-3 text-4xl font-black leading-tight tracking-tight md:text-5xl">
                 Another Classic
                 <span className="block text-lime-300">
                   in the Books.
                 </span>
               </h2>
-
               <p className="mt-5 max-w-xl text-base leading-7 text-slate-300 md:text-lg md:leading-8">
                 White Team took the honours, Ian and Painy gave us
                 &quot;Eagle Baby&quot;, and Taz walked away with
                 Player&apos;s Player.
               </p>
-
               <p className="mt-4 max-w-xl leading-7 text-slate-400">
                 And that&apos;s before we get to the 309-yard
                 longest drive, Liam&apos;s evolving relationship with
@@ -170,25 +92,20 @@ export default function Home() {
                 and the environmental incidents involving Wrighty
                 and Phil.
               </p>
-
               <div className="mt-7 flex flex-wrap gap-3">
-
                 <a
                   href="/events/carden-park-2026/weekend-review"
                   className="inline-flex items-center rounded-full bg-lime-300 px-6 py-3 font-black text-slate-950 transition hover:bg-lime-200"
                 >
                   📖 Full Weekend Review →
                 </a>
-
                 <a
-                  href="/full-scorecard"
+                  href="/events/carden-park-2026/weekend-review"
                   className="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-6 py-3 font-black text-white transition hover:bg-white/20"
                 >
-                  📊 Scorecards
+                  📊 Review & Gallery
                 </a>
-
               </div>
-
               {/* CARDEN QUICK STATS */}
               <div className="mt-8 flex flex-wrap gap-2">
                 <DarkStat value="12" label="Golfers" />
@@ -196,11 +113,8 @@ export default function Home() {
                 <DarkStat value="36" label="Holes" />
                 <DarkStat value="∞" label="Stories" />
               </div>
-
             </div>
-
             <div className="relative min-h-[340px] md:min-h-full">
-
               <Image
                 src="/images/carden-park-2026/winnerswhites.jpg"
                 alt="White Team - Carden Park 2026 champions"
@@ -208,64 +122,47 @@ export default function Home() {
                 sizes="(max-width: 768px) 100vw, 45vw"
                 className="object-cover"
               />
-
               <div className="absolute inset-0 bg-gradient-to-t from-[#07111f]/75 via-transparent to-transparent md:bg-gradient-to-r md:from-[#07111f]/50 md:to-transparent" />
-
               <div className="absolute bottom-5 left-5">
                 <span className="rounded-full bg-white px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-950 shadow">
-                  🏆 THe Champions
+                  🏆 The Champions
                 </span>
               </div>
-
             </div>
           </div>
         </section>
-
         {/* ======================================================
             CARDEN PARK MOMENTS
         ====================================================== */}
-
         <section className="mb-14">
-
           <div className="mb-6 flex items-end justify-between gap-4">
-
             <div>
-
               <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-700">
                 From The Weekend
               </p>
-
               <h2 className="mt-2 text-3xl font-black tracking-tight md:text-4xl">
                 Carden Park in pictures
               </h2>
-
               <p className="mt-2 max-w-2xl text-slate-600">
                 A few moments from two days of golf,
                 questionable golf and another memorable
                 Swift Tees weekend.
               </p>
-
             </div>
-
             <a
               href="/events/carden-park-2026/weekend-review"
               className="hidden shrink-0 text-sm font-black text-green-800 transition hover:text-green-600 sm:block"
             >
               Full review →
             </a>
-
           </div>
-
           <a
             href="/events/carden-park-2026/weekend-review"
             className="group block"
           >
-
             <div className="grid gap-3 md:grid-cols-[1.35fr_.65fr]">
-
               {/* LARGE IMAGE */}
               <div className="relative min-h-[390px] overflow-hidden rounded-[2rem] bg-slate-200 md:min-h-[520px]">
-
                 <Image
                   src="/images/carden-park-2026/outsidelaugh.jpg"
                   alt="Swift Tees at Carden Park"
@@ -273,30 +170,22 @@ export default function Home() {
                   sizes="(max-width: 768px) 100vw, 65vw"
                   className="object-cover transition duration-700 group-hover:scale-[1.02]"
                 />
-
                 <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
-
                 <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8">
-
                   <p className="text-xs font-black uppercase tracking-[0.2em] text-lime-300">
                     Carden Park 2026
                   </p>
-
                   <p className="mt-2 max-w-xl text-2xl font-black leading-tight text-white md:text-4xl">
                     The golf mattered.
                     <span className="block text-lime-300">
                       The Weekend mattered more.
                     </span>
                   </p>
-
                 </div>
               </div>
-
               {/* RIGHT IMAGES */}
               <div className="grid grid-cols-2 gap-3 md:grid-cols-1">
-
                 <div className="relative min-h-[210px] overflow-hidden rounded-[1.7rem] bg-slate-200 md:min-h-0">
-
                   <Image
                     src="/images/carden-park-2026/carts.jpeg"
                     alt="Golf carts at Carden Park"
@@ -304,17 +193,12 @@ export default function Home() {
                     sizes="(max-width: 768px) 50vw, 35vw"
                     className="object-cover transition duration-700 group-hover:scale-[1.03]"
                   />
-
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-
                   <p className="absolute bottom-4 left-4 text-sm font-black text-white">
                     Two days. Two courses.
                   </p>
-
                 </div>
-
                 <div className="relative min-h-[210px] overflow-hidden rounded-[1.7rem] bg-slate-200 md:min-h-0">
-
                   <Image
                     src="/images/carden-park-2026/beersoutside.jpg"
                     alt="Post-round drinks at Carden Park"
@@ -322,54 +206,39 @@ export default function Home() {
                     sizes="(max-width: 768px) 50vw, 35vw"
                     className="object-cover transition duration-700 group-hover:scale-[1.03]"
                   />
-
                   <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-transparent to-transparent" />
-
                   <p className="absolute bottom-4 left-4 text-sm font-black text-white">
                     Plenty to discuss afterwards.
                   </p>
-
                 </div>
               </div>
-
             </div>
           </a>
-
           <div className="mt-4 sm:hidden">
-
             <a
               href="/events/carden-park-2026/weekend-review"
               className="flex w-full items-center justify-center rounded-2xl bg-green-900 px-5 py-4 font-black text-white"
             >
               Read the Carden Park review →
             </a>
-
           </div>
         </section>
-
         {/* ======================================================
             SWIFT TEES HUB
         ====================================================== */}
-
         <section className="mb-10">
-
           <div className="mb-5">
-
             <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-700">
               Swift Tees
             </p>
-
             <h2 className="mt-2 text-3xl font-black tracking-tight md:text-4xl">
               The clubhouse
             </h2>
-
             <p className="mt-2 max-w-2xl text-slate-600">
               Results, history and the increasingly questionable
               Swift Tees record books.
             </p>
-
           </div>
-
           <div className="grid gap-4 md:grid-cols-3">
             {[
               {
@@ -432,44 +301,33 @@ export default function Home() {
             ))}
           </div>
         </section>
-
         {/* ======================================================
             CLOSING STRIP
         ====================================================== */}
-
         <section className="overflow-hidden rounded-[2rem] bg-[#07111f] px-6 py-10 text-center text-white md:px-10 md:py-14">
-
           <p className="text-xs font-black uppercase tracking-[0.28em] text-lime-300">
             Swift Tees
           </p>
-
           <p className="mx-auto mt-4 max-w-3xl text-3xl font-black leading-tight tracking-tight md:text-5xl">
             Questionable golf.
             <br />
-
             <span className="text-lime-300">
               Elite memories.
             </span>
           </p>
-
           <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-slate-400 md:text-base">
             One society. Plenty of trips. Far too much evidence.
           </p>
-
         </section>
-
         {/* MOBILE BOTTOM NAV SPACE */}
         <div className="h-40 md:hidden" />
-
       </div>
     </main>
   );
 }
-
 /* ============================================================
    SMALL COMPONENTS
 ============================================================ */
-
 function DarkStat({
   value,
   label,
@@ -479,26 +337,10 @@ function DarkStat({
 }) {
   return (
     <div className="rounded-full border border-white/10 bg-white/5 px-4 py-2">
-
       <span className="font-black text-lime-300">
         {value}
       </span>
-
       <span className="ml-2 text-xs font-bold uppercase tracking-wider text-white/70">
-        {label}
-      </span>
-
-    </div>
-  );
-}
-
-function CountdownNumber({ value, label }: { value: number | undefined; label: string }) {
-  return (
-    <div className="min-w-0 px-1 text-center sm:px-4">
-      <span className="block text-[clamp(2.5rem,8vw,6rem)] font-black leading-none tracking-[-0.06em] tabular-nums text-[#faf7ed]">
-        {value === undefined ? "—" : String(value).padStart(2, "0")}
-      </span>
-      <span className="mt-3 block text-[9px] font-bold uppercase tracking-[0.12em] text-green-300 sm:text-xs sm:tracking-[0.2em]">
         {label}
       </span>
     </div>

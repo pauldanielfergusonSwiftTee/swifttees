@@ -11,7 +11,7 @@ const navItems = [
   },
   {
     label: "Worsley",
-    href: "/events/worsley-park-september-2026",
+    href: "/events/worsley-park-2026/weekend-review",
     icon: "⛳",
   },
   {

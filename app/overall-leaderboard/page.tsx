@@ -45,7 +45,6 @@ function canonicalPlayerName(name: string) {
     default: return trimmed;
   }
 }
-
 // Share the Monday-only archive with the Hall of Fame. No scramble/bonus points.
 function mergeArchivedResults(databaseRows: OverallResult[]): OverallResult[] {
   const archivedRows: OverallResult[] = worsleyRoundRecords.map((row) => ({
@@ -69,7 +68,6 @@ function mergeArchivedResults(databaseRows: OverallResult[]): OverallResult[] {
   }
   return Array.from(unique.values());
 }
-
 export default function OverallLeaderboardPage() {
   const [results, setResults] = useState<OverallResult[]>([]);
   const [loading, setLoading] = useState(true);
@@ -208,13 +206,6 @@ export default function OverallLeaderboardPage() {
       ? totalStablefordPoints / results.length
       : 0;
   const leader = standings[0];
-  const bestAveragePlayer = standings
-    .slice()
-    .sort(
-      (a, b) =>
-        b.averagePoints - a.averagePoints ||
-        b.totalPoints - a.totalPoints
-    )[0];
   function toggleRound(key: string) {
     setOpenRounds((current) => ({
       ...current,
@@ -296,7 +287,7 @@ export default function OverallLeaderboardPage() {
           QUICK LEADERS
       ====================================================== */}
       {standings.length > 0 && (
-        <section className="mt-5 grid gap-3 md:grid-cols-2">
+        <section className="mt-5">
           <div className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-slate-200">
             <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-700">
               Current Leader
@@ -317,30 +308,6 @@ export default function OverallLeaderboardPage() {
                 </p>
                 <p className="mt-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
                   points
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-[1.5rem] bg-white p-5 shadow-sm ring-1 ring-slate-200">
-            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-700">
-              Best Average
-            </p>
-            <div className="mt-3 flex items-end justify-between gap-4">
-              <div className="min-w-0">
-                <p className="truncate text-2xl font-black text-green-950">
-                  🎯 {bestAveragePlayer.playerName}
-                </p>
-                <p className="mt-1 text-xs font-semibold text-slate-500">
-                  Across {bestAveragePlayer.roundsPlayed} round
-                  {bestAveragePlayer.roundsPlayed === 1 ? "" : "s"}
-                </p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-4xl font-black leading-none text-green-900">
-                  {bestAveragePlayer.averagePoints.toFixed(1)}
-                </p>
-                <p className="mt-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">
-                  avg pts
                 </p>
               </div>
             </div>
