@@ -432,11 +432,6 @@ export default function HallOfFamePage() {
           </div>
         </div>
       </section>
-      <section className="mt-6 rounded-[24px] bg-white p-5 shadow-sm ring-1 ring-black/[0.04]">
-        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">Weekend archive</p>
-        <a href="/events/worsley-park-2026/weekend-review" className="mt-2 block text-xl font-black text-green-950 underline underline-offset-4">Worsley Park · 27–28 September 2026 →</a>
-        <p className="mt-2 text-sm text-slate-500">The write-up, both scorecards and final champions. Individual round records use Monday’s Stableford and gross scores, excluding bonuses.</p>
-      </section>
       {/* ======================================================
           MAJOR HONOURS
       ====================================================== */}
