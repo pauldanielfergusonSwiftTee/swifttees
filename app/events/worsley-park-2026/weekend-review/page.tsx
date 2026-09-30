@@ -19,7 +19,7 @@ const moments = [
   { icon: "⏳", title: "Hurry up and wait", text: "A slow Sunday, a bit of rain and plenty of time to contemplate the last shot. Three groups called it a day. Swift Tees stayed the course, even if the walk between shots occasionally felt like the quickest part of the round." },
   { icon: "🍽️", title: "Gravy. Straight from the plate.", text: "The carvery went down very well. Carl took that appreciation a stage further by drinking the gravy straight off his plate. A strong endorsement for the kitchen, and a bold new direction for table manners." },
   { icon: "🍺", title: "All drink. No dinner.", text: "John decided the bar was a better use of his evening than tea and kept going until breakfast the next morning. The rest of us enjoyed the food. John remained committed to the liquid side of the hospitality." },
-  { icon: "🌙", title: "Last men standing. Just about.", text: "Plenty of early nights left Liam and Stu as the last two out. The time? A fearsome 10:45pm. Less a wild night out, more a respectable bedtime with witnesses. There is photographic evidence." },
+  { icon: "🌙", title: "Last men standing. Just about.", text: "Plenty of early nights left Liam and Stu as the last two out. The time? A fearsome 10:45pm. Less a wild night out, more a respectable bedtime with witnesses." },
   { icon: "🥇", title: "First attempt. Perfect G.", text: "Despite being an avid Guinness drinker, John had never tried to split the G. Naturally, he nailed it on his first attempt. One of the weekend’s cleanest finishes, and conveniently one that did not involve a putter." },
   { icon: "🦜", title: "Parakeets, not birdies", text: "Monday’s green parakeets in the trees provided a welcome bit of wildlife spotting. After Sunday produced just one birdie on the scorecards, it was nice to see some birds enjoying themselves around the course." },
   { icon: "🥣", title: "Soup in a basket", text: "John asking everyone about soup in a basket became another addition to the weekend’s conversation. Some trips leave you discussing the golf. This one also left us discussing how soup might cope with wicker." },
@@ -79,7 +79,7 @@ export default function WorsleyParkWeekendReviewPage() {
           <h1 className="mt-6 max-w-5xl text-5xl font-black leading-[0.95] tracking-tight sm:text-7xl lg:text-8xl">Fast Greens.<span className="block text-lime-300">Early Nights.</span></h1>
           <p className="mt-7 max-w-3xl text-lg leading-8 text-slate-200 sm:text-xl">Two days of golf, one very patient Sunday, a proper breakfast and a man who still wanted another drink on the way home. Worsley gave us plenty to take away.</p>
           <p className="mt-8 text-xs font-black uppercase leading-6 tracking-[0.18em] text-white/70">Marriott Worsley Park • 27–28 September 2026 • 36 Holes • 9 Golfers</p>
-          <Link href="/events/worsley-park-2026" className="mt-6 w-fit text-sm font-bold text-lime-300 underline underline-offset-4">Back to the Worsley weekend</Link>
+        
         </div>
       </section>
       <section className="mx-auto max-w-6xl px-5 py-12 sm:px-8 lg:px-10 lg:py-16">
