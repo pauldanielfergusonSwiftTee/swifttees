@@ -1,12 +1,10 @@
 "use client";
-
 import {
   useCallback,
   useEffect,
   useRef,
   useState,
 } from "react";
-
 import {
   saveHoleScores,
   deleteHoleScores,
@@ -16,18 +14,15 @@ import {
   getScrambleScores,
   getBonusWinners,
 } from "@/lib/scores";
-
 import {
   getOfflineScoreQueue,
   getOfflineQueueCount,
   queueOfflineHoleSave,
   removeOfflineQueueItem,
 } from "@/lib/offlineScoreQueue";
-
 import { calculateStablefordPoints } from "@/lib/stableford";
 import { supabase } from "@/lib/supabase";
 import { useActiveTournament } from "../hooks/useActiveTournament";
-
 function teamDot(team: string) {
   if (team === "Blue") return "bg-blue-500";
   if (team === "Green") return "bg-green-500";
@@ -35,10 +30,8 @@ function teamDot(team: string) {
     return "bg-white border border-slate-400";
   }
   if (team === "Red") return "bg-red-500";
-
   return "bg-slate-300 border border-slate-400";
 }
-
 function getBonusHoleNumber(bonus: any) {
   return Number(
     bonus.hole ??
@@ -46,7 +39,6 @@ function getBonusHoleNumber(bonus: any) {
       bonus.hole_number
   );
 }
-
 function getBonusType(bonus: any) {
   return (
     bonus.type ??
@@ -55,67 +47,142 @@ function getBonusType(bonus: any) {
     "Bonus"
   );
 }
+type ScoringPosition = {
+  version: 1;
+  eventSlug: string;
+  roundId: number | string;
+  groupId: number | string;
+  hole: number;
+};
+
+function positionStorageKey(eventSlug: string) {
+  return `swift-tees-score-position:v1:${encodeURIComponent(eventSlug)}`;
+}
+
+function readScoringPosition(eventSlug: string): ScoringPosition | null {
+  try {
+    const raw = window.localStorage.getItem(positionStorageKey(eventSlug));
+    if (!raw) return null;
+    const saved = JSON.parse(raw);
+    if (!saved || saved.version !== 1 || saved.eventSlug !== eventSlug) return null;
+    const validId = (value: unknown) =>
+      (typeof value === "string" && value.length > 0) ||
+      (typeof value === "number" && Number.isFinite(value));
+    if (!validId(saved.roundId) || !validId(saved.groupId) ||
+        !Number.isInteger(saved.hole)) return null;
+    return saved;
+  } catch (error) {
+    console.warn("Could not restore score-entry position:", error);
+    return null;
+  }
+}
+
+function writeScoringPosition(position: ScoringPosition) {
+  try {
+    window.localStorage.setItem(
+      positionStorageKey(position.eventSlug), JSON.stringify(position)
+    );
+  } catch (error) {
+    // A position-storage failure must never change score-save behaviour.
+    console.warn("Could not remember score-entry position:", error);
+  }
+}
+
+function validateScoringPosition(setup: any, saved: ScoringPosition | null): ScoringPosition | null {
+  const rounds = setup.rounds ?? [];
+  const savedRound = saved?.eventSlug === setup.slug
+    ? rounds.find((round: any) => String(round.id) === String(saved?.roundId))
+    : undefined;
+  const round = savedRound ?? rounds[0];
+  if (!round) return null;
+  const savedGroup = savedRound
+    ? round.groups?.find((group: any) => String(group.id) === String(saved?.groupId))
+    : undefined;
+  const group = savedGroup ?? round.groups?.[0];
+  const holes = (round.holes ?? []).map((item: any) => Number(item.hole))
+    .filter((number: number) => Number.isInteger(number) && number > 0);
+  if (!group || !holes.length) return null;
+  return {
+    version: 1,
+    eventSlug: setup.slug,
+    roundId: round.id,
+    groupId: group.id,
+    hole: savedGroup && saved && holes.includes(saved.hole) ? saved.hole : holes[0],
+  };
+}
+
+function nextHoleNumber(round: any, currentHole: number): number | null {
+  const holes = [...new Set<number>((round.holes ?? [])
+    .map((item: any) => Number(item.hole))
+    .filter((number: number) => Number.isInteger(number) && number > 0))]
+    .sort((a, b) => a - b);
+  const index = holes.indexOf(currentHole);
+  return index >= 0 ? holes[index + 1] ?? null : null;
+}
 
 export default function LiveScoringPage() {
   const [tournamentSetup, setTournamentSetup] =
     useState<any>(null);
+  const [position, setPosition] = useState<ScoringPosition | null>(null);
+  const positionRef = useRef<ScoringPosition | null>(null);
+  const selectionRevision = useRef(0);
+  const loadRevision = useRef(0);
+  const saveRunning = useRef(false);
+  const [setupError, setSetupError] = useState("");
+  const roundId = position?.roundId ?? null;
+  const selectedGroupId = position?.groupId ?? null;
+  const hole = position?.hole ?? 1;
 
-  const [roundId, setRoundId] = useState<
-    number | string | null
-  >(null);
-
-  const [selectedGroupId, setSelectedGroupId] =
-    useState<number | string | null>(null);
-
-  const [hole, setHole] = useState(1);
+  const commitPosition = useCallback((next: ScoringPosition) => {
+    selectionRevision.current += 1;
+    positionRef.current = next;
+    writeScoringPosition(next);
+    setPosition(next);
+  }, []);
 
   const [scores, setScores] = useState<
     Record<string, number>
   >({});
-
   const [bonusWinners, setBonusWinners] =
     useState<Record<string, string>>({});
-
   const [savedMessage, setSavedMessage] =
     useState("");
-
   const [isSaving, setIsSaving] =
     useState(false);
-
   const [isOnline, setIsOnline] =
     useState(true);
-
   const [
     pendingOfflineCount,
     setPendingOfflineCount,
   ] = useState(0);
-
   const [
     isSyncingOffline,
     setIsSyncingOffline,
   ] = useState(false);
-
   const offlineSyncRunning =
     useRef(false);
-
   const { tournament, loading } =
     useActiveTournament();
-
   const EVENT_SLUG =
     tournament?.slug ?? "";
+  const activeEventSlug = useRef(EVENT_SLUG);
+  activeEventSlug.current = EVENT_SLUG;
+
+  useEffect(() => () => {
+    loadRevision.current += 1;
+    selectionRevision.current += 1;
+  }, []);
 
   /* ============================================================
      LOAD TOURNAMENT + SAVED SCORES
   ============================================================ */
-
   const loadScoringPageData =
     useCallback(async () => {
       try {
-        if (!tournament) return;
-
+        if (!tournament || activeEventSlug.current !== EVENT_SLUG) return;
+        const requestRevision = ++loadRevision.current;
         const setup = {
           ...tournament,
-
           rounds:
             tournament.rounds?.map(
               (
@@ -123,17 +190,14 @@ export default function LiveScoringPage() {
                 roundIndex: number
               ) => ({
                 ...round,
-
                 id:
                   round.roundNumber ??
                   round.id ??
                   roundIndex + 1,
-
                 roundNumber:
                   round.roundNumber ??
                   round.id ??
                   roundIndex + 1,
-
                 day:
                   round.day ??
                   `Round ${
@@ -141,12 +205,10 @@ export default function LiveScoringPage() {
                     round.id ??
                     roundIndex + 1
                   }`,
-
                 course:
                   round.course ??
                   round.courseName ??
                   "Course",
-
                 format:
                   round.format ===
                     "scramble" ||
@@ -154,7 +216,6 @@ export default function LiveScoringPage() {
                     "scramblePairs"
                     ? "scramblePairs"
                     : "stableford",
-
                 groups:
                   round.groups?.map(
                     (
@@ -162,27 +223,22 @@ export default function LiveScoringPage() {
                       groupIndex: number
                     ) => ({
                       ...group,
-
                       id:
                         group.id ??
                         group.groupNumber ??
                         groupIndex + 1,
-
                       groupNumber:
                         group.groupNumber ??
                         group.id ??
                         groupIndex + 1,
-
                       name:
                         group.name ??
                         `Group ${
                           groupIndex + 1
                         }`,
-
                       teeTime:
                         group.teeTime ??
                         "",
-
                       players:
                         group.players
                           ?.length
@@ -193,30 +249,24 @@ export default function LiveScoringPage() {
                               ) => ({
                                 player_id:
                                   player.id,
-
                                 name:
                                   player.name,
-
                                 team:
                                   player.eventTeam ??
                                   "",
-
                                 eventHandicap:
                                   player.stablefordHandicap ??
                                   player.eventHandicap ??
                                   0,
-
                                 stablefordHandicap:
                                   player.stablefordHandicap ??
                                   player.eventHandicap ??
                                   0,
-
                                 scrambleHandicap:
                                   player.scrambleHandicap ??
                                   0,
                               })
                             ) ?? [],
-
                       pairs:
                         group.pairs?.map(
                           (
@@ -235,7 +285,6 @@ export default function LiveScoringPage() {
                                     pair.player1_id
                                   )
                               );
-
                             const player2 =
                               tournament.players?.find(
                                 (
@@ -248,10 +297,8 @@ export default function LiveScoringPage() {
                                     pair.player2_id
                                   )
                               );
-
                             return {
                               ...pair,
-
                               id:
                                 pair.id ??
                                 `${
@@ -267,30 +314,24 @@ export default function LiveScoringPage() {
                                   pairIndex +
                                     1
                                 }`,
-
                               pairNumber:
                                 pair.pairNumber ??
                                 pairIndex +
                                   1,
-
                               player1_id:
                                 pair.player1_id ??
                                 null,
-
                               player2_id:
                                 pair.player2_id ??
                                 null,
-
                               player1:
                                 pair.player1 ??
                                 player1?.name ??
                                 "",
-
                               player2:
                                 pair.player2 ??
                                 player2?.name ??
                                 "",
-
                               finalHandicap:
                                 pair.finalHandicap ??
                                 pair.calculatedHandicap ??
@@ -303,47 +344,44 @@ export default function LiveScoringPage() {
               })
             ) ?? [],
         };
-
+        const existingPosition = positionRef.current;
+        const restored = validateScoringPosition(setup,
+          existingPosition?.eventSlug === EVENT_SLUG
+            ? existingPosition : readScoringPosition(EVENT_SLUG)
+        );
         setTournamentSetup(setup);
-
-        const firstRound =
-          setup.rounds?.[0];
-
-        setRoundId(
-          (currentRoundId) =>
-            currentRoundId ??
-            firstRound?.id ??
-            null
-        );
-
-        setSelectedGroupId(
-          (currentGroupId) =>
-            currentGroupId ??
-            firstRound?.groups?.[0]
-              ?.id ??
-            null
-        );
+        if (!restored) {
+          positionRef.current = null;
+          setPosition(null);
+          setSetupError("This tournament needs a round, group and valid holes before scores can be entered.");
+          return;
+        }
+        setSetupError("");
+        if (JSON.stringify(existingPosition) !== JSON.stringify(restored)) {
+          commitPosition(restored);
+          setSavedMessage("");
+        }
 
         const savedScores =
           await getScores(
             EVENT_SLUG
           );
-
         const savedScrambleScores =
           await getScrambleScores(
             EVENT_SLUG
           );
-
         const savedBonuses =
           await getBonusWinners(
             EVENT_SLUG
           );
+        // Ignore stale reads after a newer refresh, event switch or unmount.
+        if (requestRevision !== loadRevision.current ||
+            activeEventSlug.current !== EVENT_SLUG) return;
 
         const loadedScores: Record<
           string,
           number
         > = {};
-
         savedScores.forEach(
           (row: any) => {
             const round =
@@ -357,9 +395,7 @@ export default function LiveScoringPage() {
                     row.round_number
                   )
               );
-
             if (!round) return;
-
             const group =
               round.groups.find(
                 (item: any) =>
@@ -371,9 +407,7 @@ export default function LiveScoringPage() {
                     row.group_number
                   )
               );
-
             if (!group) return;
-
             const player =
               group.players?.find(
                 (item: any) =>
@@ -384,15 +418,12 @@ export default function LiveScoringPage() {
                     row.player_id
                   )
               );
-
             if (!player) return;
-
             loadedScores[
               `${round.id}-${group.id}-${row.hole_number}-${player.name}`
             ] = row.gross_score;
           }
         );
-
         savedScrambleScores.forEach(
           (row: any) => {
             const round =
@@ -406,9 +437,7 @@ export default function LiveScoringPage() {
                     row.round_number
                   )
               );
-
             if (!round) return;
-
             const group =
               round.groups.find(
                 (item: any) =>
@@ -420,9 +449,7 @@ export default function LiveScoringPage() {
                     row.group_number
                   )
               );
-
             if (!group) return;
-
             const pair =
               group.pairs?.find(
                 (item: any) =>
@@ -433,20 +460,16 @@ export default function LiveScoringPage() {
                     row.pair_number
                   )
               );
-
             if (!pair) return;
-
             loadedScores[
               `${round.id}-${group.id}-${row.hole_number}-${pair.id}`
             ] = row.gross_score;
           }
         );
-
         const loadedBonuses: Record<
           string,
           string
         > = {};
-
         savedBonuses.forEach(
           (row: any) => {
             const round =
@@ -460,9 +483,7 @@ export default function LiveScoringPage() {
                     row.round_number
                   )
               );
-
             if (!round) return;
-
             const winnerName =
               String(
                 row.winner_player_name ??
@@ -470,7 +491,6 @@ export default function LiveScoringPage() {
               )
                 .trim()
                 .toLowerCase();
-
             const winnerPlayer =
               round.groups
                 .flatMap(
@@ -487,7 +507,6 @@ export default function LiveScoringPage() {
                       .toLowerCase() ===
                     winnerName
                 );
-
             if (
               winnerPlayer?.player_id
             ) {
@@ -499,11 +518,9 @@ export default function LiveScoringPage() {
             }
           }
         );
-
         setScores(
           loadedScores
         );
-
         setBonusWinners(
           loadedBonuses
         );
@@ -516,8 +533,8 @@ export default function LiveScoringPage() {
     }, [
       tournament,
       EVENT_SLUG,
+      commitPosition,
     ]);
-
   useEffect(() => {
     if (
       !loading &&
@@ -530,11 +547,9 @@ export default function LiveScoringPage() {
     tournament,
     loadScoringPageData,
   ]);
-
   /* ============================================================
      OFFLINE SCORE SYNC
   ============================================================ */
-
   const syncOfflineScores =
     useCallback(async () => {
       if (
@@ -545,31 +560,24 @@ export default function LiveScoringPage() {
       ) {
         return;
       }
-
       const queue =
         getOfflineScoreQueue();
-
       setPendingOfflineCount(
         queue.length
       );
-
       if (!queue.length) {
         return;
       }
-
       offlineSyncRunning.current =
         true;
-
       setIsSyncingOffline(
         true
       );
-
       try {
         for (const item of queue) {
           if (!navigator.onLine) {
             break;
           }
-
           try {
             if (
               item.rowsToDelete
@@ -579,7 +587,6 @@ export default function LiveScoringPage() {
                 item.rowsToDelete
               );
             }
-
             if (
               item.rowsToSave
                 .length > 0
@@ -592,7 +599,6 @@ export default function LiveScoringPage() {
                 }
               );
             }
-
             if (
               item.bonusWinner
             ) {
@@ -600,15 +606,12 @@ export default function LiveScoringPage() {
                 item.bonusWinner
               );
             }
-
             await checkTournamentResults(
               item.tournament
             );
-
             removeOfflineQueueItem(
               item.id
             );
-
             setPendingOfflineCount(
               getOfflineQueueCount()
             );
@@ -618,24 +621,20 @@ export default function LiveScoringPage() {
               item,
               error
             );
-
             break;
           }
         }
       } finally {
         offlineSyncRunning.current =
           false;
-
         setIsSyncingOffline(
           false
         );
-
         setPendingOfflineCount(
           getOfflineQueueCount()
         );
       }
     }, []);
-
   useEffect(() => {
     if (
       typeof window ===
@@ -643,137 +642,84 @@ export default function LiveScoringPage() {
     ) {
       return;
     }
-
     const updateOnlineStatus =
       () => {
         const online =
           navigator.onLine;
-
         setIsOnline(
           online
         );
-
         setPendingOfflineCount(
           getOfflineQueueCount()
         );
-
         if (online) {
           void syncOfflineScores();
         }
       };
-
     const handleOnline = () => {
       setIsOnline(true);
-
       void syncOfflineScores();
     };
-
     const handleOffline =
       () => {
         setIsOnline(false);
-
         setPendingOfflineCount(
           getOfflineQueueCount()
         );
       };
-
     updateOnlineStatus();
-
     window.addEventListener(
       "online",
       handleOnline
     );
-
     window.addEventListener(
       "offline",
       handleOffline
     );
-
     return () => {
       window.removeEventListener(
         "online",
         handleOnline
       );
-
       window.removeEventListener(
         "offline",
         handleOffline
       );
     };
   }, [syncOfflineScores]);
-
   /* ============================================================
      REALTIME
   ============================================================ */
-
   useEffect(() => {
-    const channel = supabase
-      .channel(
-        "live-scoring-realtime"
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "scores",
-        },
-        () =>
-          setTimeout(
-            loadScoringPageData,
-            200
-          )
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table:
-            "scramble_scores",
-        },
-        () =>
-          setTimeout(
-            loadScoringPageData,
-            200
-          )
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table:
-            "bonus_winners",
-        },
-        () =>
-          setTimeout(
-            loadScoringPageData,
-            200
-          )
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(
-        channel
-      );
+    let disposed = false;
+    const timers = new Set<ReturnType<typeof setTimeout>>();
+    const refresh = () => {
+      const timer = setTimeout(() => {
+        timers.delete(timer);
+        if (!disposed) void loadScoringPageData();
+      }, 200);
+      timers.add(timer);
     };
-  }, [
-    loadScoringPageData,
-  ]);
-
+    const channel = supabase.channel("live-scoring-realtime")
+      .on("postgres_changes", { event: "*", schema: "public", table: "scores" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "scramble_scores" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "bonus_winners" }, refresh)
+      .subscribe();
+    return () => {
+      disposed = true;
+      timers.forEach(clearTimeout);
+      void supabase.removeChannel(channel);
+    };
+  }, [loadScoringPageData]);
   /* ============================================================
      LOADING STATES
   ============================================================ */
-
   if (loading) {
     return (
       <main className="min-h-screen bg-[#f4f6f2] p-4 text-slate-900">
         <div className="flex min-h-[60vh] items-center justify-center">
           <div className="text-center">
             <div className="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-green-800" />
-
             <p className="mt-3 font-black text-green-950">
               Loading tournament...
             </p>
@@ -782,7 +728,6 @@ export default function LiveScoringPage() {
       </main>
     );
   }
-
   if (!tournament) {
     return (
       <main className="min-h-screen bg-[#f4f6f2] p-4 text-slate-900">
@@ -792,11 +737,13 @@ export default function LiveScoringPage() {
       </main>
     );
   }
-
+  if (setupError && tournamentSetup?.slug === EVENT_SLUG) {
+    return <main className="min-h-screen bg-[#f4f6f2] p-4 text-slate-900">{setupError}</main>;
+  }
   if (
-    !tournamentSetup ||
-    !roundId ||
-    !selectedGroupId
+    !tournamentSetup || tournamentSetup.slug !== EVENT_SLUG ||
+    position?.eventSlug !== EVENT_SLUG ||
+    roundId === null || selectedGroupId === null
   ) {
     return (
       <main className="min-h-screen bg-[#f4f6f2] p-4 text-slate-900">
@@ -805,18 +752,15 @@ export default function LiveScoringPage() {
       </main>
     );
   }
-
   /* ============================================================
      CURRENT ROUND / GROUP / HOLE
   ============================================================ */
-
   const currentRound =
     tournamentSetup.rounds.find(
       (round: any) =>
         String(round.id) ===
         String(roundId)
     );
-
   if (!currentRound) {
     return (
       <main className="min-h-screen bg-[#f4f6f2] p-4 text-slate-900">
@@ -824,7 +768,6 @@ export default function LiveScoringPage() {
       </main>
     );
   }
-
   const selectedGroup =
     currentRound.groups.find(
       (group: any) =>
@@ -834,11 +777,9 @@ export default function LiveScoringPage() {
         )
     ) ??
     currentRound.groups[0];
-
   const isScramble =
     currentRound.format ===
     "scramblePairs";
-
   const currentHole =
     currentRound.holes.find(
       (item: any) =>
@@ -846,13 +787,11 @@ export default function LiveScoringPage() {
         Number(hole)
     ) ??
     currentRound.holes[0];
-
   const roundBonusHoles =
     currentRound.bonusHoles ??
     currentRound.bonus_holes ??
     currentRound.bonuses ??
     [];
-
   const bonusHole =
     roundBonusHoles.find(
       (bonus: any) =>
@@ -860,7 +799,6 @@ export default function LiveScoringPage() {
           bonus
         ) === hole
     );
-
   const allRoundPlayers =
     currentRound.groups
       .flatMap(
@@ -871,7 +809,6 @@ export default function LiveScoringPage() {
         (player: any) =>
           player?.player_id
       );
-
   const uniqueRoundPlayers =
     Array.from(
       new Map(
@@ -885,11 +822,9 @@ export default function LiveScoringPage() {
         )
       ).values()
     );
-
   /* ============================================================
      HELPERS
   ============================================================ */
-
   function getPlayerNameById(
     playerId: string
   ) {
@@ -901,13 +836,11 @@ export default function LiveScoringPage() {
           ) ===
           String(playerId)
       ) as any;
-
     return (
       foundPlayer?.name ??
       ""
     );
   }
-
   function validPlayerId(
     playerId: any
   ) {
@@ -919,7 +852,6 @@ export default function LiveScoringPage() {
         "undefined"
     );
   }
-
   function scoreKeyFor(
     groupId:
       | string
@@ -929,7 +861,6 @@ export default function LiveScoringPage() {
   ) {
     return `${roundId}-${groupId}-${holeNumber}-${id}`;
   }
-
   function scoreKey(
     id: string,
     holeNumber = hole
@@ -940,13 +871,11 @@ export default function LiveScoringPage() {
       holeNumber
     );
   }
-
   function bonusKey(
     holeNumber = hole
   ) {
     return `${roundId}-${holeNumber}`;
   }
-
   function getScore(
     id: string
   ) {
@@ -956,30 +885,25 @@ export default function LiveScoringPage() {
       ] || 0
     );
   }
-
   function changeScore(
     id: string,
     amount: number
   ) {
     const key =
       scoreKey(id);
-
     const currentScore =
       scores[key] || 0;
-
     const newScore =
       Math.max(
         0,
         currentScore +
           amount
       );
-
     setScores(
       (current) => {
         const updated = {
           ...current,
         };
-
         if (
           newScore === 0
         ) {
@@ -988,28 +912,23 @@ export default function LiveScoringPage() {
           updated[key] =
             newScore;
         }
-
         return updated;
       }
     );
   }
-
   function setScore(
     id: string,
     value: string
   ) {
     const key =
       scoreKey(id);
-
     const numberValue =
       Number(value);
-
     setScores(
       (current) => {
         const updated = {
           ...current,
         };
-
         if (
           !value ||
           numberValue <= 0
@@ -1019,12 +938,10 @@ export default function LiveScoringPage() {
           updated[key] =
             numberValue;
         }
-
         return updated;
       }
     );
   }
-
   function setBonusWinner(
     playerId: string
   ) {
@@ -1036,7 +953,6 @@ export default function LiveScoringPage() {
       })
     );
   }
-
   function getBonusWinner(
     holeNumber = hole
   ) {
@@ -1048,52 +964,48 @@ export default function LiveScoringPage() {
       ] || ""
     );
   }
-
   /* ============================================================
      SAVE
   ============================================================ */
-
   async function saveHole() {
+    if (saveRunning.current) return;
+    saveRunning.current = true;
+    const savedPosition = positionRef.current;
+    const savedRevision = selectionRevision.current;
+    const isSameSelection = () =>
+      selectionRevision.current === savedRevision &&
+      activeEventSlug.current === EVENT_SLUG &&
+      savedPosition?.eventSlug === EVENT_SLUG;
+    const showSaveMessage = (message: string) => {
+      if (isSameSelection()) setSavedMessage(message);
+    };
     setIsSaving(true);
     setSavedMessage("");
-
     let rowsToSave: any[] =
       [];
-
     const rowsToDelete:
       any[] = [];
-
     let bonusWinnerToSave:
       | any
       | null = null;
-
     const roundNumber =
       Number(
         currentRound.roundNumber ??
           currentRound.id
       );
-
     const groupNumber =
       Number(
         selectedGroup.groupNumber ??
           selectedGroup.id
       );
-
     function moveToNextHole() {
-      if (hole < 18) {
-        setTimeout(() => {
-          setHole(
-            (current) =>
-              current + 1
-          );
-
-          setSavedMessage(
-            ""
-          );
-        }, 800);
+      const next = nextHoleNumber(currentRound, hole);
+      if (next !== null && savedPosition && isSameSelection()) {
+        // Persist at once, so closing the app immediately after Save restores
+        // the next hole. Never increment a newer manual selection.
+        commitPosition({ ...savedPosition, hole: next });
       }
     }
-
     try {
       if (isScramble) {
         rowsToSave =
@@ -1104,7 +1016,6 @@ export default function LiveScoringPage() {
                   getScore(
                     pair.id
                   );
-
                 if (
                   !grossScore
                 ) {
@@ -1112,49 +1023,35 @@ export default function LiveScoringPage() {
                     {
                       event_slug:
                         EVENT_SLUG,
-
                       round_number:
                         roundNumber,
-
                       hole_number:
                         hole,
-
                       group_number:
                         groupNumber,
-
                       pair_number:
                         pair.pairNumber,
                     }
                   );
-
                   return null;
                 }
-
                 return {
                   event_slug:
                     EVENT_SLUG,
-
                   round_number:
                     roundNumber,
-
                   player_id:
                     null,
-
                   hole_number:
                     hole,
-
                   gross_score:
                     grossScore,
-
                   group_number:
                     groupNumber,
-
                   pair_number:
                     pair.pairNumber,
-
                   score_type:
                     "scramblePairs",
-
                   points:
                     calculateStablefordPoints(
                       grossScore,
@@ -1162,7 +1059,6 @@ export default function LiveScoringPage() {
                       currentHole.strokeIndex,
                       pair.finalHandicap
                     ),
-
                   event_handicap:
                     pair.finalHandicap,
                 };
@@ -1181,7 +1077,6 @@ export default function LiveScoringPage() {
                   getScore(
                     player.name
                   );
-
                 if (
                   !grossScore
                 ) {
@@ -1194,22 +1089,17 @@ export default function LiveScoringPage() {
                       {
                         event_slug:
                           EVENT_SLUG,
-
                         round_number:
                           roundNumber,
-
                         player_id:
                           player.player_id,
-
                         hole_number:
                           hole,
                       }
                     );
                   }
-
                   return null;
                 }
-
                 if (
                   !validPlayerId(
                     player.player_id
@@ -1217,32 +1107,23 @@ export default function LiveScoringPage() {
                 ) {
                   return null;
                 }
-
                 return {
                   event_slug:
                     EVENT_SLUG,
-
                   round_number:
                     roundNumber,
-
                   player_id:
                     player.player_id,
-
                   hole_number:
                     hole,
-
                   gross_score:
                     grossScore,
-
                   group_number:
                     groupNumber,
-
                   pair_number:
                     null,
-
                   score_type:
                     "stableford",
-
                   points:
                     calculateStablefordPoints(
                       grossScore,
@@ -1250,7 +1131,6 @@ export default function LiveScoringPage() {
                       currentHole.strokeIndex,
                       player.eventHandicap
                     ),
-
                   event_handicap:
                     player.eventHandicap,
                 };
@@ -1260,7 +1140,6 @@ export default function LiveScoringPage() {
               Boolean
             );
       }
-
       if (
         bonusHole &&
         getBonusWinner()
@@ -1268,28 +1147,22 @@ export default function LiveScoringPage() {
         bonusWinnerToSave = {
           event_slug:
             EVENT_SLUG,
-
           round_number:
             roundNumber,
-
           hole,
-
           bonus_type:
             getBonusType(
               bonusHole
             ),
-
           winner_player_name:
             getPlayerNameById(
               getBonusWinner()
             ),
-
           points:
             bonusHole.points ??
             0,
         };
       }
-
       /*
        * We already know the phone
        * has no connection.
@@ -1302,45 +1175,31 @@ export default function LiveScoringPage() {
         queueOfflineHoleSave({
           eventSlug:
             EVENT_SLUG,
-
           roundNumber,
-
           groupNumber,
-
           holeNumber:
             hole,
-
           rowsToSave,
-
           rowsToDelete,
-
           bonusWinner:
             bonusWinnerToSave,
-
           tournament:
             tournamentSetup,
         });
-
         const pending =
           getOfflineQueueCount();
-
         setPendingOfflineCount(
           pending
         );
-
         setIsOnline(
           false
         );
-
-        setSavedMessage(
+        showSaveMessage(
           `📴 Hole ${hole} saved on this phone · ${pending} waiting to sync`
         );
-
         moveToNextHole();
-
         return;
       }
-
       /*
        * Normal online save.
        */
@@ -1352,7 +1211,6 @@ export default function LiveScoringPage() {
           rowsToDelete
         );
       }
-
       if (
         rowsToSave.length >
         0
@@ -1365,7 +1223,6 @@ export default function LiveScoringPage() {
           }
         );
       }
-
       if (
         bonusWinnerToSave
       ) {
@@ -1373,25 +1230,20 @@ export default function LiveScoringPage() {
           bonusWinnerToSave
         );
       }
-
       await checkTournamentResults(
         tournamentSetup
       );
-
       const bonusMessage =
         bonusWinnerToSave
           ? ` Bonus winner: ${bonusWinnerToSave.winner_player_name}.`
           : "";
-
       const formatMessage =
         isScramble
           ? "scramble scores"
           : "scorecards";
-
-      setSavedMessage(
+      showSaveMessage(
         `${currentRound.day} ${currentRound.course} — Hole ${hole} ${formatMessage} saved.${bonusMessage}`
       );
-
       moveToNextHole();
     } catch (
       error: any
@@ -1400,7 +1252,6 @@ export default function LiveScoringPage() {
         "Online score save failed:",
         error
       );
-
       /*
        * If connection disappears
        * during the save, keep the
@@ -1414,44 +1265,32 @@ export default function LiveScoringPage() {
         queueOfflineHoleSave({
           eventSlug:
             EVENT_SLUG,
-
           roundNumber,
-
           groupNumber,
-
           holeNumber:
             hole,
-
           rowsToSave,
-
           rowsToDelete,
-
           bonusWinner:
             bonusWinnerToSave,
-
           tournament:
             tournamentSetup,
         });
-
         const pending =
           getOfflineQueueCount();
-
         setPendingOfflineCount(
           pending
         );
-
         setIsOnline(
           typeof navigator !==
             "undefined"
             ? navigator.onLine
             : false
         );
-
-        setSavedMessage(
+        showSaveMessage(
           `📴 Hole ${hole} stored safely · ${pending} waiting to sync`
         );
 
-        moveToNextHole();
       } catch (
         queueError
       ) {
@@ -1459,18 +1298,17 @@ export default function LiveScoringPage() {
           "Could not store offline score:",
           queueError
         );
-
-        setSavedMessage(
+        showSaveMessage(
           `❌ Could not save Hole ${hole}. Please try again.`
         );
       }
     } finally {
+      saveRunning.current = false;
       setIsSaving(
         false
       );
     }
   }
-
   function holeHasScores(
     holeNumber: number
   ) {
@@ -1486,7 +1324,6 @@ export default function LiveScoringPage() {
           ]
       );
     }
-
     return selectedGroup.players.some(
       (player: any) =>
         scores[
@@ -1498,39 +1335,31 @@ export default function LiveScoringPage() {
         ]
     );
   }
-
   /* ============================================================
      PAGE
   ============================================================ */
-
   return (
     <main className="min-h-screen bg-[#eef2eb] px-2.5 pb-44 pt-2 text-slate-900 md:p-8 md:pb-20">
       <div className="mx-auto max-w-6xl">
         {/* ======================================================
             COMPACT EVENT HEADER
         ====================================================== */}
-
         <header className="mb-2 px-1 text-center">
           <div className="flex items-center justify-center gap-2">
             <span className="text-xs">
               ⛳
             </span>
-
             <p className="text-[9px] font-black uppercase tracking-[0.28em] text-emerald-700">
               Swift Tees
             </p>
           </div>
-
           <h1 className="mt-0.5 truncate text-[24px] font-black leading-tight tracking-[-0.035em] text-green-950 md:text-4xl">
             {tournament.name}
           </h1>
-
         </header>
-
         {/* ======================================================
             ROUND + GROUP SWITCHERS
         ====================================================== */}
-
         <div className="mb-2 space-y-1.5">
           {tournamentSetup
             .rounds.length >
@@ -1553,28 +1382,17 @@ export default function LiveScoringPage() {
                     String(
                       round.id
                     );
-
                   return (
                     <button
                       key={
                         round.id
                       }
                       onClick={() => {
-                        setRoundId(
-                          round.id
-                        );
-
-                        setSelectedGroupId(
-                          round
-                            .groups?.[0]
-                            ?.id ??
-                            null
-                        );
-
-                        setHole(
-                          1
-                        );
-
+                        const next = validateScoringPosition(tournamentSetup, {
+                          version: 1, eventSlug: EVENT_SLUG, roundId: round.id,
+                          groupId: round.groups?.[0]?.id, hole: Number(round.holes?.[0]?.hole),
+                        });
+                        if (next) commitPosition(next);
                         setSavedMessage(
                           ""
                         );
@@ -1590,7 +1408,6 @@ export default function LiveScoringPage() {
                           round.course
                         }
                       </span>
-
                       <span
                         className={`mt-0.5 block truncate text-[8px] font-bold ${
                           active
@@ -1613,7 +1430,6 @@ export default function LiveScoringPage() {
               )}
             </div>
           )}
-
           {currentRound.groups
             .length >
             1 && (
@@ -1635,17 +1451,15 @@ export default function LiveScoringPage() {
                     String(
                       group.id
                     );
-
                   return (
                     <button
                       key={
                         group.id
                       }
                       onClick={() => {
-                        setSelectedGroupId(
-                          group.id
-                        );
-
+                        if (positionRef.current) {
+                          commitPosition({ ...positionRef.current, groupId: group.id });
+                        }
                         setSavedMessage(
                           ""
                         );
@@ -1661,7 +1475,6 @@ export default function LiveScoringPage() {
                           group.name
                         }
                       </span>
-
                       {group.teeTime && (
                         <span
                           className={`mt-0.5 block text-[8px] font-bold ${
@@ -1682,14 +1495,11 @@ export default function LiveScoringPage() {
             </div>
           )}
         </div>
-
         {/* ======================================================
             MAIN SCORING PANEL
         ====================================================== */}
-
         <section className="overflow-hidden rounded-[1.7rem] bg-[#043b25] text-white shadow-[0_10px_30px_rgba(3,46,30,0.15)] ring-1 ring-green-950/10">
         {/* HOLE INFO */}
-
         <div className="px-3 pb-2 pt-3">
           {/* CURRENT HOLE + PAR / SI / YARDS */}
           <div className="grid grid-cols-[minmax(0,1fr)_104px] gap-2">
@@ -1697,12 +1507,10 @@ export default function LiveScoringPage() {
               <p className="text-[8px] font-black uppercase tracking-[0.3em] text-emerald-300">
                 Hole
               </p>
-
               <p className="mt-0.5 text-[48px] font-black leading-[0.85] tracking-[-0.07em] text-white">
                 {hole}
               </p>
             </div>
-
             <div className="flex h-[82px] flex-col justify-center overflow-hidden rounded-xl bg-[#f8faf7] px-3 shadow-sm ring-1 ring-white/20">
               <HoleStatRow label="PAR" value={currentHole.par} />
               <HoleStatRow label="SI" value={currentHole.strokeIndex} />
@@ -1712,9 +1520,7 @@ export default function LiveScoringPage() {
               />
             </div>
           </div>
-
             {/* HOLE PICKER */}
-
             <div className="mt-2 grid grid-cols-9 gap-1">
               {currentRound.holes.map(
                 (
@@ -1724,12 +1530,10 @@ export default function LiveScoringPage() {
                     Number(
                       item.hole
                     );
-
                   const hasScores =
                     holeHasScores(
                       holeNumber
                     );
-
                   const hasBonus =
                     roundBonusHoles.some(
                       (
@@ -1740,21 +1544,18 @@ export default function LiveScoringPage() {
                         ) ===
                         holeNumber
                     );
-
                   const selected =
                     hole ===
                     holeNumber;
-
                   return (
                     <button
                       key={
                         holeNumber
                       }
                       onClick={() => {
-                        setHole(
-                          holeNumber
-                        );
-
+                        if (positionRef.current) {
+                          commitPosition({ ...positionRef.current, hole: holeNumber });
+                        }
                         setSavedMessage(
                           ""
                         );
@@ -1770,7 +1571,6 @@ export default function LiveScoringPage() {
                       {
                         holeNumber
                       }
-
                       {hasBonus && (
                         <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-yellow-300 ring-1 ring-green-950" />
                       )}
@@ -1780,9 +1580,7 @@ export default function LiveScoringPage() {
               )}
             </div>
           </div>
-
           {/* BONUS HOLE */}
-
           {bonusHole && (
             <div className="mx-2.5 mb-2 rounded-xl bg-yellow-300 p-2 text-green-950">
               <div className="flex items-center justify-between gap-2">
@@ -1795,12 +1593,10 @@ export default function LiveScoringPage() {
                     ? ` · ${bonusHole.points} pts`
                     : ""}
                 </p>
-
                 <span className="rounded-full bg-yellow-400 px-2 py-0.5 text-[8px] font-black uppercase tracking-wider">
                   Bonus hole
                 </span>
               </div>
-
               <select
                 value={
                   getBonusWinner()
@@ -1818,7 +1614,6 @@ export default function LiveScoringPage() {
                 <option value="">
                   Select winner
                 </option>
-
                 {uniqueRoundPlayers.map(
                   (
                     player: any
@@ -1840,11 +1635,9 @@ export default function LiveScoringPage() {
               </select>
             </div>
           )}
-
           {/* ======================================================
               PLAYERS
           ====================================================== */}
-
           <div className="space-y-1.5 px-2.5 pb-2.5">
             {!isScramble &&
               selectedGroup.players.map(
@@ -1863,14 +1656,12 @@ export default function LiveScoringPage() {
                           player.team
                         )}`}
                       />
-
                       <div className="min-w-0">
                         <p className="truncate text-[15px] font-black leading-tight">
                           {
                             player.name
                           }
                         </p>
-
                         <p className="mt-0.5 truncate text-[9px] font-bold text-slate-400">
                           {player.team
                             ? `${player.team} · `
@@ -1882,7 +1673,6 @@ export default function LiveScoringPage() {
                         </p>
                       </div>
                     </div>
-
                     <ScoreControl
                       value={
                         getScore(
@@ -1913,11 +1703,9 @@ export default function LiveScoringPage() {
                   </div>
                 )
               )}
-
             {/* ======================================================
                 SCRAMBLE PAIRS
             ====================================================== */}
-
             {isScramble &&
               selectedGroup.pairs?.map(
                 (
@@ -1936,10 +1724,8 @@ export default function LiveScoringPage() {
                           pair.pairNumber
                         }
                       </p>
-
                       <p className="mt-0.5 truncate text-[16px] font-black leading-tight">
                         {pair.player1}
-
                         {pair.player2 && (
                           <>
                             {" "}
@@ -1950,7 +1736,6 @@ export default function LiveScoringPage() {
                           </>
                         )}
                       </p>
-
                       <p className="mt-0.5 text-[9px] font-bold text-slate-400">
                         {
                           pair.finalHandicap
@@ -1958,7 +1743,6 @@ export default function LiveScoringPage() {
                         HCP
                       </p>
                     </div>
-
                     <ScoreControl
                       value={
                         getScore(
@@ -1991,11 +1775,9 @@ export default function LiveScoringPage() {
               )}
           </div>
         </section>
-
         {/* ======================================================
             CONNECTION / OFFLINE STATUS
         ====================================================== */}
-
         <div className="mt-2">
           {isSyncingOffline ? (
             <div className="rounded-xl bg-amber-100 px-3 py-2 text-center text-[11px] font-black text-amber-900 ring-1 ring-amber-200">
@@ -2044,11 +1826,9 @@ export default function LiveScoringPage() {
             </div>
           )}
         </div>
-
         {/* ======================================================
             SAVE STATUS
         ====================================================== */}
-
         {savedMessage && (
           <div
             className={`mt-2 rounded-xl px-3 py-2 text-center text-[11px] font-black ${
@@ -2073,11 +1853,9 @@ export default function LiveScoringPage() {
               : `✅ ${savedMessage}`}
           </div>
         )}
-
         {/* ======================================================
             SECONDARY LINKS
         ====================================================== */}
-
         <section className="mt-2 grid grid-cols-2 gap-1.5">
   <a
     href="/live-centre"
@@ -2085,7 +1863,6 @@ export default function LiveScoringPage() {
   >
     🏆 Leaderboard
   </a>
-
   <a
     href="/full-scorecard"
     className="flex h-10 items-center justify-center rounded-xl bg-white text-center text-[10px] font-black text-green-950 shadow-sm ring-1 ring-slate-200"
@@ -2094,12 +1871,10 @@ export default function LiveScoringPage() {
   </a>
 </section>
       </div>
-
       {/* ======================================================
           STICKY SAVE BAR
           sits above Swift Tees bottom navigation
       ====================================================== */}
-
       <div
   className="fixed inset-x-0 z-40 px-2.5 md:static md:mt-4 md:px-0"
   style={{
@@ -2119,7 +1894,6 @@ export default function LiveScoringPage() {
             {isSaving ? (
               <>
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-
                 Saving...
               </>
             ) : (
@@ -2127,7 +1901,6 @@ export default function LiveScoringPage() {
                 <span>
                   ✓
                 </span>
-
                 <span>
                   Save Hole{" "}
                   {hole}
@@ -2135,8 +1908,7 @@ export default function LiveScoringPage() {
                     ? " Scores"
                     : " Scorecards"}
                 </span>
-
-                {hole < 18 && (
+                {nextHoleNumber(currentRound, hole) !== null && (
                   <span className="text-green-200">
                     →
                   </span>
@@ -2149,11 +1921,9 @@ export default function LiveScoringPage() {
     </main>
   );
 }
-
 /* ============================================================
    SCORE CONTROL
-============================================================ */
-
+\============================================================ */
 function ScoreControl({
   value,
   onMinus,
@@ -2181,7 +1951,6 @@ function ScoreControl({
       >
         −
       </button>
-
       <input
         type="number"
         inputMode="numeric"
@@ -2199,7 +1968,6 @@ function ScoreControl({
         placeholder="-"
         aria-label="Gross score"
       />
-
       <button
         type="button"
         onClick={
@@ -2213,11 +1981,9 @@ function ScoreControl({
     </div>
   );
 }
-
 /* ============================================================
    HOLE STAT
-============================================================ */
-
+\============================================================ */
 function HoleStatRow({
   label,
   value,
@@ -2230,7 +1996,6 @@ function HoleStatRow({
       <p className="text-[7px] font-black uppercase tracking-[0.12em] text-emerald-700">
         {label}
       </p>
-
       <p className="text-[14px] font-black leading-none text-green-950">
         {value}
       </p>
