@@ -21,7 +21,7 @@ const moments = [
   { icon: "🍺", title: "All drink. No dinner.", text: "John decided the bar was a better use of his evening than tea and kept going until breakfast the next morning. The rest of us enjoyed the food. John remained committed to the liquid side of the hospitality." },
   { icon: "🌙", title: "Last men standing. Just about.", text: "Plenty of early nights left Liam and Stu as the last two out. The time? A fearsome 10:45pm. Less a wild night out, more a respectable bedtime with witnesses." },
   { icon: "🥇", title: "First attempt. Perfect G.", text: "Despite being an avid Guinness drinker, John had never tried to split the G. Naturally, he nailed it on his first attempt. One of the weekend’s cleanest finishes, and conveniently one that did not involve a putter." },
-  { icon: "🦜", title: "Parakeets, not birdies", text: "Monday’s green parakeets in the trees provided a welcome bit of wildlife spotting. After Sunday produced just one birdie on the scorecards, it was nice to see some birds enjoying themselves around the course." },
+  { icon: "🦜", title: "Plenty of Birds, just not birdies", text: "Monday’s green parakeets in the trees provided a welcome bit of wildlife spotting. After Sunday produced just one birdie on the scorecards, it was nice to see some birds enjoying themselves around the course." },
   { icon: "🥣", title: "Soup in a basket", text: "John asking everyone about soup in a basket became another addition to the weekend’s conversation. Some trips leave you discussing the golf. This one also left us discussing how soup might cope with wicker." },
   { icon: "🚗", title: "We going out for a drink?", text: "The golf was finished. The bags were packed. We were in the car going home. John, however, was still asking about going out for a drink. The official competition had ended; his weekend clearly had not." },
 ];
@@ -86,7 +86,7 @@ export default function WorsleyParkWeekendReviewPage() {
         <div className="grid gap-7 lg:grid-cols-[1.35fr_.65fr]">
           <article className="rounded-[2rem] bg-white p-7 shadow-sm sm:p-10">
             <p className="text-xl leading-9 text-slate-700 sm:text-2xl">Nine mates, three teams and another weekend that gave the group plenty to talk about long after the last putt.</p>
-            <p className="mt-6 leading-8 text-slate-600">Worsley was a proper test. The course was tough, the greens were fast and Sunday made everyone work for their points. There were good shots, expensive mistakes and a fair amount of standing around wondering when we could hit the next one.</p>
+            <p className="mt-6 leading-8 text-slate-600">Worsley was a proper test. The course was tough, the greens were fast and the wind on Sunday made everyone work for their points. There were good shots, expensive mistakes and a fair amount of standing around wondering when we could hit the next one.</p>
             <p className="mt-5 leading-8 text-slate-600">Away from the course, the hotel and food were a real highlight. A good carvery, a 10/10 Monday breakfast and the usual conversations that somehow became the weekend’s running jokes. Thanks to everyone for another brilliant trip and for keeping the scores coming in.</p>
           </article>
           <aside className="overflow-hidden rounded-[2rem] bg-[#0b1728] p-7 text-white sm:p-8">
@@ -108,14 +108,14 @@ export default function WorsleyParkWeekendReviewPage() {
           <h2 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">A long round. A strong start.</h2>
           <div className="mt-7 grid gap-8 lg:grid-cols-2">
             <div className="space-y-5 leading-8 text-slate-600">
-              <p>Sunday’s scramble came with a bit of rain and a lot of waiting. Slow play tested the patience, three groups quit, and “hurry up and wait” felt like a reasonable description of proceedings. The course and quick greens made sure the golf itself offered little respite.</p>
-              <p>Paul’s scramble score of <strong className="text-slate-950">43 Stableford points from a gross 82</strong> set the pace. Liam and Calp, and Carl and Stu, both returned 39, with Ian’s scramble entry on 38. There were useful points on the board, but Worsley was making everyone earn them.</p>
+              <p>Sunday’s scramble came with a bit of rain and some waiting. Slow play tested metalities, and “hurry up and wait” felt like a reasonable description of proceedings. The course and quick greens made sure the golf itself offered little respite.</p>
+              <p>Paul’s scramble score of <strong className="text-slate-950">43 Stableford points from a gross 82</strong> set the pace. Liam and Calp, and Carl and Stu, both returned 39. There were useful points on the board, but Worsley was making everyone earn them.</p>
               <p>The day produced just <strong className="text-slate-950">one birdie</strong>: Chris Mc’s scramble entry on the 18th. A good way to finish, and an indication of how difficult the course was playing. Birdies were very much a limited edition.</p>
             </div>
             <div className="space-y-5 leading-8 text-slate-600">
-              <p>Paul also picked up nearest the pin on holes 7, 9 and 14, adding six bonus points to his individual tally. Carl claimed nearest the pin on 4 and longest drive on 18. By the end of Sunday, Paul had an <strong className="text-slate-950">eight-point overall lead</strong> to take into Monday.</p>
-              <p>Then came the carvery. The food earned plenty of praise, particularly from Carl, who dispensed with the cutlery for the final gravy and drank it straight off his plate. John skipped dinner entirely to stay in the bar. Two very different approaches to the evening meal.</p>
-              <p>Despite all that, it was a surprisingly sensible night. Most headed off early, leaving Liam and Stu to close proceedings at 10:45pm. The last men standing were, by most standards, still getting an early night.</p>
+              <p>Paul picked up nearest the pin on holes 7, 9 and 14, adding six bonus points to his individual tally. While Carl claimed nearest the pin on 4 and longest drive on 18. By the end of Sunday, Paul had an <strong className="text-slate-950">eight-point overall lead</strong> to take into Monday.</p>
+              <p>Then came the carvery. The food earned plenty of praise, particularly from Carl, who dispensed with the cutlery for the final gravy round and drank it straight off his plate. John skipped dinner entirely to stay in the bar. Two very different approaches to the evening meal.</p>
+              <p>Despite all that, it was a surprisingly sensible night. Most headed off early, leaving Liam and Stu to close proceedings before 11pm. The last men standing were, by most standards, still getting an early night.</p>
             </div>
           </div>
         </article>
@@ -133,11 +133,11 @@ export default function WorsleyParkWeekendReviewPage() {
             <div>
               <p className="text-xs font-black uppercase tracking-[0.24em] text-lime-300">Monday • Day Two</p>
               <h2 className="mt-4 text-5xl font-black tracking-tight sm:text-6xl">Breakfast first.<span className="block text-lime-300">Business next.</span></h2>
-              <p className="mt-7 text-lg leading-8 text-slate-300">A 10/10 breakfast. A fresh scorecard. And green parakeets in the trees offering a different sort of birdie watch.</p>
+              <p className="mt-7 text-lg leading-8 text-slate-300">A great breakfast. A fresh scorecard. And green parakeets in the trees offering a different sort of birdie watch.</p>
             </div>
             <article className="space-y-5 text-lg leading-8 text-slate-300">
               <p><strong className="text-white">Liam had a great second day</strong>, leading Monday’s Stableford with 36 points from a gross 93. His birdie on the 12th was one of just two on the day, and his round gave the Greens a strong contribution to their team total.</p>
-              <p><strong className="text-white">Paul finished one Stableford point behind</strong> on 35, with the day’s lowest gross score of 92 and a birdie on the 10th. Added to Sunday’s 43 points and six bonuses, that made 83 for the weekend and secured the individual title.</p>
+              <p><strong className="text-white">Paul finished with the day’s lowest gross score of 92, </strong>one Stableford point behind Liam,  and a birdie on the 10th. Added to Sunday’s 43 points and six bonuses, that made 83 for the weekend and secured the individual title.</p>
               <p><strong className="text-white">Carl played well on the second day</strong> and added another nearest-the-pin win on the 4th to his weekend collection. Alongside Paul and Stu, he finished as part of the winning Blues. <strong className="text-white">Adam’s golf is coming along too</strong>, with 25 Stableford points on Monday and more encouraging progress to take home.</p>
               <p>Chris Mc also returned 25 Stableford points and took nearest the pin on 7. Ian collected nearest the pin on 9 and longest drive on 18, adding four bonus points. With fast greens and plenty of difficult holes, those extras were useful additions to the scorecards.</p>
               <p>The closing holes gave the live commentary plenty of material about repairs, pressure and scorecards best forgotten. The final results, though, were clear: <strong className="text-white">Blues won the team competition with 211 points. Paul was the Worsley Weekend champion with 83.</strong></p>
