@@ -65,14 +65,20 @@ export default function WorsleyParkWeekendReviewPage() {
     <main className="min-h-screen bg-[#f3f1eb] text-slate-950">
       <section className="relative overflow-hidden bg-[#07111f] text-white">
         <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-br from-emerald-950 via-[#07111f] to-blue-950" />
-        <Image
-          src="/images/worsley-park/worsleymain.png"
-          alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover object-center"
-        />
+        <video
+  autoPlay
+  muted
+  loop
+  playsInline
+  preload="auto"
+  aria-hidden="true"
+  className="absolute inset-0 h-full w-full object-cover object-center"
+>
+  <source
+    src="/videos/worsley-park-2026-hero.mp4"
+    type="video/mp4"
+  />
+</video>
         <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/40 to-[#07111f]/95" />
         <div className="relative mx-auto flex min-h-[70vh] max-w-6xl flex-col justify-end px-5 pb-14 pt-28 sm:px-8 lg:px-10 lg:pb-20">
           <p className="text-xs font-black uppercase tracking-[0.24em] text-lime-300">Swift Tees • Worsley Park 2026 • Weekend Review</p>
