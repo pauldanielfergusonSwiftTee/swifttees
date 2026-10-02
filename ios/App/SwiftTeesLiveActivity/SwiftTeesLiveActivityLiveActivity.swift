@@ -9,23 +9,7 @@ import ActivityKit
 import WidgetKit
 import SwiftUI
 
-struct SwiftTeesLiveActivityAttributes: ActivityAttributes {
 
-    public struct ContentState: Codable, Hashable {
-        var leaderName: String
-        var leaderPoints: Int
-        var secondName: String
-        var secondPoints: Int
-        var thirdName: String
-        var thirdPoints: Int
-        var progress: String
-        var status: String
-    }
-
-    // These stay the same for the lifetime of the activity
-    var tournamentName: String
-    var roundName: String
-}
 
 struct SwiftTeesLiveActivityLiveActivity: Widget {
 
